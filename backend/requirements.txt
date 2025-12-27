@@ -2,7 +2,7 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
 alembic==1.12.1
-psycopg2-binary==2.9.9
+# psycopg2-binary==2.9.9  # Commented out for local SQLite testing
 python-multipart==0.0.6
 pyotp==2.9.0
 cryptography==41.0.7

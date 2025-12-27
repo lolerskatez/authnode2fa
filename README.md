@@ -49,22 +49,47 @@ A secure, full-stack web application for managing Two-Factor Authentication (2FA
 
 ### Local Development
 
-#### Backend Setup
+#### Automated Setup (Recommended)
+```bash
+# Linux/Mac
+./setup_local.sh
+
+# Windows
+setup_local.bat
+```
+
+This will:
+- Set up Python virtual environment and install dependencies
+- Configure environment variables
+- Run database migrations
+- Create a test user
+- Install frontend dependencies
+
+#### Manual Setup
+
+##### Backend Setup
 ```bash
 cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-# Configure .env
+# Configure .env (DATABASE_URL=sqlite:///./authy.db, ENCRYPTION_KEY)
+alembic upgrade head
+python create_test_user.py
 python run_server.py
 ```
 
-#### Frontend Setup
+##### Frontend Setup
 ```bash
 cd frontend
 npm install
-npm start
+PORT=8040 npm start
 ```
+
+#### Access
+- Frontend: http://localhost:8040
+- Backend API: http://localhost:8041
+- Test user: `test@example.com` / `password123`
 
 ## 🔧 Configuration
 

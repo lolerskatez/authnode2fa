@@ -52,17 +52,22 @@ function Auth({ onLoginSuccess }) {
   }, []);
 
   const applyTheme = (theme) => {
-    if (theme === 'dark') {
+    let effectiveTheme = theme;
+    
+    // Handle 'auto' theme by detecting system preference
+    if (theme === 'auto') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      effectiveTheme = prefersDark ? 'dark' : 'light';
+    }
+    
+    if (effectiveTheme === 'dark') {
       document.documentElement.style.colorScheme = 'dark';
       document.body.classList.add('theme-dark');
       document.body.classList.remove('theme-light');
-    } else if (theme === 'light') {
+    } else if (effectiveTheme === 'light') {
       document.documentElement.style.colorScheme = 'light';
       document.body.classList.add('theme-light');
       document.body.classList.remove('theme-dark');
-    } else {
-      document.documentElement.style.colorScheme = 'light dark';
-      document.body.classList.remove('theme-dark', 'theme-light');
     }
   };
 

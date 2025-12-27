@@ -1,7 +1,7 @@
 """Add settings column to users table
 
-Revision ID: 005
-Revises: 004
+Revision ID: 005_add_settings_column
+Revises: 004_add_color_column
 Create Date: 2025-12-27 12:00:00.000000
 
 """
@@ -10,14 +10,15 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '005'
-down_revision = '004'
+revision = '005_add_settings_column'
+down_revision = '004_add_color_column'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('users', sa.Column('settings', sa.JSON(), nullable=True, server_default='{"theme": "light", "autoLock": 5, "codeFormat": "spaced"}'))
+    # Settings column already added in initial migration
+    pass
 
 
 def downgrade() -> None:

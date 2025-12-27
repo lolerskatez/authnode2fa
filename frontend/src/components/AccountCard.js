@@ -56,47 +56,36 @@ const AccountCard = ({
     );
   }
 
+  const circumference = 2 * Math.PI * 18;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
   return (
     <div 
       className="account-card"
       onContextMenu={onContextMenu}
       style={{ cursor: 'context-menu' }}
     >
-      <div className="card-header">
-        <div 
-          className="card-icon" 
-          style={{ backgroundColor: account.color }}
-        >
-          <i className={account.icon}></i>
-        </div>
-        <div className="card-title">
-          <h3>{account.name}</h3>
-          <p>{account.email}</p>
-        </div>
-        {account.favorite && (
-          <div className="favorite-badge">
-            <i className="fas fa-star"></i>
-          </div>
-        )}
+      <div className="card-icon" style={{ backgroundColor: account.color }}>
+        <i className={account.icon}></i>
       </div>
-      <div className="card-code">
-        <div className="code-display">{displayCode}</div>
-        <div className="code-info">
-          <span className="timer-text">Expires in {timer}s</span>
-          <div className="timer-bar-small">
-            <div 
-              className="timer-progress-small"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-        </div>
+      
+      <div className="card-content">
+        <div className="card-name">{account.name}</div>
+        <div className="card-code">{displayCode}</div>
       </div>
-      <div 
-        className="card-menu"
-        onClick={onContextMenu}
-        style={{ cursor: 'pointer' }}
-      >
-        <i className="fas fa-ellipsis-v"></i>
+      
+      <div className="card-timer-badge">
+        <svg className="timer-circle" viewBox="0 0 40 40">
+          <circle className="timer-circle-bg" cx="20" cy="20" r="18" />
+          <circle 
+            className="timer-circle-progress" 
+            cx="20" 
+            cy="20" 
+            r="18"
+            style={{ strokeDashoffset }}
+          />
+        </svg>
+        <span className="timer-number">{timer}</span>
       </div>
     </div>
   );

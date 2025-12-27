@@ -21,28 +21,87 @@ const AddAccountModal = ({
 }) => {
   const serviceIcons = {
     'google': { icon: 'fab fa-google', color: '#4285F4' },
-    'microsoft': { icon: 'fab fa-microsoft', color: '#00A4EF' },
+    'microsoft': { icon: 'fab fa-microsoft', color: '#00BCF2' },
     'apple': { icon: 'fab fa-apple', color: '#000000' },
     'amazon': { icon: 'fab fa-amazon', color: '#FF9900' },
     'facebook': { icon: 'fab fa-facebook', color: '#1877F2' },
     'twitter': { icon: 'fab fa-twitter', color: '#1DA1F2' },
     'instagram': { icon: 'fab fa-instagram', color: '#E4405F' },
     'linkedin': { icon: 'fab fa-linkedin', color: '#0077B5' },
-    'github': { icon: 'fab fa-github', color: '#333333' },
+    'github': { icon: 'fab fa-github', color: '#181717' },
     'gitlab': { icon: 'fab fa-gitlab', color: '#FC6D26' },
+    'bitbucket': { icon: 'fab fa-bitbucket', color: '#0052CC' },
     'discord': { icon: 'fab fa-discord', color: '#5865F2' },
-    'slack': { icon: 'fab fa-slack', color: '#36C5F0' },
-    'zoom': { icon: 'fas fa-video', color: '#0B5CFF' },
+    'slack': { icon: 'fab fa-slack', color: '#4A154B' },
+    'zoom': { icon: 'fas fa-video', color: '#2D8CFF' },
+    'teams': { icon: 'fab fa-microsoft', color: '#6264A7' },
+    'skype': { icon: 'fab fa-skype', color: '#00AFF0' },
+    'gmail': { icon: 'fab fa-google', color: '#EA4335' },
+    'outlook': { icon: 'fab fa-microsoft', color: '#0078D4' },
+    'yahoo': { icon: 'fab fa-yahoo', color: '#5F01D1' },
+    'protonmail': { icon: 'fas fa-shield-alt', color: '#6D4AFF' },
+    'aws': { icon: 'fab fa-aws', color: '#FF9900' },
+    'azure': { icon: 'fab fa-microsoft', color: '#0078D4' },
+    'digitalocean': { icon: 'fab fa-digital-ocean', color: '#0080FF' },
+    'heroku': { icon: 'fab fa-heroku', color: '#430098' },
+    'netlify': { icon: 'fas fa-globe', color: '#00C46A' },
+    'vercel': { icon: 'fas fa-rocket', color: '#000000' },
+    'rustdesk': { icon: 'fas fa-desktop', color: '#1E90FF' },
+    'teamviewer': { icon: 'fas fa-tv', color: '#0E70F5' },
+    'anydesk': { icon: 'fas fa-desktop', color: '#EF443B' },
+    'chrome remote desktop': { icon: 'fab fa-chrome', color: '#4285F4' },
+    'lastpass': { icon: 'fas fa-key', color: '#D32F2F' },
+    'bitwarden': { icon: 'fas fa-shield-alt', color: '#175DDC' },
+    '1password': { icon: 'fas fa-key', color: '#0094F5' },
+    'keepass': { icon: 'fas fa-key', color: '#4CAF50' },
+    'paypal': { icon: 'fab fa-paypal', color: '#003087' },
+    'stripe': { icon: 'fab fa-stripe-s', color: '#635BFF' },
+    'coinbase': { icon: 'fab fa-bitcoin', color: '#0052FF' },
+    'telegram': { icon: 'fab fa-telegram', color: '#0088CC' },
+    'whatsapp': { icon: 'fab fa-whatsapp', color: '#25D366' },
+    'signal': { icon: 'fas fa-comment', color: '#3A76F0' },
+    'jetbrains': { icon: 'fas fa-code', color: '#000000' },
+    'visual studio': { icon: 'fab fa-microsoft', color: '#5C2D91' },
+    'vscode': { icon: 'fas fa-code', color: '#007ACC' },
+    'nextcloud': { icon: 'fas fa-cloud', color: '#0082C9' },
+    'owncloud': { icon: 'fas fa-cloud', color: '#041E42' },
+    'pi-hole': { icon: 'fas fa-shield-alt', color: '#96060C' },
+    'home assistant': { icon: 'fas fa-home', color: '#18BCF2' },
+    'plex': { icon: 'fas fa-play', color: '#E5A00D' },
+    'jellyfin': { icon: 'fas fa-play', color: '#AA5CC3' },
+    'emby': { icon: 'fas fa-play', color: '#52B54B' },
   };
 
   const getIconForService = (serviceName) => {
     const cleanName = serviceName.toLowerCase().trim();
-    return serviceIcons[cleanName]?.icon || 'fab fa-key';
+    
+    if (serviceIcons[cleanName]) {
+      return serviceIcons[cleanName].icon;
+    }
+    
+    for (const key in serviceIcons) {
+      if (key.includes(cleanName) || cleanName.includes(key)) {
+        return serviceIcons[key].icon;
+      }
+    }
+    
+    return 'fas fa-key';
   };
 
   const getColorForService = (serviceName) => {
     const cleanName = serviceName.toLowerCase().trim();
-    return serviceIcons[cleanName]?.color || '#6B46C1';
+    
+    if (serviceIcons[cleanName]) {
+      return serviceIcons[cleanName].color;
+    }
+    
+    for (const key in serviceIcons) {
+      if (key.includes(cleanName) || cleanName.includes(key)) {
+        return serviceIcons[key].color;
+      }
+    }
+    
+    return '#6B46C1';
   };
 
   // Theme-aware color helpers
@@ -189,34 +248,37 @@ const AddAccountModal = ({
         <div className="modal-body">
           <form onSubmit={handleAddAccount}>
             <div className="form-grid">
-              <div className="form-group">
+              <div className="form-group" style={{ position: 'relative' }}>
                 <label htmlFor="accountName">Account Name</label>
-                <input 
-                  type="text" 
-                  id="accountName" 
-                  className="form-control" 
-                  placeholder="e.g., Google, Facebook, etc."
-                  name="accountName"
-                  onChange={(e) => onAccountNameChange(e.target.value)}
-                />
-                {accountNamePreview && (
-                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12px' }}>Icon preview:</span>
-                    <div 
-                      style={{ 
-                        width: '20px', 
-                        height: '20px', 
-                        borderRadius: '4px', 
-                        backgroundColor: getColorForService(accountNamePreview),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <i className={getIconForService(accountNamePreview)} style={{ fontSize: '12px', color: 'white' }}></i>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <input 
+                    type="text" 
+                    id="accountName" 
+                    className="form-control" 
+                    placeholder="e.g., Google, Facebook, etc."
+                    name="accountName"
+                    onChange={(e) => onAccountNameChange(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {accountNamePreview && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '0px', minWidth: '50px' }}>
+                      <span style={{ fontSize: '11px', color: '#718096' }}>Icon</span>
+                      <div 
+                        style={{ 
+                          width: '24px', 
+                          height: '24px', 
+                          borderRadius: '4px', 
+                          backgroundColor: getColorForService(accountNamePreview),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <i className={getIconForService(accountNamePreview)} style={{ fontSize: '12px', color: 'white' }}></i>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="form-group">

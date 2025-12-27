@@ -1,7 +1,7 @@
 """Add category and favorite columns to applications table
 
-Revision ID: 003
-Revises: 002
+Revision ID: 003_add_category_and_favorite
+Revises: 002_add_app_icon
 Create Date: 2025-12-26 12:00:00.000000
 
 """
@@ -10,15 +10,15 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '003'
-down_revision = '002'
+revision = '003_add_category_and_favorite'
+down_revision = '002_add_app_icon'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('applications', sa.Column('category', sa.String(), nullable=True, default='Personal'))
-    op.add_column('applications', sa.Column('favorite', sa.Boolean(), nullable=True, default=False))
+    # Category and favorite columns already added in initial migration
+    pass
 
 
 def downgrade() -> None:

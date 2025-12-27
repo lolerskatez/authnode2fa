@@ -1,6 +1,6 @@
 """initial
 
-Revision ID: 001
+Revision ID: 001_initial
 Revises:
 Create Date: 2025-12-25 00:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '001'
+revision: str = '001_initial'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,19 +24,27 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('oidc_id', sa.String(), nullable=True),
     sa.Column('email', sa.String(), nullable=True),
+    sa.Column('username', sa.String(), nullable=True),
     sa.Column('name', sa.String(), nullable=True),
+    sa.Column('password_hash', sa.String(), nullable=True),
     sa.Column('role', sa.String(), nullable=True),
+    sa.Column('settings', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_oidc_id'), 'users', ['oidc_id'], unique=True)
+    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     op.create_table('applications',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
+    sa.Column('icon', sa.String(), nullable=True),
+    sa.Column('color', sa.String(), nullable=True),
     sa.Column('secret', sa.Text(), nullable=True),
     sa.Column('backup_key', sa.String(), nullable=True),
+    sa.Column('category', sa.String(), nullable=True),
+    sa.Column('favorite', sa.Boolean(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
@@ -45,6 +53,23 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_applications_id'), 'applications', ['id'], unique=False)
     op.create_index(op.f('ix_applications_name'), 'applications', ['name'], unique=False)
+    op.create_table('global_settings',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('login_page_theme', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('smtp_config',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('enabled', sa.Boolean(), nullable=True),
+    sa.Column('host', sa.String(), nullable=True),
+    sa.Column('port', sa.Integer(), nullable=True),
+    sa.Column('username', sa.String(), nullable=True),
+    sa.Column('password', sa.String(), nullable=True),
+    sa.Column('from_email', sa.String(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     # ### end Alembic commands ###
 
 

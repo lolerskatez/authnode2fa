@@ -1,7 +1,7 @@
 """Add color column to applications table
 
-Revision ID: 004
-Revises: 003
+Revision ID: 004_add_color_column
+Revises: 003_add_category_and_favorite
 Create Date: 2025-12-26 12:00:00.000000
 
 """
@@ -10,14 +10,15 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '004'
-down_revision = '003'
+revision = '004_add_color_column'
+down_revision = '003_add_category_and_favorite'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('applications', sa.Column('color', sa.String(), nullable=True, default='#6B46C1'))
+    # Color column already added in initial migration
+    pass
 
 
 def downgrade() -> None:

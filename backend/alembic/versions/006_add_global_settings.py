@@ -17,14 +17,8 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        'global_settings',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('login_page_theme', sa.String(), nullable=True, server_default='light'),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('updated_at', sa.DateTime(), nullable=True),
-        sa.PrimaryKeyConstraint('id')
-    )
+    # Global settings table already added in initial migration
+    pass
 
 
 def downgrade():

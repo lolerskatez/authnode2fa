@@ -2,21 +2,29 @@ import React, { useState, useEffect } from 'react';
 import './Auth.css';
 
 function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings }) {
-  // Theme-aware color helpers
+  // Theme-aware color helpers - uses CSS variables from App.css
   const getThemeColors = () => {
+    const root = document.documentElement.style;
+    const getVar = (varName) => {
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    };
+    
     const isDark = appSettings?.theme === 'dark';
     return {
-      primary: isDark ? '#e2e8f0' : '#2d3748',
-      secondary: isDark ? '#cbd5e0' : '#718096',
-      tertiary: isDark ? '#a0aec0' : '#4a5568',
-      accent: isDark ? '#4299e1' : '#4299e1',
-      border: isDark ? '#4a5568' : '#e0e6ed',
-      background: isDark ? '#2d3748' : '#ffffff',
-      backgroundSecondary: isDark ? '#1a202c' : '#f7fafc',
+      primary: getVar('--text-primary'),
+      secondary: getVar('--text-secondary'),
+      tertiary: getVar('--text-secondary'),
+      accent: getVar('--accent-color'),
+      border: getVar('--border-color'),
+      background: getVar('--bg-primary'),
+      backgroundSecondary: getVar('--bg-secondary'),
       adminBg: isDark ? '#1e3a5f' : '#bee3f8',
       adminText: isDark ? '#63b3ed' : '#2c5aa0',
       userBg: isDark ? '#22433a' : '#f0fff4',
-      userText: isDark ? '#68d391' : '#22543d'
+      userText: isDark ? '#68d391' : '#22543d',
+      success: isDark ? '#48bb78' : '#48bb78',
+      danger: isDark ? '#f56565' : '#f56565',
+      dangerLight: isDark ? '#9b2c2c' : '#fed7d7'
     };
   };
 
@@ -254,11 +262,11 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         {error && (
           <div style={{
             padding: '12px 16px',
-            backgroundColor: '#fed7d7',
-            color: '#c53030',
+            backgroundColor: colors.dangerLight,
+            color: colors.danger,
             borderRadius: '6px',
             marginBottom: '16px',
-            border: '1px solid #fc8181'
+            border: `1px solid ${colors.danger}`
           }}>
             {error}
           </div>
@@ -269,7 +277,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             onClick={handleAddUser}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#2c5aa0',
+              backgroundColor: colors.accent,
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -288,7 +296,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             onClick={loadUsers}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#2f855a',
+              backgroundColor: colors.success,
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -309,7 +317,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           <div style={{
             padding: '40px',
             textAlign: 'center',
-            color: '#718096'
+            color: colors.secondary
           }}>
             <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', marginBottom: '10px', display: 'block' }}></i>
             Loading users...
@@ -318,9 +326,9 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           <div style={{
             padding: '40px',
             textAlign: 'center',
-            backgroundColor: '#f5f7fa',
+            backgroundColor: colors.backgroundSecondary,
             borderRadius: '8px',
-            color: '#718096'
+            color: colors.secondary
           }}>
             <p>No users found</p>
           </div>
@@ -387,7 +395,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         onClick={() => handleEditClick(user)}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: '#2c5aa0',
+                          backgroundColor: colors.accent,
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -409,7 +417,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         {showForm && (
           <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div className="modal" style={{ backgroundColor: colors.background, borderRadius: '8px', padding: '0', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflow: 'auto', border: `1px solid ${colors.border}` }}>
-              <div className="modal-header" style={{ padding: '20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2c5282' }}>
+              <div className="modal-header" style={{ padding: '20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.accent }}>
                 <h3 style={{ margin: 0, color: 'white' }}>
                   {editingUser ? `Edit ${editingUser.name}` : 'Add New User'}
                 </h3>
@@ -611,7 +619,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           top: '20px',
           right: '20px',
           padding: '12px 24px',
-          backgroundColor: toast.type === 'success' ? '#48bb78' : '#f56565',
+          backgroundColor: toast.type === 'success' ? colors.success : colors.danger,
           color: 'white',
           borderRadius: '6px',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -639,11 +647,11 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           {error && (
             <div style={{
               padding: '12px 16px',
-              backgroundColor: '#fed7d7',
-              color: '#c53030',
+              backgroundColor: colors.dangerLight,
+              color: colors.danger,
               borderRadius: '6px',
               marginBottom: '16px',
-              border: '1px solid #fc8181'
+              border: `1px solid ${colors.danger}`
             }}>
               {error}
             </div>
@@ -654,7 +662,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
               onClick={handleAddUser}
               style={{
                 padding: '10px 20px',
-                backgroundColor: '#2c5aa0',
+                backgroundColor: colors.accent,
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -673,7 +681,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
               onClick={loadUsers}
               style={{
                 padding: '10px 20px',
-                backgroundColor: '#2f855a',
+                backgroundColor: colors.success,
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -694,7 +702,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             <div style={{
               padding: '40px',
               textAlign: 'center',
-              color: '#718096'
+              color: colors.secondary
             }}>
               <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', marginBottom: '10px', display: 'block' }}></i>
               Loading users...
@@ -703,9 +711,9 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             <div style={{
               padding: '40px',
               textAlign: 'center',
-              backgroundColor: '#f5f7fa',
+              backgroundColor: colors.backgroundSecondary,
               borderRadius: '8px',
-              color: '#718096'
+              color: colors.secondary
             }}>
               <p>No users found</p>
             </div>
@@ -717,24 +725,24 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                 fontSize: '14px'
               }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #e0e6ed' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#2d3748' }}>User</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#2d3748' }}>Email</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#2d3748' }}>Role</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#2d3748' }}>Created</th>
-                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: '#2d3748' }}>Actions</th>
+                  <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>User</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Email</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Role</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Created</th>
+                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: colors.primary }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map(user => (
-                    <tr key={user.id} style={{ borderBottom: '1px solid #e0e6ed' }}>
+                    <tr key={user.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
                       <td style={{ padding: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
                             width: '36px',
                             height: '36px',
                             borderRadius: '50%',
-                            backgroundColor: '#cbd5e0',
+                            backgroundColor: colors.secondary,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -745,17 +753,17 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                             {getUserInitials(user.name)}
                           </div>
                           <div>
-                            <div style={{ fontWeight: '500', color: '#2d3748' }}>{user.name || 'Unknown'}</div>
-                            <div style={{ fontSize: '12px', color: '#718096' }}>@{user.username}</div>
+                            <div style={{ fontWeight: '500', color: colors.primary }}>{user.name || 'Unknown'}</div>
+                            <div style={{ fontSize: '12px', color: colors.secondary }}>@{user.username}</div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px', color: '#4a5568' }}>{user.email}</td>
+                      <td style={{ padding: '12px', color: colors.primary }}>{user.email}</td>
                       <td style={{ padding: '12px' }}>
                         <span style={{
                           padding: '4px 12px',
-                          backgroundColor: user.role === 'admin' ? '#bee3f8' : '#f0fff4',
-                          color: user.role === 'admin' ? '#2c5aa0' : '#22543d',
+                          backgroundColor: user.role === 'admin' ? colors.adminBg : colors.userBg,
+                          color: user.role === 'admin' ? colors.adminText : colors.userText,
                           borderRadius: '4px',
                           fontSize: '12px',
                           fontWeight: '500',
@@ -764,7 +772,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                           {user.role}
                         </span>
                       </td>
-                      <td style={{ padding: '12px', color: '#718096', fontSize: '12px' }}>
+                      <td style={{ padding: '12px', color: colors.secondary, fontSize: '12px' }}>
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
                       <td style={{ padding: '12px', textAlign: 'center' }}>
@@ -772,7 +780,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                           onClick={() => handleEditClick(user)}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: '#4299e1',
+                            backgroundColor: colors.accent,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -794,7 +802,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           {showForm && (
             <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
               <div className="modal" style={{ backgroundColor: colors.background, borderRadius: '8px', padding: '0', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflow: 'auto', border: `1px solid ${colors.border}` }}>
-                <div className="modal-header" style={{ padding: '20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2c5282' }}>
+                <div className="modal-header" style={{ padding: '20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.accent }}>
                   <h3 style={{ margin: 0, color: 'white' }}>
                     {editingUser ? `Edit ${editingUser.name}` : 'Add New User'}
                   </h3>
