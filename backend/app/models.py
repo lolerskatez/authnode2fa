@@ -90,6 +90,7 @@ class OIDCConfig(Base):
     jwks_uri = Column(String, nullable=True)
     logout_endpoint = Column(String, nullable=True)
     redirect_uri = Column(String, nullable=True)
+    post_logout_redirect_uri = Column(String, nullable=True)
     scope = Column(String, default="openid email profile")
     admin_groups = Column(JSON, default=["administrators", "admins"])  # Groups that map to admin role
     user_groups = Column(JSON, default=["users"])  # Groups that map to user role

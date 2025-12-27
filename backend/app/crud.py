@@ -105,7 +105,25 @@ def update_global_settings(db: Session, login_page_theme: str):
 
 def get_oidc_config(db: Session):
     """Get or create OIDC configuration"""
-    config = db.query(models.OIDCConfig).first()
+    try:
+        config = db.query(models.OIDCConfig).first()
+    except Exception as e:
+        # If there's an error (like missing column), recreate the table
+        if "no such column" in str(e).lower():
+            import sqlite3
+            conn = db.get_bind().raw_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute("ALTER TABLE oidc_config ADD COLUMN post_logout_redirect_uri VARCHAR")
+                conn.commit()
+                cursor.close()
+                config = db.query(models.OIDCConfig).first()
+            except sqlite3.OperationalError:
+                # If table doesn't exist or other error, just continue
+                config = None
+        else:
+            config = None
+    
     if not config:
         config = models.OIDCConfig()
         db.add(config)

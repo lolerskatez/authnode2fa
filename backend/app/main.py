@@ -5,10 +5,10 @@ from .database import engine
 from . import models
 
 # Create tables without startup
-try:
-    models.Base.metadata.create_all(bind=engine)
-except Exception as e:
-    print(f"Warning: Could not create tables: {e}")
+# try:
+#     models.Base.metadata.create_all(bind=engine)
+# except Exception as e:
+#     print(f"Warning: Could not create tables: {e}")
 
 app = FastAPI(title="2FA Manager", version="1.0.0")
 

@@ -140,6 +140,7 @@ class OIDCConfigBase(BaseModel):
     jwks_uri: Optional[str] = None
     logout_endpoint: Optional[str] = None
     redirect_uri: Optional[str] = None
+    post_logout_redirect_uri: Optional[str] = None
     scope: str = "openid email profile"
     admin_groups: List[str] = ["administrators", "admins"]
     user_groups: List[str] = ["users"]
@@ -161,6 +162,7 @@ class OIDCConfigUpdate(BaseModel):
     jwks_uri: Optional[str] = None
     logout_endpoint: Optional[str] = None
     redirect_uri: Optional[str] = None
+    post_logout_redirect_uri: Optional[str] = None
     scope: Optional[str] = None
     admin_groups: Optional[List[str]] = None
     user_groups: Optional[List[str]] = None

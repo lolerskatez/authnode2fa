@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth
@@ -123,18 +123,32 @@ def get_oidc_config(db: Session = Depends(get_db)):
     }
 
 @router.get("/oidc/login")
-async def oidc_login(db: Session = Depends(get_db)):
+async def oidc_login(request: Request, db: Session = Depends(get_db)):
     """Initiate OIDC login flow"""
     config = crud.get_oidc_config(db)
     if not config.enabled:
         raise HTTPException(status_code=400, detail="OIDC not enabled")
+    
+    # Always use https://{host} for redirect_uri (Cloudflare sets Host header)
+    host = request.headers.get('host')
+    if host and host not in ['localhost', '127.0.0.1']:
+        # Remove port if present
+        if ':' in host:
+            parts = host.rsplit(':', 1)
+            if parts[1].isdigit():
+                host = parts[0]
+        origin = f"https://{host}"
+    else:
+        origin = request.headers.get('origin') or f"{request.url.scheme}://{request.url.netloc}"
+    # Build dynamic redirect URI based on the current domain
+    redirect_uri = f"{origin}/api/auth/oidc/callback"
     
     # Build authorization URL
     params = {
         'client_id': config.client_id,
         'response_type': 'code',
         'scope': config.scope,
-        'redirect_uri': config.redirect_uri,
+        'redirect_uri': redirect_uri,
         'state': 'random_state'  # In production, use proper state management
     }
     
@@ -142,11 +156,25 @@ async def oidc_login(db: Session = Depends(get_db)):
     return {"authorization_url": auth_url}
 
 @router.post("/oidc/callback")
-async def oidc_callback(code: str, state: str, db: Session = Depends(get_db)):
+async def oidc_callback(code: str, state: str, request: Request, db: Session = Depends(get_db)):
     """Handle OIDC callback"""
     config = crud.get_oidc_config(db)
     if not config.enabled:
         raise HTTPException(status_code=400, detail="OIDC not enabled")
+    
+    # Always use https://{host} for redirect_uri (Cloudflare sets Host header)
+    host = request.headers.get('host')
+    if host and host not in ['localhost', '127.0.0.1']:
+        # Remove port if present
+        if ':' in host:
+            parts = host.rsplit(':', 1)
+            if parts[1].isdigit():
+                host = parts[0]
+        origin = f"https://{host}"
+    else:
+        origin = request.headers.get('origin') or f"{request.url.scheme}://{request.url.netloc}"
+    # Build dynamic redirect URI to match the login request
+    redirect_uri = f"{origin}/api/auth/oidc/callback"
     
     # Exchange code for token
     async with AsyncOAuth2Client(
@@ -157,7 +185,7 @@ async def oidc_callback(code: str, state: str, db: Session = Depends(get_db)):
         token = await client.fetch_token(
             url=config.token_endpoint,
             code=code,
-            redirect_uri=config.redirect_uri
+            redirect_uri=redirect_uri
         )
         
         # Get user info
@@ -202,3 +230,34 @@ async def oidc_logout(db: Session = Depends(get_db)):
         return {"logout_url": None}
     
     return {"logout_url": config.logout_endpoint}
+
+@router.get("/oidc/discover")
+async def oidc_discover_endpoints(issuer_url: str):
+    """Discover OIDC endpoints from provider's .well-known configuration"""
+    import httpx
+    
+    try:
+        # Construct discovery URL
+        discovery_url = issuer_url.rstrip('/') + '/.well-known/openid-configuration'
+        
+        # Make request to discovery endpoint
+        async with httpx.AsyncClient() as client:
+            response = await client.get(discovery_url)
+            response.raise_for_status()
+            
+        config = response.json()
+        
+        # Return relevant endpoints
+        return {
+            "success": True,
+            "authorization_endpoint": config.get("authorization_endpoint"),
+            "token_endpoint": config.get("token_endpoint"),
+            "userinfo_endpoint": config.get("userinfo_endpoint"),
+            "jwks_uri": config.get("jwks_uri"),
+            "end_session_endpoint": config.get("end_session_endpoint")
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
