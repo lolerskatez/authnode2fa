@@ -24,8 +24,9 @@ def create_user(db: Session, user: schemas.UserCreate):
         email=user.email,
         username=user.username,
         name=user.name,
-        password_hash=auth.hash_password(user.password),
-        role=role
+        password_hash=auth.hash_password(user.password) if user.password else None,
+        role=role,
+        is_sso_user=False
     )
     db.add(db_user)
     db.commit()
@@ -36,6 +37,8 @@ def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email)
     if not user:
         return None
+    if user.is_sso_user:
+        return None  # SSO users cannot login locally
     if not auth.verify_password(password, user.password_hash):
         return None
     return user
@@ -99,3 +102,62 @@ def update_global_settings(db: Session, login_page_theme: str):
     db.commit()
     db.refresh(settings)
     return settings
+
+def get_oidc_config(db: Session):
+    """Get or create OIDC configuration"""
+    config = db.query(models.OIDCConfig).first()
+    if not config:
+        config = models.OIDCConfig()
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    return config
+
+def update_oidc_config(db: Session, config_update: schemas.OIDCConfigUpdate):
+    """Update OIDC configuration"""
+    config = get_oidc_config(db)
+    for key, value in config_update.dict().items():
+        if value is not None:
+            setattr(config, key, value)
+    db.commit()
+    db.refresh(config)
+    return config
+
+def get_user_by_oidc_id(db: Session, oidc_id: str):
+    """Get user by OIDC ID"""
+    return db.query(models.User).filter(models.User.oidc_id == oidc_id).first()
+
+def create_sso_user(db: Session, oidc_id: str, email: str, name: str, username: str, groups: list = None):
+    """Create a new SSO user"""
+    if groups is None:
+        groups = []
+    
+    # Determine role based on groups
+    config = get_oidc_config(db)
+    role = "user"  # default
+    if any(group in config.admin_groups for group in groups):
+        role = "admin"
+    
+    db_user = models.User(
+        email=email,
+        username=username,
+        name=name,
+        password_hash=None,  # No password for SSO users
+        oidc_id=oidc_id,
+        is_sso_user=True,
+        role=role
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def link_existing_user_to_oidc(db: Session, user_id: int, oidc_id: str):
+    """Link an existing user to OIDC"""
+    user = get_user(db, user_id)
+    if user:
+        user.oidc_id = oidc_id
+        user.is_sso_user = True
+        db.commit()
+        db.refresh(user)
+    return user

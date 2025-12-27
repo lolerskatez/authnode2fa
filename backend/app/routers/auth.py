@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth
 from datetime import timedelta
+from authlib.integrations.httpx_client import AsyncOAuth2Client
+import os
+from urllib.parse import urlencode
 
 router = APIRouter()
 
@@ -104,3 +107,98 @@ def get_login_page_theme(db: Session = Depends(get_db)):
     from .. import crud
     settings = crud.get_global_settings(db)
     return {"theme": settings.login_page_theme}
+
+@router.get("/oidc/config")
+def get_oidc_config(db: Session = Depends(get_db)):
+    """Get OIDC configuration (public endpoint for frontend)"""
+    config = crud.get_oidc_config(db)
+    if not config.enabled:
+        return {"enabled": False}
+    return {
+        "enabled": config.enabled,
+        "provider_name": config.provider_name,
+        "authorization_endpoint": config.authorization_endpoint,
+        "scope": config.scope,
+        "client_id": config.client_id
+    }
+
+@router.get("/oidc/login")
+async def oidc_login(db: Session = Depends(get_db)):
+    """Initiate OIDC login flow"""
+    config = crud.get_oidc_config(db)
+    if not config.enabled:
+        raise HTTPException(status_code=400, detail="OIDC not enabled")
+    
+    # Build authorization URL
+    params = {
+        'client_id': config.client_id,
+        'response_type': 'code',
+        'scope': config.scope,
+        'redirect_uri': config.redirect_uri,
+        'state': 'random_state'  # In production, use proper state management
+    }
+    
+    auth_url = f"{config.authorization_endpoint}?{urlencode(params)}"
+    return {"authorization_url": auth_url}
+
+@router.post("/oidc/callback")
+async def oidc_callback(code: str, state: str, db: Session = Depends(get_db)):
+    """Handle OIDC callback"""
+    config = crud.get_oidc_config(db)
+    if not config.enabled:
+        raise HTTPException(status_code=400, detail="OIDC not enabled")
+    
+    # Exchange code for token
+    async with AsyncOAuth2Client(
+        client_id=config.client_id,
+        client_secret=config.client_secret,
+        token_endpoint=config.token_endpoint,
+    ) as client:
+        token = await client.fetch_token(
+            url=config.token_endpoint,
+            code=code,
+            redirect_uri=config.redirect_uri
+        )
+        
+        # Get user info
+        user_info = await client.get(config.userinfo_endpoint)
+        user_data = user_info.json()
+        
+        # Extract user information
+        oidc_id = user_data.get('sub')
+        email = user_data.get('email')
+        name = user_data.get('name', user_data.get('preferred_username', ''))
+        username = user_data.get('preferred_username', email.split('@')[0] if email else oidc_id)
+        groups = user_data.get('groups', [])
+        
+        if not oidc_id or not email:
+            raise HTTPException(status_code=400, detail="Invalid user data from OIDC provider")
+        
+        # Check if user exists
+        user = crud.get_user_by_oidc_id(db, oidc_id)
+        if not user:
+            # Check if email already exists
+            existing_user = crud.get_user_by_email(db, email)
+            if existing_user:
+                # Link existing user to OIDC
+                user = crud.link_existing_user_to_oidc(db, existing_user.id, oidc_id)
+            else:
+                # Create new SSO user
+                user = crud.create_sso_user(db, oidc_id, email, name, username, groups)
+        
+        # Generate token
+        access_token = auth.create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/oidc/logout")
+async def oidc_logout(db: Session = Depends(get_db)):
+    """Get OIDC logout URL"""
+    config = crud.get_oidc_config(db)
+    if not config.enabled or not config.logout_endpoint:
+        return {"logout_url": None}
+    
+    return {"logout_url": config.logout_endpoint}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 class UserBase(BaseModel):
@@ -20,6 +20,7 @@ class Token(BaseModel):
 
 class User(UserBase):
     id: int
+    is_sso_user: bool
     role: str
     settings: Optional[Dict[str, Any]] = None
     created_at: datetime
@@ -119,6 +120,53 @@ class GlobalSettingsCreate(GlobalSettingsBase):
 
 
 class GlobalSettings(GlobalSettingsBase):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OIDCConfigBase(BaseModel):
+    enabled: bool = False
+    provider_name: str = "Custom OIDC Provider"
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    issuer_url: Optional[str] = None
+    authorization_endpoint: Optional[str] = None
+    token_endpoint: Optional[str] = None
+    userinfo_endpoint: Optional[str] = None
+    jwks_uri: Optional[str] = None
+    logout_endpoint: Optional[str] = None
+    redirect_uri: Optional[str] = None
+    scope: str = "openid email profile"
+    admin_groups: List[str] = ["administrators", "admins"]
+    user_groups: List[str] = ["users"]
+
+
+class OIDCConfigCreate(OIDCConfigBase):
+    pass
+
+
+class OIDCConfigUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    provider_name: Optional[str] = None
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    issuer_url: Optional[str] = None
+    authorization_endpoint: Optional[str] = None
+    token_endpoint: Optional[str] = None
+    userinfo_endpoint: Optional[str] = None
+    jwks_uri: Optional[str] = None
+    logout_endpoint: Optional[str] = None
+    redirect_uri: Optional[str] = None
+    scope: Optional[str] = None
+    admin_groups: Optional[List[str]] = None
+    user_groups: Optional[List[str]] = None
+
+
+class OIDCConfig(OIDCConfigBase):
     id: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

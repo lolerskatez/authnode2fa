@@ -143,3 +143,24 @@ def update_global_settings(
     from .. import crud
     settings = crud.update_global_settings(db, settings_update.login_page_theme)
     return settings
+
+@router.get("/oidc", response_model=schemas.OIDCConfig)
+def get_oidc_config(
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get OIDC configuration (admin only)"""
+    from .. import crud
+    config = crud.get_oidc_config(db)
+    return config
+
+@router.put("/oidc", response_model=schemas.OIDCConfig)
+def update_oidc_config(
+    config_update: schemas.OIDCConfigUpdate,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Update OIDC configuration (admin only)"""
+    from .. import crud
+    config = crud.update_oidc_config(db, config_update)
+    return config

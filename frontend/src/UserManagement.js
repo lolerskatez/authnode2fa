@@ -344,6 +344,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>User</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Email</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Role</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Type</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Created</th>
                   <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: colors.primary }}>Actions</th>
                 </tr>
@@ -385,6 +386,19 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         display: 'inline-block'
                       }}>
                         {user.role}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        backgroundColor: user.is_sso_user ? '#e6f3ff' : '#f0f9ff',
+                        color: user.is_sso_user ? '#0066cc' : '#0066cc',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        display: 'inline-block'
+                      }}>
+                        {user.is_sso_user ? 'SSO' : 'Local'}
                       </span>
                     </td>
                     <td style={{ padding: '12px', color: colors.secondary, fontSize: '12px' }}>
@@ -729,6 +743,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                     <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>User</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Email</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Role</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Type</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Created</th>
                     <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: colors.primary }}>Actions</th>
                   </tr>
@@ -770,6 +785,19 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                           display: 'inline-block'
                         }}>
                           {user.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          backgroundColor: user.is_sso_user ? '#e6f3ff' : '#f0f9ff',
+                          color: user.is_sso_user ? '#0066cc' : '#0066cc',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          display: 'inline-block'
+                        }}>
+                          {user.is_sso_user ? 'SSO' : 'Local'}
                         </span>
                       </td>
                       <td style={{ padding: '12px', color: colors.secondary, fontSize: '12px' }}>

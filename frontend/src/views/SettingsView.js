@@ -52,6 +52,23 @@ const SettingsView = ({
   const [smtpLoading, setSmtpLoading] = useState(false);
   const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light' });
   const [globalSettingsLoading, setGlobalSettingsLoading] = useState(false);
+  const [oidcSettings, setOidcSettings] = useState({
+    enabled: false,
+    provider_name: 'Custom OIDC Provider',
+    client_id: '',
+    client_secret: '',
+    issuer_url: '',
+    authorization_endpoint: '',
+    token_endpoint: '',
+    userinfo_endpoint: '',
+    jwks_uri: '',
+    logout_endpoint: '',
+    redirect_uri: '',
+    scope: 'openid email profile',
+    admin_groups: ['administrators', 'admins'],
+    user_groups: ['users']
+  });
+  const [oidcLoading, setOidcLoading] = useState(false);
 
   // Load SMTP settings from backend if admin
   useEffect(() => {
@@ -90,6 +107,32 @@ const SettingsView = ({
         })
         .catch(err => {
           console.log('Global settings not available yet:', err.message);
+        });
+
+      // Load OIDC settings
+      axios.get('/api/admin/oidc')
+        .then(res => {
+          if (res.data) {
+            setOidcSettings({
+              enabled: res.data.enabled || false,
+              provider_name: res.data.provider_name || 'Custom OIDC Provider',
+              client_id: res.data.client_id || '',
+              client_secret: res.data.client_secret || '',
+              issuer_url: res.data.issuer_url || '',
+              authorization_endpoint: res.data.authorization_endpoint || '',
+              token_endpoint: res.data.token_endpoint || '',
+              userinfo_endpoint: res.data.userinfo_endpoint || '',
+              jwks_uri: res.data.jwks_uri || '',
+              logout_endpoint: res.data.logout_endpoint || '',
+              redirect_uri: res.data.redirect_uri || '',
+              scope: res.data.scope || 'openid email profile',
+              admin_groups: res.data.admin_groups || ['administrators', 'admins'],
+              user_groups: res.data.user_groups || ['users']
+            });
+          }
+        })
+        .catch(err => {
+          console.log('OIDC settings not available yet:', err.message);
         });
     }
   }, [currentUser]);
@@ -188,6 +231,44 @@ const SettingsView = ({
       }
     } finally {
       setSmtpLoading(false);
+    }
+  };
+
+  const handleOidcChange = (key, value) => {
+    setOidcSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleSaveOidc = async () => {
+    try {
+      setOidcLoading(true);
+      await axios.put('/api/admin/oidc', {
+        enabled: oidcSettings.enabled,
+        provider_name: oidcSettings.provider_name,
+        client_id: oidcSettings.client_id,
+        client_secret: oidcSettings.client_secret,
+        issuer_url: oidcSettings.issuer_url,
+        authorization_endpoint: oidcSettings.authorization_endpoint,
+        token_endpoint: oidcSettings.token_endpoint,
+        userinfo_endpoint: oidcSettings.userinfo_endpoint,
+        jwks_uri: oidcSettings.jwks_uri,
+        logout_endpoint: oidcSettings.logout_endpoint,
+        redirect_uri: oidcSettings.redirect_uri,
+        scope: oidcSettings.scope,
+        admin_groups: oidcSettings.admin_groups,
+        user_groups: oidcSettings.user_groups
+      });
+      showToast('OIDC settings saved successfully');
+    } catch (error) {
+      if (error.response?.status === 404) {
+        showToast('OIDC endpoint not yet available - backend not implemented');
+      } else {
+        showToast(error.response?.data?.detail || 'Failed to save OIDC settings');
+      }
+    } finally {
+      setOidcLoading(false);
     }
   };
 
@@ -306,6 +387,26 @@ const SettingsView = ({
               }}
             >
               <i className="fas fa-envelope"></i> SMTP
+            </button>
+          )}
+          {currentUser && currentUser.role === 'admin' && (
+            <button
+              onClick={() => onTabChange('oidc')}
+              style={{
+                padding: '12px 20px',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderBottom: activeTab === 'oidc' ? `3px solid ${colors.accent}` : 'none',
+                backgroundColor: 'transparent',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: activeTab === 'oidc' ? '600' : '500',
+                color: activeTab === 'oidc' ? colors.accent : colors.primary,
+                transition: 'all 0.2s'
+              }}
+            >
+              <i className="fas fa-key"></i> OIDC SSO
             </button>
           )}
           {currentUser && currentUser.role === 'admin' && (
@@ -983,6 +1084,479 @@ const SettingsView = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* OIDC SSO Configuration Tab */}
+        {activeTab === 'oidc' && currentUser && currentUser.role === 'admin' && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+            gap: '20px'
+          }}>
+            {/* OIDC Settings Card */}
+            <div style={{
+              backgroundColor: colors.background,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+              padding: '20px'
+            }}>
+              <h3 style={{ marginBottom: '16px', color: colors.primary }}>
+                <i className="fas fa-key" style={{ marginRight: '8px', color: colors.accent }}></i>
+                OIDC SSO Configuration
+              </h3>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '10px',
+                  backgroundColor: colors.backgroundSecondary,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: '16px'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={oidcSettings.enabled}
+                    onChange={(e) => handleOidcChange('enabled', e.target.checked)}
+                    style={{ marginRight: '8px', cursor: 'pointer', width: '18px', height: '18px' }}
+                  />
+                  <span style={{ color: colors.primary, fontWeight: '500' }}>Enable OIDC SSO</span>
+                </label>
+              </div>
+
+              {oidcSettings.enabled && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: colors.primary,
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      Provider Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Custom OIDC Provider"
+                      value={oidcSettings.provider_name}
+                      onChange={(e) => handleOidcChange('provider_name', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${colors.border}`,
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        backgroundColor: colors.background,
+                        color: colors.primary
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        Client ID
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="your-client-id"
+                        value={oidcSettings.client_id}
+                        onChange={(e) => handleOidcChange('client_id', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        Client Secret
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={oidcSettings.client_secret}
+                        onChange={(e) => handleOidcChange('client_secret', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: colors.primary,
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      Issuer URL
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://your-oidc-provider.com"
+                      value={oidcSettings.issuer_url}
+                      onChange={(e) => handleOidcChange('issuer_url', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${colors.border}`,
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        backgroundColor: colors.background,
+                        color: colors.primary
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: colors.primary,
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      Authorization Endpoint
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://your-oidc-provider.com/oauth2/authorize"
+                      value={oidcSettings.authorization_endpoint}
+                      onChange={(e) => handleOidcChange('authorization_endpoint', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${colors.border}`,
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        backgroundColor: colors.background,
+                        color: colors.primary
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        Token Endpoint
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://your-oidc-provider.com/oauth2/token"
+                        value={oidcSettings.token_endpoint}
+                        onChange={(e) => handleOidcChange('token_endpoint', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        UserInfo Endpoint
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://your-oidc-provider.com/oauth2/userinfo"
+                        value={oidcSettings.userinfo_endpoint}
+                        onChange={(e) => handleOidcChange('userinfo_endpoint', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: colors.primary,
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      JWKS URI
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://your-oidc-provider.com/oauth2/jwks"
+                      value={oidcSettings.jwks_uri}
+                      onChange={(e) => handleOidcChange('jwks_uri', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${colors.border}`,
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        backgroundColor: colors.background,
+                        color: colors.primary
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        Logout Endpoint
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://your-oidc-provider.com/oauth2/logout"
+                        value={oidcSettings.logout_endpoint}
+                        onChange={(e) => handleOidcChange('logout_endpoint', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        Redirect URI
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="http://localhost:8040/api/auth/oidc/callback"
+                        value={oidcSettings.redirect_uri}
+                        onChange={(e) => handleOidcChange('redirect_uri', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: colors.primary,
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      Scope
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="openid email profile"
+                      value={oidcSettings.scope}
+                      onChange={(e) => handleOidcChange('scope', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${colors.border}`,
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        backgroundColor: colors.background,
+                        color: colors.primary
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        Admin Groups (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="administrators,admins"
+                        value={oidcSettings.admin_groups.join(',')}
+                        onChange={(e) => handleOidcChange('admin_groups', e.target.value.split(',').map(s => s.trim()))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        color: colors.primary,
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}>
+                        User Groups (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="users"
+                        value={oidcSettings.user_groups.join(',')}
+                        onChange={(e) => handleOidcChange('user_groups', e.target.value.split(',').map(s => s.trim()))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.border}`,
+                          fontSize: '14px',
+                          boxSizing: 'border-box',
+                          backgroundColor: colors.background,
+                          color: colors.primary
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '16px' }}>
+                    <button
+                      onClick={handleSaveOidc}
+                      disabled={oidcLoading}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: colors.accent,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: oidcLoading ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s',
+                        opacity: oidcLoading ? 0.6 : 1
+                      }}
+                      onMouseOver={(e) => !oidcLoading && (e.target.style.backgroundColor = '#3651d4')}
+                      onMouseOut={(e) => !oidcLoading && (e.target.style.backgroundColor = colors.accent)}
+                    >
+                      <i className="fas fa-save" style={{ marginRight: '6px' }}></i>
+                      Save Settings
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {oidcSettings.enabled && (
+                <div style={{
+                  backgroundColor: colors.infoLight,
+                  border: `1px solid ${colors.infoBorder}`,
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontSize: '13px',
+                  color: colors.info
+                }}>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
+                    <strong>Note:</strong> OIDC SSO is now enabled. Users can login using the SSO button on the login page.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    SSO users will be created automatically and cannot login with passwords.
+                  </p>
+                </div>
+              )}
+
+              {!oidcSettings.enabled && (
+                <div style={{
+                  backgroundColor: colors.warningLight,
+                  border: `1px solid ${colors.warningBorder}`,
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontSize: '13px',
+                  color: colors.warning
+                }}>
+                  <p style={{ margin: 0 }}>
+                    <i className="fas fa-exclamation-triangle" style={{ marginRight: '6px' }}></i>
+                    <strong>Disabled:</strong> OIDC SSO is currently disabled.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

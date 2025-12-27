@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './Auth.css';
 
@@ -16,6 +16,31 @@ function Auth({ onLoginSuccess }) {
   const [isInitialSetup, setIsInitialSetup] = useState(false);
   const [checkingUsers, setCheckingUsers] = useState(true);
   const [loginPageTheme, setLoginPageTheme] = useState('light');
+  const [oidcConfig, setOidcConfig] = useState(null);
+  const [ssoLoading, setSsoLoading] = useState(false);
+
+  const handleOidcCallback = useCallback(async (code, state) => {
+    try {
+      setSsoLoading(true);
+      setError('');
+
+      const res = await axios.post('/api/auth/oidc/callback', { code, state });
+      const token = res.data.access_token;
+
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      onLoginSuccess(token);
+    } catch (err) {
+      setError('SSO authentication failed. Please try again.');
+      console.error('OIDC callback error:', err);
+    } finally {
+      setSsoLoading(false);
+    }
+  }, [onLoginSuccess]);
 
   useEffect(() => {
     // Load login page theme from server
@@ -49,7 +74,32 @@ function Auth({ onLoginSuccess }) {
       }
     };
     checkUsers();
-  }, []);
+
+    // Load OIDC configuration
+    const loadOidcConfig = async () => {
+      try {
+        const res = await axios.get('/api/auth/oidc/config');
+        if (res.data.enabled) {
+          setOidcConfig(res.data);
+        }
+      } catch (err) {
+        // OIDC not configured or disabled
+        setOidcConfig(null);
+      }
+    };
+
+    loadOidcConfig();
+
+    // Check for OIDC callback parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+
+    if (code && state) {
+      // Handle OIDC callback
+      handleOidcCallback(code, state);
+    }
+  }, [handleOidcCallback]);
 
   const applyTheme = (theme) => {
     let effectiveTheme = theme;
@@ -126,6 +176,22 @@ function Auth({ onLoginSuccess }) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSSOLogin = async () => {
+    try {
+      setSsoLoading(true);
+      setError('');
+
+      const res = await axios.get('/api/auth/oidc/login');
+      // Redirect to the authorization URL
+      window.location.href = res.data.authorization_url;
+    } catch (err) {
+      setError('SSO login failed. Please try again.');
+      console.error('SSO login error:', err);
+    } finally {
+      setSsoLoading(false);
     }
   };
 
@@ -258,6 +324,36 @@ function Auth({ onLoginSuccess }) {
               <button type="submit" className="auth-submit" disabled={loading}>
                 {loading ? 'Processing...' : (mode === 'login' ? 'Login' : 'Sign Up')}
               </button>
+
+              {mode === 'login' && oidcConfig && (
+                <>
+                  <div style={{ textAlign: 'center', margin: '16px 0', color: '#666', fontSize: '14px' }}>
+                    or
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSSOLogin}
+                    disabled={ssoLoading}
+                    className="auth-submit"
+                    style={{
+                      backgroundColor: '#4285f4',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '6px',
+                      cursor: ssoLoading ? 'not-allowed' : 'pointer',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      width: '100%',
+                      marginBottom: '16px',
+                      opacity: ssoLoading ? 0.6 : 1
+                    }}
+                  >
+                    <i className="fas fa-key" style={{ marginRight: '8px' }}></i>
+                    {ssoLoading ? 'Redirecting...' : `Login with ${oidcConfig.provider_name}`}
+                  </button>
+                </>
+              )}
             </form>
 
             {!isInitialSetup && (
