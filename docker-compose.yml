@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: authy
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://user:password@db/authy
+      ENCRYPTION_KEY: cYLcVxWRSrY0tUhsDcmJ4jbx0HuYAY34mz42nQ5v3_k=
+    depends_on:
+      - db
+    ports:
+      - "8041:8041"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8040:80"
+
+volumes:
+  postgres_data:
