@@ -1,8 +1,9 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from .routers import users, applications, auth, admin
-from .database import engine
+from .database import engine, SessionLocal
 from . import models
 
 # Create tables without startup
@@ -35,3 +36,24 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 @app.get("/")
 def read_root():
     return {"message": "2FA Manager API"}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring and load balancers"""
+    try:
+        # Test database connection
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {
+            "status": "healthy",
+            "service": "2FA Manager API",
+            "database": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "service": "2FA Manager API",
+            "database": "disconnected",
+            "error": str(e)
+        }, 503

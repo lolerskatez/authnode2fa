@@ -21,7 +21,9 @@ def upgrade():
     op.add_column('users', sa.Column('is_sso_user', sa.Boolean(), nullable=False, server_default='0'))
 
     # Make password_hash nullable for SSO users
-    op.alter_column('users', 'password_hash', existing_type=sa.String(), nullable=True)
+    # Note: SQLite doesn't support ALTER COLUMN directly, this is handled at the application level
+    # For PostgreSQL and other databases, uncomment:
+    # op.alter_column('users', 'password_hash', existing_type=sa.String(), nullable=True)
 
     # Create oidc_config table
     op.create_table('oidc_config',
@@ -54,4 +56,6 @@ def downgrade():
     op.drop_column('users', 'is_sso_user')
 
     # Make password_hash non-nullable again
-    op.alter_column('users', 'password_hash', existing_type=sa.String(), nullable=False)
+    # Note: SQLite doesn't support ALTER COLUMN directly, this is handled at the application level
+    # For PostgreSQL and other databases, uncomment:
+    # op.alter_column('users', 'password_hash', existing_type=sa.String(), nullable=False)

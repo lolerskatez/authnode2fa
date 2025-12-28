@@ -24,41 +24,31 @@ A secure, full-stack web application for managing Two-Factor Authentication (2FA
 
 ## 🛠 Installation
 
-### Quick Start with Docker (Recommended)
+### 🏃 Quick Start - Choose Your Path
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/2fa-manager.git
-   cd 2fa-manager
-   ```
+#### **Fast Track** - Production Ready (10 min)
+**→ See [QUICK_START_PRODUCTION.md](QUICK_START_PRODUCTION.md)**
 
-2. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration (OIDC, SMTP, secrets)
-   ```
+#### **Docker** - Recommended
 
-3. **Configure production environment** (optional):
+1. Clone the repository and configure:
    ```bash
+   git clone https://github.com/lolerskatez/authnode2fa.git
+   cd authnode2fa
    cp .env.docker.example .env.docker
-   # Edit .env.docker with your production configuration
+   # Edit .env.docker with your settings
+   ```
+
+2. Build and run:
+   ```bash
    docker-compose --env-file .env.docker up -d --build
    ```
 
-4. **Run with Docker Compose** (default - development):
-   ```bash
-   docker-compose up --build
-   ```
+3. Access at http://localhost (or your domain after Nginx setup)
 
-5. **Access the application**:
-   - Frontend: http://localhost (or your domain)
-   - API Docs: http://localhost/api/docs
+#### **Local Development**
 
-**For production deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
-
-### Local Development
-
-#### Automated Setup (Recommended)
+Automated setup:
 ```bash
 # Linux/Mac
 ./setup_local.sh
@@ -67,42 +57,37 @@ A secure, full-stack web application for managing Two-Factor Authentication (2FA
 setup_local.bat
 ```
 
-This will:
-- Set up Python virtual environment and install dependencies
-- Configure environment variables
-- Run database migrations
-- Create a test user
-- Install frontend dependencies
-
-#### Manual Setup
-
-##### Backend Setup
+Manual setup:
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Backend
+cd backend && python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-# Configure .env (DATABASE_URL=sqlite:///./authy.db, ENCRYPTION_KEY)
 alembic upgrade head
 python create_test_user.py
 python run_server.py
+
+# Frontend (new terminal)
+cd frontend && npm install && PORT=8040 npm start
 ```
 
-##### Frontend Setup
-```bash
-cd frontend
-npm install
-PORT=8040 npm start
-```
-
-#### Access
+Access at:
 - Frontend: http://localhost:8040
-- Backend API: http://localhost:8041
+- Backend: http://localhost:8041
 - Test user: `test@example.com` / `password123`
+
+## 📚 Documentation
+
+| Guide | Purpose |
+|-------|---------|
+| [QUICK_START_PRODUCTION.md](QUICK_START_PRODUCTION.md) | 10-minute production deployment |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Detailed deployment instructions |
+| [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) | Pre-deployment checklist |
+| [TESTING_RESULTS.md](TESTING_RESULTS.md) | Test results and verification |
 
 ## 🔧 Configuration
 
-Copy `.env.example` to `.env` and configure:
+Configure via environment variables or `.env` files:
 
 - **OIDC Settings**: Client ID, secret, issuer URL
 - **Database**: SQLite path or external DB
