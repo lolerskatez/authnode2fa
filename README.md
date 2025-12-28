@@ -38,14 +38,23 @@ A secure, full-stack web application for managing Two-Factor Authentication (2FA
    # Edit .env with your configuration (OIDC, SMTP, secrets)
    ```
 
-3. **Run with Docker Compose**:
+3. **Configure production environment** (optional):
+   ```bash
+   cp .env.docker.example .env.docker
+   # Edit .env.docker with your production configuration
+   docker-compose --env-file .env.docker up -d --build
+   ```
+
+4. **Run with Docker Compose** (default - development):
    ```bash
    docker-compose up --build
    ```
 
-4. **Access the application**:
-   - Frontend: http://localhost
+5. **Access the application**:
+   - Frontend: http://localhost (or your domain)
    - API Docs: http://localhost/api/docs
+
+**For production deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
 
 ### Local Development
 

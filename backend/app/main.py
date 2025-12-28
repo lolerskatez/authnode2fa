@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import users, applications, auth, admin
@@ -12,9 +13,15 @@ from . import models
 
 app = FastAPI(title="2FA Manager", version="1.0.0")
 
+# Get allowed origins from environment, default to localhost for development
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:8040,http://127.0.0.1:8040,http://localhost:8041,http://127.0.0.1:8041"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8040", "http://127.0.0.1:8040", "http://localhost:8041", "http://127.0.0.1:8041"],  # Frontend and Backend URLs
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

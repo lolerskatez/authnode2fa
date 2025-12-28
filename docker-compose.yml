@@ -2,17 +2,17 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: authy
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB:-authy}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql://user:password@db/authy
-      ENCRYPTION_KEY: cYLcVxWRSrY0tUhsDcmJ4jbx0HuYAY34mz42nQ5v3_k=
+      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db/${POSTGRES_DB:-authy}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-cYLcVxWRSrY0tUhsDcmJ4jbx0HuYAY34mz42nQ5v3_k=}
     depends_on:
       - db
     ports:
