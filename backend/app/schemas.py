@@ -113,6 +113,7 @@ class UserPreferences(UserPreferencesBase):
 
 class GlobalSettingsBase(BaseModel):
     login_page_theme: str = "light"  # light, dark, or auto
+    signup_enabled: bool = True  # Whether signup is allowed on the login page
 
 
 class GlobalSettingsCreate(GlobalSettingsBase):

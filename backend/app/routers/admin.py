@@ -141,7 +141,7 @@ def update_global_settings(
 ):
     """Update global settings (admin only)"""
     from .. import crud
-    settings = crud.update_global_settings(db, settings_update.login_page_theme)
+    settings = crud.update_global_settings(db, settings_update)
     return settings
 
 @router.get("/oidc", response_model=schemas.OIDCConfig)

@@ -71,6 +71,7 @@ class GlobalSettings(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     login_page_theme = Column(String, default="light")  # Theme for login/signup page: light, dark, or auto
+    signup_enabled = Column(Boolean, default=True)  # Whether signup is allowed on the login page
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

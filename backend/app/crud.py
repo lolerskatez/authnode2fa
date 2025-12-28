@@ -95,10 +95,18 @@ def get_global_settings(db: Session):
         db.refresh(settings)
     return settings
 
-def update_global_settings(db: Session, login_page_theme: str):
+def update_global_settings(db: Session, settings_update):
     """Update global settings"""
     settings = get_global_settings(db)
-    settings.login_page_theme = login_page_theme
+    if isinstance(settings_update, dict):
+        for key, value in settings_update.items():
+            if value is not None and hasattr(settings, key):
+                setattr(settings, key, value)
+    else:
+        # Handle schema object
+        for key, value in settings_update.dict(exclude_unset=True).items():
+            if hasattr(settings, key):
+                setattr(settings, key, value)
     db.commit()
     db.refresh(settings)
     return settings

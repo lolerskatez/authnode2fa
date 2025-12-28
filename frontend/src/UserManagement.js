@@ -4,7 +4,6 @@ import './Auth.css';
 function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings }) {
   // Theme-aware color helpers - uses CSS variables from App.css
   const getThemeColors = () => {
-    const root = document.documentElement.style;
     const getVar = (varName) => {
       return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
     };
@@ -58,7 +57,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
       setLoading(true);
       setError('');
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8040/api/users/', {
+      const response = await fetch('/api/users/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -121,7 +120,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
       if (editingUser) {
         // Update existing user
         if (formData.email && formData.email !== editingUser.email) {
-          const emailResponse = await fetch(`http://localhost:8040/api/users/${editingUser.id}/email`, {
+          const emailResponse = await fetch(`/api/users/${editingUser.id}/email`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -133,7 +132,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         }
 
         if (formData.password) {
-          const pwResponse = await fetch(`http://localhost:8040/api/users/${editingUser.id}/password`, {
+          const pwResponse = await fetch(`/api/users/${editingUser.id}/password`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -145,7 +144,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         }
 
         if (formData.role !== editingUser.role) {
-          const roleResponse = await fetch(`http://localhost:8040/api/users/${editingUser.id}/role`, {
+          const roleResponse = await fetch(`/api/users/${editingUser.id}/role`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -159,7 +158,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         showToast('User updated successfully!');
       } else {
         // Create new user
-        const createResponse = await fetch('http://localhost:8040/api/users/', {
+        const createResponse = await fetch('/api/users/', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -210,7 +209,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
     try {
       setError('');
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8040/api/users/${userId}`, {
+      const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

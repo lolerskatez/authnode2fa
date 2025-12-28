@@ -59,7 +59,7 @@ const SettingsView = ({
 
   const [testEmailInput, setTestEmailInput] = useState('');
   const [smtpLoading, setSmtpLoading] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light' });
+  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true });
   const [globalSettingsLoading, setGlobalSettingsLoading] = useState(false);
   
   const [oidcSettings, setOidcSettings] = useState(() => ({
@@ -113,7 +113,8 @@ const SettingsView = ({
         .then(res => {
           if (res.data) {
             setGlobalSettings({
-              login_page_theme: res.data.login_page_theme || 'light'
+              login_page_theme: res.data.login_page_theme || 'light',
+              signup_enabled: res.data.signup_enabled !== false
             });
           }
         })
@@ -594,6 +595,48 @@ const SettingsView = ({
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Admin: Signup Toggle */}
+              {currentUser && currentUser.role === 'admin' && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: colors.background,
+                  borderRadius: '8px',
+                  border: `1px solid ${colors.border}`,
+                  marginBottom: '16px'
+                }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={globalSettings.signup_enabled}
+                      onChange={(e) => handleGlobalSettingChange('signup_enabled', e.target.checked)}
+                      disabled={globalSettingsLoading}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: globalSettingsLoading ? 'not-allowed' : 'pointer'
+                      }}
+                    />
+                    <span style={{
+                      fontSize: '14px',
+                      color: colors.primary,
+                      fontWeight: '500'
+                    }}>
+                      <i className="fas fa-user-plus" style={{ marginRight: '8px', color: colors.accent }}></i>
+                      Allow User Signup
+                    </span>
+                  </label>
+                  <p style={{ color: colors.secondary, fontSize: '12px', marginBottom: '0', margin: '8px 0 0 26px' }}>
+                    When disabled, users can only login with existing accounts or SSO
+                  </p>
                 </div>
               )}
 

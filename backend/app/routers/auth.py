@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth
@@ -108,6 +109,16 @@ def get_login_page_theme(db: Session = Depends(get_db)):
     settings = crud.get_global_settings(db)
     return {"theme": settings.login_page_theme}
 
+@router.get("/settings")
+def get_auth_settings(db: Session = Depends(get_db)):
+    """Get public auth settings (public endpoint, no auth required)"""
+    from .. import crud
+    settings = crud.get_global_settings(db)
+    return {
+        "signup_enabled": settings.signup_enabled,
+        "theme": settings.login_page_theme
+    }
+
 @router.get("/oidc/config")
 def get_oidc_config(db: Session = Depends(get_db)):
     """Get OIDC configuration (public endpoint for frontend)"""
@@ -129,19 +140,33 @@ async def oidc_login(request: Request, db: Session = Depends(get_db)):
     if not config.enabled:
         raise HTTPException(status_code=400, detail="OIDC not enabled")
     
-    # Always use https://{host} for redirect_uri (Cloudflare sets Host header)
-    host = request.headers.get('host')
-    if host and host not in ['localhost', '127.0.0.1']:
-        # Remove port if present
-        if ':' in host:
-            parts = host.rsplit(':', 1)
-            if parts[1].isdigit():
-                host = parts[0]
-        origin = f"https://{host}"
+    # Get redirect URI - must match what's configured in the OIDC provider
+    if config.redirect_uri:
+        redirect_uri = config.redirect_uri
     else:
-        origin = request.headers.get('origin') or f"{request.url.scheme}://{request.url.netloc}"
-    # Build dynamic redirect URI based on the current domain
-    redirect_uri = f"{origin}/api/auth/oidc/callback"
+        # Dynamic detection: Get the correct origin, considering proxies and Cloudflare
+        # Priority: origin header > x-forwarded-host > host header
+        origin = request.headers.get('origin')
+        
+        if not origin or origin.startswith('http://localhost'):
+            # If origin is localhost or not available, try to construct from headers
+            host = request.headers.get('x-forwarded-host') or request.headers.get('host')
+            
+            if host and host not in ['localhost', '127.0.0.1']:
+                # Remove port if present
+                if ':' in host:
+                    parts = host.rsplit(':', 1)
+                    if parts[1].isdigit():
+                        host = parts[0]
+                origin = f"https://{host}"
+            else:
+                # Last resort: use request URL
+                origin = f"{request.url.scheme}://{request.url.netloc}"
+        
+        redirect_uri = origin
+    
+    # Ensure no trailing slash for consistency
+    redirect_uri = redirect_uri.rstrip('/')
     
     # Build authorization URL
     params = {
@@ -155,72 +180,110 @@ async def oidc_login(request: Request, db: Session = Depends(get_db)):
     auth_url = f"{config.authorization_endpoint}?{urlencode(params)}"
     return {"authorization_url": auth_url}
 
-@router.post("/oidc/callback")
+@router.get("/oidc/callback")
 async def oidc_callback(code: str, state: str, request: Request, db: Session = Depends(get_db)):
-    """Handle OIDC callback"""
+    """Handle OIDC callback - exchanges authorization code for token"""
     config = crud.get_oidc_config(db)
     if not config.enabled:
         raise HTTPException(status_code=400, detail="OIDC not enabled")
     
-    # Always use https://{host} for redirect_uri (Cloudflare sets Host header)
-    host = request.headers.get('host')
-    if host and host not in ['localhost', '127.0.0.1']:
-        # Remove port if present
-        if ':' in host:
-            parts = host.rsplit(':', 1)
-            if parts[1].isdigit():
-                host = parts[0]
-        origin = f"https://{host}"
+    # Get redirect URI - must match what was used in the login request and configured in OIDC provider
+    if config.redirect_uri:
+        redirect_uri = config.redirect_uri
     else:
-        origin = request.headers.get('origin') or f"{request.url.scheme}://{request.url.netloc}"
-    # Build dynamic redirect URI to match the login request
-    redirect_uri = f"{origin}/api/auth/oidc/callback"
+        # Dynamic detection: Get the correct origin, considering proxies and Cloudflare
+        # Priority: origin header > x-forwarded-host > host header
+        origin = request.headers.get('origin')
+        
+        if not origin or origin.startswith('http://localhost'):
+            # If origin is localhost or not available, try to construct from headers
+            host = request.headers.get('x-forwarded-host') or request.headers.get('host')
+            
+            if host and host not in ['localhost', '127.0.0.1']:
+                # Remove port if present
+                if ':' in host:
+                    parts = host.rsplit(':', 1)
+                    if parts[1].isdigit():
+                        host = parts[0]
+                origin = f"https://{host}"
+            else:
+                # Last resort: use request URL
+                origin = f"{request.url.scheme}://{request.url.netloc}"
+        
+        redirect_uri = origin
+    
+    # Ensure no trailing slash for consistency
+    redirect_uri = redirect_uri.rstrip('/')
     
     # Exchange code for token
-    async with AsyncOAuth2Client(
-        client_id=config.client_id,
-        client_secret=config.client_secret,
-        token_endpoint=config.token_endpoint,
-    ) as client:
-        token = await client.fetch_token(
-            url=config.token_endpoint,
-            code=code,
-            redirect_uri=redirect_uri
-        )
-        
-        # Get user info
-        user_info = await client.get(config.userinfo_endpoint)
-        user_data = user_info.json()
-        
-        # Extract user information
-        oidc_id = user_data.get('sub')
-        email = user_data.get('email')
-        name = user_data.get('name', user_data.get('preferred_username', ''))
-        username = user_data.get('preferred_username', email.split('@')[0] if email else oidc_id)
-        groups = user_data.get('groups', [])
-        
-        if not oidc_id or not email:
-            raise HTTPException(status_code=400, detail="Invalid user data from OIDC provider")
-        
-        # Check if user exists
-        user = crud.get_user_by_oidc_id(db, oidc_id)
-        if not user:
-            # Check if email already exists
-            existing_user = crud.get_user_by_email(db, email)
-            if existing_user:
-                # Link existing user to OIDC
-                user = crud.link_existing_user_to_oidc(db, existing_user.id, oidc_id)
-            else:
-                # Create new SSO user
-                user = crud.create_sso_user(db, oidc_id, email, name, username, groups)
-        
-        # Generate token
-        access_token = auth.create_access_token(
-            data={"sub": str(user.id)},
-            expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        
-        return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        async with AsyncOAuth2Client(
+            client_id=config.client_id,
+            client_secret=config.client_secret,
+            token_endpoint=config.token_endpoint,
+        ) as client:
+            token = await client.fetch_token(
+                url=config.token_endpoint,
+                code=code,
+                redirect_uri=redirect_uri
+            )
+            
+            # Get user info
+            user_info = await client.get(config.userinfo_endpoint)
+            user_data = user_info.json()
+            
+            # Extract user information
+            oidc_id = user_data.get('sub')
+            email = user_data.get('email')
+            name = user_data.get('name', user_data.get('preferred_username', ''))
+            username = user_data.get('preferred_username', email.split('@')[0] if email else oidc_id)
+            groups = user_data.get('groups', [])
+            
+            if not oidc_id or not email:
+                raise HTTPException(status_code=400, detail="Invalid user data from OIDC provider")
+            
+            # Check if user exists
+            user = crud.get_user_by_oidc_id(db, oidc_id)
+            if not user:
+                # Check if email already exists
+                existing_user = crud.get_user_by_email(db, email)
+                if existing_user:
+                    # Link existing user to OIDC
+                    user = crud.link_existing_user_to_oidc(db, existing_user.id, oidc_id)
+                else:
+                    # Create new SSO user
+                    user = crud.create_sso_user(db, oidc_id, email, name, username, groups)
+            
+            # Generate token
+            access_token = auth.create_access_token(
+                data={"sub": str(user.id)},
+                expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+            )
+            
+            # Return HTML that stores token and redirects to app
+            # This handles the case where OIDC provider redirects directly to this endpoint
+            return HTMLResponse(content=f"""
+            <html>
+              <head>
+                <title>Logging in...</title>
+                <script>
+                  // Store the token in localStorage
+                  localStorage.setItem('token', '{access_token}');
+                  // Set authorization header for axios
+                  document.cookie = 'token={access_token}; path=/';
+                  // Redirect to the app
+                  window.location.href = '/';
+                </script>
+              </head>
+              <body>
+                <p>Logging in... <a href="/">Click here if not redirected</a></p>
+              </body>
+            </html>
+            """)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OIDC token exchange failed: {str(e)}. Redirect URI used: {redirect_uri}")
 
 @router.get("/oidc/logout")
 async def oidc_logout(db: Session = Depends(get_db)):

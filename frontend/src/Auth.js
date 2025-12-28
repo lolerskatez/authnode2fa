@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './Auth.css';
 
-axios.defaults.baseURL = 'http://localhost:8040';
-
 function Auth({ onLoginSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' or 'signup'
   const [email, setEmail] = useState('');
@@ -15,44 +13,53 @@ function Auth({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [isInitialSetup, setIsInitialSetup] = useState(false);
   const [checkingUsers, setCheckingUsers] = useState(true);
-  const [loginPageTheme, setLoginPageTheme] = useState('light');
   const [oidcConfig, setOidcConfig] = useState(null);
   const [ssoLoading, setSsoLoading] = useState(false);
+  const [loginPageTheme, setLoginPageTheme] = useState('light');
+  const [oidcCallbackProcessed, setOidcCallbackProcessed] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState(true);
 
   const handleOidcCallback = useCallback(async (code, state) => {
+    // Prevent double processing (React StrictMode calls useEffect twice)
+    if (oidcCallbackProcessed) return;
+    setOidcCallbackProcessed(true);
+    
+    // Clear URL parameters immediately to prevent re-processing
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
     try {
       setSsoLoading(true);
       setError('');
 
-      const res = await axios.post('/api/auth/oidc/callback', { code, state });
+      const res = await axios.get('/api/auth/oidc/callback', {
+        params: { code, state }
+      });
       const token = res.data.access_token;
 
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-
       onLoginSuccess(token);
     } catch (err) {
-      setError('SSO authentication failed. Please try again.');
+      const errorMsg = err.response?.data?.detail || 'SSO authentication failed. Please try again.';
+      setError(errorMsg);
       console.error('OIDC callback error:', err);
     } finally {
       setSsoLoading(false);
     }
-  }, [onLoginSuccess]);
+  }, [onLoginSuccess, oidcCallbackProcessed]);
 
   useEffect(() => {
     // Load login page theme from server
     const loadLoginPageTheme = async () => {
       try {
         const res = await axios.get('/api/auth/login-page-theme');
-        setLoginPageTheme(res.data.theme);
         applyTheme(res.data.theme);
+        setLoginPageTheme(res.data.theme);
       } catch (err) {
         // Default to light if error
-        setLoginPageTheme('light');
         applyTheme('light');
+        setLoginPageTheme('light');
       }
     };
 
@@ -79,16 +86,31 @@ function Auth({ onLoginSuccess }) {
     const loadOidcConfig = async () => {
       try {
         const res = await axios.get('/api/auth/oidc/config');
-        if (res.data.enabled) {
+        if (res.data && res.data.enabled) {
           setOidcConfig(res.data);
+        } else {
+          setOidcConfig(null);
         }
       } catch (err) {
-        // OIDC not configured or disabled
+        console.log('OIDC config not available:', err.message);
         setOidcConfig(null);
       }
     };
 
     loadOidcConfig();
+
+    // Load signup enabled setting from server
+    const loadSignupEnabled = async () => {
+      try {
+        const res = await axios.get('/api/auth/settings');
+        setSignupEnabled(res.data.signup_enabled !== false);
+      } catch (err) {
+        // Default to enabled if error
+        setSignupEnabled(true);
+      }
+    };
+
+    loadSignupEnabled();
 
     // Check for OIDC callback parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -185,10 +207,16 @@ function Auth({ onLoginSuccess }) {
       setError('');
 
       const res = await axios.get('/api/auth/oidc/login');
-      // Redirect to the authorization URL
-      window.location.href = res.data.authorization_url;
+      if (res.data.authorization_url) {
+        // Redirect to the authorization URL
+        window.location.href = res.data.authorization_url;
+      } else {
+        setError('Failed to get authorization URL from server.');
+        console.error('No authorization_url in response:', res.data);
+      }
     } catch (err) {
-      setError('SSO login failed. Please try again.');
+      const errorMsg = err.response?.data?.detail || err.message || 'SSO login failed. Please try again.';
+      setError(`SSO login failed: ${errorMsg}`);
       console.error('SSO login error:', err);
     } finally {
       setSsoLoading(false);
@@ -229,15 +257,17 @@ function Auth({ onLoginSuccess }) {
               >
                 Login
               </button>
-              <button 
-                className={`auth-tab ${mode === 'signup' ? 'active' : ''}`}
-                onClick={() => {
-                  setMode('signup');
-                  setError('');
-                }}
-              >
-                Sign Up
-              </button>
+              {(signupEnabled || isInitialSetup) && (
+                <button 
+                  className={`auth-tab ${mode === 'signup' ? 'active' : ''}`}
+                  onClick={() => {
+                    setMode('signup');
+                    setError('');
+                  }}
+                >
+                  Sign Up
+                </button>
+              )}
             </div>
 
             {error && <div className="auth-error">{error}</div>}
@@ -359,7 +389,7 @@ function Auth({ onLoginSuccess }) {
             {!isInitialSetup && (
               <p className="auth-footer">
                 {mode === 'login' 
-                  ? "Don't have an account? Click Sign Up" 
+                  ? (signupEnabled ? "Don't have an account? Click Sign Up" : "")
                   : "Already have an account? Click Login"}
               </p>
             )}
