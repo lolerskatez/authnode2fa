@@ -19,7 +19,7 @@ app = FastAPI(
     description="Secure Two-Factor Authentication (2FA) Token Management System",
     version="1.0.0",
     docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    redoc_url=None,  # We'll use a custom optimized ReDoc endpoint
     openapi_url="/api/openapi.json",
 )
 
@@ -84,10 +84,11 @@ For issues and documentation, visit: https://github.com/lolerskatez/authnode2fa
     )
     
     # Add custom styling and info
-    openapi_schema["info"]["x-logo"] = {
-        "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png",
-        "altText": "2FA Manager Logo"
-    }
+    if "info" in openapi_schema:
+        openapi_schema["info"]["x-logo"] = {
+            "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png",
+            "altText": "2FA Manager Logo"
+        }
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -304,23 +305,206 @@ def read_root():
     </html>
     """
 
-@app.get("/health")
+@app.get("/health", response_class=HTMLResponse)
 def health_check():
-    """Health check endpoint for monitoring and load balancers"""
+    """Health check endpoint with visual status display"""
     try:
         # Test database connection
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
-        return {
-            "status": "healthy",
-            "service": "2FA Manager API",
-            "database": "connected"
-        }
+        
+        status = "healthy"
+        db_status = "connected"
+        status_color = "#27ae60"
+        status_icon = "✓"
+        
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "service": "2FA Manager API",
-            "database": "disconnected",
-            "error": str(e)
-        }, 503
+        status = "unhealthy"
+        db_status = f"disconnected: {str(e)}"
+        status_color = "#e74c3c"
+        status_icon = "✗"
+    
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>2FA Manager API - Health Check</title>
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }}
+            
+            .container {{
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                max-width: 500px;
+                width: 100%;
+                padding: 50px 40px;
+                text-align: center;
+            }}
+            
+            .status-icon {{
+                font-size: 80px;
+                margin-bottom: 20px;
+                animation: pulse 2s infinite;
+            }}
+            
+            @keyframes pulse {{
+                0%, 100% {{ opacity: 1; }}
+                50% {{ opacity: 0.7; }}
+            }}
+            
+            h1 {{
+                color: #333;
+                font-size: 28px;
+                margin-bottom: 15px;
+            }}
+            
+            .status-badge {{
+                display: inline-block;
+                padding: 10px 20px;
+                background: {status_color};
+                color: white;
+                border-radius: 20px;
+                font-weight: 600;
+                margin-bottom: 30px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-size: 14px;
+            }}
+            
+            .status-grid {{
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 25px;
+                margin-bottom: 30px;
+                text-align: left;
+            }}
+            
+            .status-item {{
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #e0e0e0;
+            }}
+            
+            .status-item:last-child {{
+                border-bottom: none;
+            }}
+            
+            .status-label {{
+                color: #666;
+                font-weight: 600;
+            }}
+            
+            .status-value {{
+                color: {status_color};
+                font-weight: 700;
+            }}
+            
+            .footer {{
+                color: #999;
+                font-size: 12px;
+                margin-top: 20px;
+            }}
+            
+            .footer a {{
+                color: #667eea;
+                text-decoration: none;
+            }}
+            
+            .footer a:hover {{
+                text-decoration: underline;
+            }}
+            
+            @media (max-width: 600px) {{
+                .container {{
+                    padding: 35px 25px;
+                }}
+                
+                h1 {{
+                    font-size: 22px;
+                }}
+                
+                .status-icon {{
+                    font-size: 60px;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="status-icon">{status_icon}</div>
+            <h1>System Status</h1>
+            <div class="status-badge">{status.upper()}</div>
+            
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Service</span>
+                    <span class="status-value">2FA Manager API</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Status</span>
+                    <span class="status-value">{status.capitalize()}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Database</span>
+                    <span class="status-value">{db_status}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Timestamp</span>
+                    <span class="status-value">{__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>System health check performed</p>
+                <p><a href="/">← Back to Dashboard</a></p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+
+@app.get("/api/redoc", response_class=HTMLResponse)
+def redoc_ui():
+    """ReDoc API documentation UI"""
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>ReDoc - 2FA Manager API</title>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background: #f5f5f5;
+            }
+        </style>
+    </head>
+    <body>
+        <redoc spec-url='/api/openapi.json'></redoc>
+        <script src="https://cdn.jsdelivr.net/npm/redoc@latest/bundles/redoc.standalone.js"></script>
+    </body>
+    </html>
+    """
