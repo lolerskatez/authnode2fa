@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 from slowapi.errors import RateLimitExceeded
-from .routers import users, applications, auth, admin
+from .routers import users, applications, auth, admin, webauthn
 from .database import engine, SessionLocal
 from .rate_limit import limiter, get_rate_limit_exceeded_handler
 from . import models
@@ -47,6 +47,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["User Management"])
 app.include_router(applications.router, prefix="/api/applications", tags=["2FA Applications"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Administration"])
+app.include_router(webauthn.router, prefix="/api/webauthn", tags=["WebAuthn/FIDO2"])
 
 
 def custom_openapi():

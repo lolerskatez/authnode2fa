@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import '../App.css';
+import WebAuthnHelper from '../utils/WebAuthnHelper';
 
 const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
   // Theme-aware color helpers
@@ -35,6 +33,14 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
   const [loading, setLoading] = useState(false);
   const [userSessions, setUserSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+
+  // WebAuthn states
+  const [webauthnStatus, setWebauthnStatus] = useState(null);
+  const [loadingWebauthn, setLoadingWebauthn] = useState(false);
+  const [showWebauthnSetup, setShowWebauthnSetup] = useState(false);
+  const [webauthnDeviceName, setWebauthnDeviceName] = useState('');
+  const [webauthnSupported, setWebauthnSupported] = useState(false);
+  const [platformAuthenticatorAvailable, setPlatformAuthenticatorAvailable] = useState(false);
 
   const fetchUserPreferences = useCallback(async () => {
     try {

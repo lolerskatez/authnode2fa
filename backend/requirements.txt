@@ -19,3 +19,4 @@ python-dotenv==1.0.0
 slowapi==0.1.9  # Rate limiting for API endpoints
 pytest==7.4.3
 httpx==0.25.2
+webauthn==1.8.0  # WebAuthn/FIDO2 support
