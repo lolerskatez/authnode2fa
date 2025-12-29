@@ -144,6 +144,7 @@ class GlobalSettingsUpdate(BaseModel):
     totp_grace_period_days: Optional[int] = None
     webauthn_enabled: Optional[bool] = None
     webauthn_enforcement: Optional[str] = None
+    password_reset_enabled: Optional[bool] = None
 
 
 class GlobalSettings(GlobalSettingsBase):

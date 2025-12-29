@@ -59,7 +59,7 @@ const SettingsView = ({
 
   const [testEmailInput, setTestEmailInput] = useState('');
   const [smtpLoading, setSmtpLoading] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true, totp_enabled: false, totp_enforcement: 'optional', totp_grace_period_days: 7, webauthn_enabled: true, webauthn_enforcement: 'optional' });
+  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true, totp_enabled: false, totp_enforcement: 'optional', totp_grace_period_days: 7, webauthn_enabled: true, webauthn_enforcement: 'optional', password_reset_enabled: true });
   const [globalSettingsLoading, setGlobalSettingsLoading] = useState(false);
   
   // Session Management States
@@ -207,7 +207,8 @@ const SettingsView = ({
               totp_enforcement: res.data.totp_enforcement || 'optional',
               totp_grace_period_days: res.data.totp_grace_period_days || 7,
               webauthn_enabled: res.data.webauthn_enabled !== false,
-              webauthn_enforcement: res.data.webauthn_enforcement || 'optional'
+              webauthn_enforcement: res.data.webauthn_enforcement || 'optional',
+              password_reset_enabled: res.data.password_reset_enabled !== false
             });
           }
         })
