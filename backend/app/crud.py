@@ -374,3 +374,108 @@ def get_audit_logs(db: Session, user_id: int = None, action: str = None, status:
         query = query.filter(models.AuditLog.created_at <= end_date)
     
     return query.order_by(models.AuditLog.created_at.desc()).limit(limit).offset(offset).all()
+
+
+# Export/Import Functions
+def export_applications(db: Session, user_id: int):
+    """Export all applications for a user with decrypted secrets"""
+    from datetime import datetime
+    applications = db.query(models.Application).filter(models.Application.user_id == user_id).all()
+    
+    exported_apps = []
+    for app in applications:
+        try:
+            decrypted_secret = cipher.decrypt(app.secret.encode()).decode()
+            exported_apps.append(schemas.ApplicationExportData(
+                name=app.name,
+                secret=decrypted_secret,
+                icon=app.icon,
+                color=app.color,
+                category=app.category,
+                favorite=app.favorite
+            ))
+        except Exception as e:
+            print(f"Error exporting app {app.id}: {str(e)}")
+            continue
+    
+    return schemas.ExportResponse(
+        export_date=datetime.utcnow(),
+        account_count=len(exported_apps),
+        accounts=exported_apps
+    )
+
+
+def import_applications(db: Session, user_id: int, import_data: schemas.ImportRequest):
+    """Import applications for a user, handling conflicts based on strategy"""
+    imported = 0
+    skipped = 0
+    overwritten = 0
+    errors = []
+    
+    existing_apps = {app.name: app for app in db.query(models.Application).filter(models.Application.user_id == user_id).all()}
+    
+    for app_data in import_data.accounts:
+        try:
+            # Check if app with same name exists
+            if app_data.name in existing_apps:
+                if import_data.conflict_action == "skip":
+                    skipped += 1
+                    continue
+                elif import_data.conflict_action == "overwrite":
+                    # Update existing app
+                    existing_app = existing_apps[app_data.name]
+                    encrypted_secret = cipher.encrypt(app_data.secret.encode()).decode()
+                    existing_app.secret = encrypted_secret
+                    existing_app.icon = app_data.icon or existing_app.icon
+                    existing_app.color = app_data.color or existing_app.color
+                    existing_app.category = app_data.category or existing_app.category
+                    db.add(existing_app)
+                    db.commit()
+                    overwritten += 1
+                    continue
+            
+            # Create new application
+            encrypted_secret = cipher.encrypt(app_data.secret.encode()).decode()
+            backup_key = auth.generate_token()
+            
+            new_app = models.Application(
+                user_id=user_id,
+                name=app_data.name,
+                secret=encrypted_secret,
+                backup_key=backup_key,
+                icon=app_data.icon,
+                color=app_data.color,
+                category=app_data.category or "Personal",
+                favorite=app_data.favorite or False
+            )
+            db.add(new_app)
+            db.commit()
+            imported += 1
+            
+        except Exception as e:
+            errors.append(f"Error importing '{app_data.name}': {str(e)}")
+            continue
+    
+    return schemas.ImportResponse(
+        imported=imported,
+        skipped=skipped,
+        overwritten=overwritten,
+        errors=errors
+    )
+
+
+def search_applications(db: Session, user_id: int, query: str = None, category: str = None, favorite: bool = None):
+    """Search and filter applications with optional criteria"""
+    search_query = db.query(models.Application).filter(models.Application.user_id == user_id)
+    
+    if query:
+        # Case-insensitive search on name
+        search_query = search_query.filter(models.Application.name.ilike(f"%{query}%"))
+    
+    if category:
+        search_query = search_query.filter(models.Application.category == category)
+    
+    if favorite is not None:
+        search_query = search_query.filter(models.Application.favorite == favorite)
+    
+    return search_query.order_by(models.Application.name).all()

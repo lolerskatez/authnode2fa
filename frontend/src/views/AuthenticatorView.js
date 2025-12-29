@@ -42,13 +42,66 @@ const AuthenticatorView = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [setupMethod, setSetupMethod] = useState('scan');
   const [accountNamePreview, setAccountNamePreview] = useState('');
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importConflictAction, setImportConflictAction] = useState('skip');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [debounceTimer, setDebounceTimer] = useState(null);
 
-  // Filter accounts based on selected category
-  const filteredAccounts = accounts.filter(account => {
-    if (selectedCategory === 'all') return true;
-    if (selectedCategory === 'favorites') return account.favorite;
-    return account.category === selectedCategory;
-  });
+  // Update filtered accounts to use backend API with debounced search
+  const fetchFilteredAccounts = useCallback(async () => {
+    try {
+      setIsSearching(true);
+      const params = {};
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+      if (selectedCategory !== 'all') {
+        if (selectedCategory === 'favorites') {
+          params.favorite = true;
+        } else {
+          params.category = selectedCategory;
+        }
+      }
+
+      const response = await axios.get('/api/applications/', { params });
+      const applications = response.data;
+
+      onAccountsChange(applications.map(app => ({
+        id: app.id,
+        name: app.name,
+        email: '',
+        icon: app.icon || 'fab fa-key',
+        color: app.color || '#6B46C1',
+        category: app.category || 'Personal',
+        favorite: app.favorite || false
+      })));
+    } catch (error) {
+      console.error('Failed to fetch filtered accounts:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [searchQuery, selectedCategory, onAccountsChange]);
+
+  // Debounced search effect
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
+    const newTimer = setTimeout(() => {
+      fetchFilteredAccounts();
+    }, 300); // 300ms debounce
+    
+    setDebounceTimer(newTimer);
+    
+    return () => {
+      if (newTimer) {
+        clearTimeout(newTimer);
+      }
+    };
+  }, [searchQuery, selectedCategory, fetchFilteredAccounts]);
+
+  // Filter accounts based on selected category and search query (fallback for local filtering if needed)
+  const filteredAccounts = accounts;
 
   // Fetch real TOTP code from backend API
   const fetchCode = useCallback(async (appId) => {
@@ -79,6 +132,61 @@ const AuthenticatorView = ({
     setSelectedAccount(null);
     setSetupMethod('scan');
     setShowModal(true);
+  };
+
+  const handleExportAccounts = async () => {
+    try {
+      const response = await axios.post('/api/applications/export');
+      const exportData = response.data;
+      
+      // Convert to JSON and download
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `2fa-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      alert(`Successfully exported ${exportData.account_count} accounts!`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export accounts. Please try again.');
+    }
+  };
+
+  const handleImportAccounts = async (file) => {
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+      
+      // Make import request
+      const response = await axios.post('/api/applications/import', {
+        accounts: importData.accounts,
+        conflict_action: importConflictAction
+      });
+      
+      // Reload accounts
+      const appsResponse = await axios.get('/api/applications');
+      onAccountsChange(appsResponse.data.map(app => ({
+        id: app.id,
+        name: app.name,
+        email: '',
+        icon: app.icon || 'fab fa-key',
+        color: app.color || '#6B46C1',
+        category: app.category || 'Personal',
+        favorite: app.favorite || false
+      })));
+      
+      setShowImportDialog(false);
+      alert(`Import complete!\nImported: ${response.data.imported}\nSkipped: ${response.data.skipped}\nOverwritten: ${response.data.overwritten}${response.data.errors.length > 0 ? '\nErrors: ' + response.data.errors.length : ''}`);
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Failed to import accounts. Please check the file format and try again.');
+    }
   };
 
   const handleEditAccount = () => {
@@ -220,12 +328,52 @@ const AuthenticatorView = ({
     <>
       <div className="content-area">
         <div className="search-box" style={{ marginBottom: '12px' }}>
-          <i className="fas fa-search" style={{ color: colors.secondary }}></i>
-          <input type="text" placeholder="Search accounts..." />
+          <i className={`fas ${isSearching ? 'fa-spinner fa-spin' : 'fa-search'}`} style={{ color: colors.secondary }}></i>
+          <input 
+            type="text" 
+            placeholder="Search accounts..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              backgroundColor: colors.background,
+              color: colors.primary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              padding: '8px 12px'
+            }}
+          />
         </div>
         <div className="content-header">
           <h2>Authenticator</h2>
-          {filteredAccounts.length > 0 && (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {filteredAccounts.length > 0 && (
+              <>
+                <button 
+                  className="btn-add"
+                  onClick={handleExportAccounts}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px'
+                  }}
+                  title="Export all accounts as JSON"
+                >
+                  <i className="fas fa-download"></i>
+                  Export
+                </button>
+                <button 
+                  className="btn-add"
+                  onClick={() => setShowImportDialog(true)}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px'
+                  }}
+                  title="Import accounts from JSON file"
+                >
+                  <i className="fas fa-upload"></i>
+                  Import
+                </button>
+              </>
+            )}
             <button 
               className="btn-add"
               onClick={handleAddAccountClick}
@@ -233,7 +381,7 @@ const AuthenticatorView = ({
               <i className="fas fa-plus"></i>
               Add Account
             </button>
-          )}
+          </div>
         </div>
 
         <div className="accounts-grid">
@@ -355,6 +503,109 @@ const AuthenticatorView = ({
           onDelete={handleDeleteAccount}
           onClose={handleCloseContextMenu}
         />
+      )}
+
+      {showImportDialog && (
+        <div className="context-menu-overlay" onClick={() => setShowImportDialog(false)}>
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: colors.background,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            zIndex: 9999,
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+              <i className="fas fa-upload" style={{ marginRight: '8px', color: colors.accent }}></i>
+              Import Accounts
+            </h3>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: colors.primary, fontWeight: '500', fontSize: '14px' }}>
+                What should happen if an account name already exists?
+              </label>
+              <select 
+                value={importConflictAction}
+                onChange={(e) => setImportConflictAction(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.background,
+                  color: colors.primary,
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="skip">Skip (keep existing)</option>
+                <option value="overwrite">Overwrite (replace existing)</option>
+                <option value="merge">Merge (combine all)</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: colors.primary, fontWeight: '500', fontSize: '14px' }}>
+                Select export file
+              </label>
+              <input
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImportAccounts(e.target.files[0]);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `2px dashed ${colors.border}`,
+                  backgroundColor: colors.backgroundLight,
+                  color: colors.primary,
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  cursor: 'pointer'
+                }}
+              />
+            </div>
+
+            <p style={{ 
+              fontSize: '12px', 
+              color: colors.secondary, 
+              margin: '0 0 16px 0',
+              lineHeight: '1.5'
+            }}>
+              <i className="fas fa-info-circle" style={{ marginRight: '6px', color: colors.accent }}></i>
+              Upload a JSON file exported from this app. Your encrypted secrets remain secure.
+            </p>
+
+            <button
+              onClick={() => setShowImportDialog(false)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: colors.accent,
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

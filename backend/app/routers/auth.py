@@ -5,7 +5,7 @@ from ..database import get_db
 from .. import models, schemas, crud, auth
 from ..rate_limit import limiter, LOGIN_RATE_LIMIT, SIGNUP_RATE_LIMIT, TOTP_VERIFY_RATE_LIMIT
 from ..oidc_state import generate_secure_state, store_oidc_state, validate_oidc_state
-from datetime import timedelta
+from datetime import timedelta, datetime
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 import os
 from urllib.parse import urlencode
@@ -122,6 +122,25 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
+    
+    # Create user session for tracking
+    try:
+        from jose import jwt
+        payload = jwt.decode(access_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        token_jti = payload.get('jti')
+        expires_at = payload.get('exp')
+        if token_jti and expires_at:
+            crud.create_user_session(
+                db,
+                user_id=user.id,
+                token_jti=token_jti,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get('user-agent'),
+                expires_at=datetime.utcfromtimestamp(expires_at)
+            )
+    except Exception as e:
+        # Don't fail login if session creation fails
+        print(f"Warning: Failed to create user session: {str(e)}")
     
     # Log successful login
     crud.create_audit_log(
@@ -623,6 +642,25 @@ def verify_login_2fa(request: Request, data: dict, db: Session = Depends(get_db)
         expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
+    # Create user session for tracking
+    try:
+        from jose import jwt
+        payload = jwt.decode(access_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        token_jti = payload.get('jti')
+        expires_at = payload.get('exp')
+        if token_jti and expires_at:
+            crud.create_user_session(
+                db,
+                user_id=user.id,
+                token_jti=token_jti,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get('user-agent'),
+                expires_at=datetime.utcfromtimestamp(expires_at)
+            )
+    except Exception as e:
+        # Don't fail login if session creation fails
+        print(f"Warning: Failed to create user session: {str(e)}")
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -705,6 +743,104 @@ def password_reset_confirm(request: Request, reset_confirm: schemas.PasswordRese
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+# Session Management Endpoints
+@router.get("/sessions", response_model=schemas.SessionListResponse)
+def get_user_sessions(
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all active sessions for the current user."""
+    sessions = crud.get_user_sessions(db, current_user.id)
+    
+    # Find current session by checking JWT token
+    current_session_id = None
+    if hasattr(request.state, 'user') and hasattr(request.state.user, 'token_jti'):
+        current_session_id = request.state.user.token_jti
+    elif request.headers.get('authorization'):
+        # Try to extract JTI from current token
+        try:
+            from jose import jwt
+            token = request.headers.get('authorization').replace('Bearer ', '')
+            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+            current_session_id = payload.get('jti')
+        except:
+            pass
+    
+    return schemas.SessionListResponse(
+        sessions=sessions,
+        current_session_id=current_session_id
+    )
+
+
+@router.delete("/sessions/{session_id}")
+def revoke_session(
+    request: Request,
+    session_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke a specific user session."""
+    # Verify the session belongs to the current user
+    session = db.query(models.UserSession).filter(
+        models.UserSession.id == session_id,
+        models.UserSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    success = crud.revoke_session(db, session_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to revoke session")
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="session_revoked",
+        resource_type="session",
+        resource_id=session_id,
+        ip_address=request.client.host if request.client else None,
+        status="success"
+    )
+    
+    return {"message": "Session revoked successfully"}
+
+
+@router.post("/logout-all")
+def logout_all_sessions(
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke all user sessions except the current one."""
+    # Find current session
+    current_session_id = None
+    if request.headers.get('authorization'):
+        try:
+            from jose import jwt
+            token = request.headers.get('authorization').replace('Bearer ', '')
+            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+            current_session_id = payload.get('jti')
+        except:
+            pass
+    
+    crud.revoke_all_user_sessions(db, current_user.id, exclude_session_id=current_session_id)
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="all_sessions_revoked",
+        ip_address=request.client.host if request.client else None,
+        status="success"
+    )
+    
+    return {"message": "All other sessions have been logged out"}
+
 
 # Backup Code Endpoints
 @router.post("/2fa/verify-backup-code")

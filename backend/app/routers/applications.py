@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth, utils
 from ..rate_limit import limiter, API_RATE_LIMIT, SENSITIVE_API_RATE_LIMIT
 from cryptography.fernet import Fernet
 import os
+import json
 
 key = os.getenv("ENCRYPTION_KEY").encode()
 cipher = Fernet(key)
@@ -13,7 +14,17 @@ router = APIRouter()
 
 @router.get("/", response_model=list[schemas.Application])
 @limiter.limit(API_RATE_LIMIT)
-def get_applications(request: Request, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+def get_applications(
+    request: Request, 
+    q: str = Query(None, description="Search by application name"),
+    category: str = Query(None, description="Filter by category"),
+    favorite: bool = Query(None, description="Filter by favorite status"),
+    current_user: models.User = Depends(auth.get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """Get applications with optional search and filtering"""
+    if q or category is not None or favorite is not None:
+        return crud.search_applications(db, current_user.id, query=q, category=category, favorite=favorite)
     return crud.get_applications(db, current_user.id)
 
 @router.post("/", response_model=schemas.Application)
@@ -54,6 +65,67 @@ def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, 
         return crud.create_application(db, app, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/export", response_model=schemas.ExportResponse)
+@limiter.limit(API_RATE_LIMIT)
+def export_applications(request: Request, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    """Export all applications as JSON with decrypted secrets"""
+    try:
+        export_data = crud.export_applications(db, current_user.id)
+        # Log the export action
+        crud.create_audit_log(
+            db,
+            user_id=current_user.id,
+            action="applications_exported",
+            status="success",
+            details={"account_count": export_data.account_count}
+        )
+        return export_data
+    except Exception as e:
+        crud.create_audit_log(
+            db,
+            user_id=current_user.id,
+            action="applications_export_failed",
+            status="failed",
+            reason=str(e)
+        )
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+@router.post("/import", response_model=schemas.ImportResponse)
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def import_applications(
+    request: Request, 
+    import_data: schemas.ImportRequest,
+    current_user: models.User = Depends(auth.get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """Import applications from export file"""
+    try:
+        result = crud.import_applications(db, current_user.id, import_data)
+        
+        # Log the import action
+        crud.create_audit_log(
+            db,
+            user_id=current_user.id,
+            action="applications_imported",
+            status="success",
+            details={
+                "imported": result.imported,
+                "skipped": result.skipped,
+                "overwritten": result.overwritten,
+                "errors": len(result.errors)
+            }
+        )
+        return result
+    except Exception as e:
+        crud.create_audit_log(
+            db,
+            user_id=current_user.id,
+            action="applications_import_failed",
+            status="failed",
+            reason=str(e)
+        )
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
 
 @router.get("/{app_id}/code")
 @limiter.limit(API_RATE_LIMIT)

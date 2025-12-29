@@ -26,6 +26,13 @@ function Auth({ onLoginSuccess }) {
   const [enrollmentBackupCodes, setEnrollmentBackupCodes] = useState([]);
   const [enrollmentCode, setEnrollmentCode] = useState('');
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetTokenLoading, setResetTokenLoading] = useState(false);
 
   const handleOidcCallback = useCallback(async (code, state) => {
     // Prevent double processing (React StrictMode calls useEffect twice)
@@ -124,10 +131,17 @@ function Auth({ onLoginSuccess }) {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const state = urlParams.get('state');
+    const resetToken = urlParams.get('token');
 
     if (code && state) {
       // Handle OIDC callback
       handleOidcCallback(code, state);
+    } else if (resetToken) {
+      // Handle password reset token
+      setResetToken(resetToken);
+      setShowForgotPassword(true);
+      // Clear URL parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [handleOidcCallback]);
 
@@ -217,44 +231,6 @@ function Auth({ onLoginSuccess }) {
     } catch (err) {
       setError(err.response?.data?.detail || `${mode === 'login' ? 'Login' : 'Signup'} failed`);
       console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEnrollmentComplete = async () => {
-    if (!enrollmentCode || enrollmentCode.length !== 6) {
-      setError('Please enter a valid 6-digit code');
-      return;
-    }
-
-    try {
-      setEnrollmentLoading(true);
-      await axios.post('/api/auth/2fa/enable', {
-        secret: enrollmentSecret,
-        totp_code: enrollmentCode,
-        backup_codes: enrollmentBackupCodes
-      }, {
-        headers: {
-          Authorization: `Bearer ${enrollmentData.token}`
-        }
-      });
-
-      // Enrollment complete, proceed with login
-      localStorage.setItem('token', enrollmentData.token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${enrollmentData.token}`;
-      setShowEnrollmentModal(false);
-      onLoginSuccess(enrollmentData.token);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to enable 2FA');
-    } finally {
-      setEnrollmentLoading(false);
-    }
-  };
-
-  const handleSSOLogin = async () => {
-    try {
-      setSsoLoading(true);
       setError('');
 
       const res = await axios.get('/api/auth/oidc/login');
@@ -388,6 +364,28 @@ function Auth({ onLoginSuccess }) {
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 />
               </div>
+
+              {mode === 'login' && !isInitialSetup && (
+                <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(true);
+                      setError('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#4361ee',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
 
               {mode === 'signup' && (
                 <div className="form-group">
@@ -674,6 +672,203 @@ function Auth({ onLoginSuccess }) {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {showForgotPassword && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: loginPageTheme === 'dark' ? '#1e1e1e' : '#ffffff',
+            borderRadius: '8px',
+            padding: '32px',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h2 style={{
+              margin: '0 0 8px 0',
+              color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+              fontSize: '24px',
+              fontWeight: '600'
+            }}>
+              {resetToken ? 'Reset Password' : 'Forgot Password'}
+            </h2>
+            <p style={{
+              margin: '0 0 24px 0',
+              color: loginPageTheme === 'dark' ? '#aaaaaa' : '#666666',
+              fontSize: '14px'
+            }}>
+              {resetToken 
+                ? 'Enter your new password below.'
+                : 'Enter your email address and we\'ll send you a link to reset your password.'
+              }
+            </p>
+
+            <form onSubmit={resetToken ? handlePasswordResetConfirm : handleForgotPassword}>
+              {!resetToken && (
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: `2px solid ${loginPageTheme === 'dark' ? '#444444' : '#dddddd'}`,
+                      borderRadius: '6px',
+                      backgroundColor: loginPageTheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+                      color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                      fontSize: '16px',
+                      boxSizing: 'border-box'
+                    }}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              {resetToken && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}>
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: `2px solid ${loginPageTheme === 'dark' ? '#444444' : '#dddddd'}`,
+                        borderRadius: '6px',
+                        backgroundColor: loginPageTheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+                        color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}>
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: `2px solid ${loginPageTheme === 'dark' ? '#444444' : '#dddddd'}`,
+                        borderRadius: '6px',
+                        backgroundColor: loginPageTheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+                        color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {error && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#ffcccc',
+                  color: '#cc0000',
+                  borderRadius: '6px',
+                  marginBottom: '16px',
+                  fontSize: '13px'
+                }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={(resetToken ? resetTokenLoading : forgotPasswordLoading) || (!resetToken && !forgotPasswordEmail) || (resetToken && (!newPassword || newPassword !== confirmNewPassword))}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: '#4361ee',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: (resetToken ? resetTokenLoading : forgotPasswordLoading) || (!resetToken && !forgotPasswordEmail) || (resetToken && (!newPassword || newPassword !== confirmNewPassword)) ? 'not-allowed' : 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  marginBottom: '16px',
+                  opacity: (resetToken ? resetTokenLoading : forgotPasswordLoading) || (!resetToken && !forgotPasswordEmail) || (resetToken && (!newPassword || newPassword !== confirmNewPassword)) ? 0.6 : 1
+                }}
+              >
+                {resetToken ? resetTokenLoading ? 'Resetting...' : 'Reset Password' : forgotPasswordLoading ? 'Sending...' : 'Send Reset Link'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setError('');
+                  setForgotPasswordEmail('');
+                  setResetToken('');
+                  setNewPassword('');
+                  setConfirmNewPassword('');
+                }}
+                disabled={resetToken ? resetTokenLoading : forgotPasswordLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: 'transparent',
+                  color: '#4361ee',
+                  border: `2px solid #4361ee`,
+                  borderRadius: '6px',
+                  cursor: (resetToken ? resetTokenLoading : forgotPasswordLoading) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  opacity: (resetToken ? resetTokenLoading : forgotPasswordLoading) ? 0.6 : 1
+                }}
+              >
+                {resetToken ? 'Cancel' : 'Back to Login'}
+              </button>
+            </form>
           </div>
         </div>
       )}

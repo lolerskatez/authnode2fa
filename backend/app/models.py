@@ -196,3 +196,45 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User")
+
+
+class WebAuthnCredential(Base):
+    """
+    Stores WebAuthn/FIDO2 credentials for hardware security keys.
+    Each user can have multiple credentials (different keys).
+    """
+    __tablename__ = "webauthn_credentials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+
+    # Credential data from WebAuthn registration
+    credential_id = Column(String, unique=True, index=True)  # Base64 encoded
+    public_key = Column(Text)  # PEM encoded public key
+    sign_count = Column(Integer, default=0)
+
+    # Device information
+    device_name = Column(String, nullable=True)  # User-friendly name
+    device_type = Column(String, nullable=True)  # platform, cross-platform
+    transports = Column(JSON, nullable=True)  # Available transports
+
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_used_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+
+
+class WebAuthnChallenge(Base):
+    """
+    Stores WebAuthn challenges for registration and authentication.
+    Challenges expire after 5 minutes for security.
+    """
+    __tablename__ = "webauthn_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    challenge = Column(String, unique=True, index=True)  # Base64 encoded challenge
+    challenge_type = Column(String)  # 'registration' or 'authentication'
+    expires_at = Column(DateTime, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

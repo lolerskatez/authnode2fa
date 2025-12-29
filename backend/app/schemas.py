@@ -274,3 +274,125 @@ class AuditLogFilterRequest(BaseModel):
     end_date: Optional[datetime] = None
     limit: int = 100
     offset: int = 0
+
+
+# Export/Import Schemas
+class ApplicationExportData(BaseModel):
+    """Single application for export"""
+    name: str
+    secret: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    category: Optional[str] = None
+    favorite: Optional[bool] = False
+
+
+class ExportResponse(BaseModel):
+    """Response format for account export"""
+    version: str = "1.0"
+    export_date: datetime
+    account_count: int
+    accounts: List[ApplicationExportData]
+
+
+class ImportRequest(BaseModel):
+    """Request format for account import"""
+    accounts: List[ApplicationExportData]
+    conflict_action: str = "skip"  # skip, overwrite, or merge
+
+
+class ImportResponse(BaseModel):
+    """Response from import operation"""
+    imported: int
+    skipped: int
+    overwritten: int
+    errors: List[str] = []
+
+
+# WebAuthn Schemas
+class WebAuthnCredentialBase(BaseModel):
+    credential_id: str
+    device_name: Optional[str] = None
+    device_type: Optional[str] = None
+    transports: Optional[List[str]] = None
+
+
+class WebAuthnCredentialCreate(WebAuthnCredentialBase):
+    public_key: str
+    sign_count: int = 0
+
+
+class WebAuthnCredential(WebAuthnCredentialBase):
+    id: int
+    user_id: int
+    sign_count: int
+    created_at: datetime
+    last_used_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WebAuthnRegistrationOptions(BaseModel):
+    """Options sent to browser for WebAuthn registration"""
+    challenge: str  # Base64 encoded
+    rp: Dict[str, Any]  # Relying Party info
+    user: Dict[str, Any]  # User info
+    pubKeyCredParams: List[Dict[str, Any]]
+    authenticatorSelection: Dict[str, Any]
+    timeout: int
+    attestation: str
+
+
+class WebAuthnRegistrationResponse(BaseModel):
+    """Response from browser after WebAuthn registration"""
+    id: str
+    rawId: str
+    type: str
+    response: Dict[str, Any]
+
+
+class WebAuthnAuthenticationOptions(BaseModel):
+    """Options sent to browser for WebAuthn authentication"""
+    challenge: str  # Base64 encoded
+    timeout: int
+    rpId: str
+    allowCredentials: List[Dict[str, Any]]
+    userVerification: str
+
+
+class WebAuthnAuthenticationResponse(BaseModel):
+    """Response from browser after WebAuthn authentication"""
+    id: str
+    rawId: str
+    type: str
+    response: Dict[str, Any]
+
+
+class WebAuthnRegistrationRequest(BaseModel):
+    """Request to initiate WebAuthn registration"""
+    device_name: Optional[str] = None
+
+
+class WebAuthnRegistrationComplete(BaseModel):
+    """Request to complete WebAuthn registration"""
+    device_name: Optional[str] = None
+    credential: WebAuthnRegistrationResponse
+
+
+class WebAuthnAuthenticationRequest(BaseModel):
+    """Request to initiate WebAuthn authentication"""
+    email: str
+
+
+class WebAuthnAuthenticationComplete(BaseModel):
+    """Request to complete WebAuthn authentication"""
+    email: str
+    credential: WebAuthnAuthenticationResponse
+
+
+class WebAuthnStatus(BaseModel):
+    """WebAuthn status for user"""
+    enabled: bool
+    credentials_count: int
+    credentials: List[WebAuthnCredential]

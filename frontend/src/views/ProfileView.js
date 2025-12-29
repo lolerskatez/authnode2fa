@@ -33,6 +33,8 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
   
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [userSessions, setUserSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   const fetchUserPreferences = useCallback(async () => {
     try {
@@ -168,6 +170,58 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
       setIsChangingPassword(false);
     }
   };
+
+  const fetchUserSessions = useCallback(async () => {
+    try {
+      setLoadingSessions(true);
+      const response = await axios.get('/api/auth/sessions');
+      setUserSessions(response.data.sessions || []);
+      setCurrentSessionId(response.data.current_session_id);
+    } catch (error) {
+      console.error('Failed to fetch user sessions:', error);
+      showToast('Failed to load sessions', 'error');
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, []);
+
+  const revokeSession = async (sessionId, sessionName) => {
+    if (!window.confirm(`Are you sure you want to revoke the session "${sessionName}"? This will log you out of that device.`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/auth/sessions/${sessionId}`);
+      showToast('Session revoked successfully');
+      fetchUserSessions(); // Refresh the sessions list
+    } catch (error) {
+      showToast(error.response?.data?.detail || 'Failed to revoke session', 'error');
+    }
+  };
+
+  const logoutAllSessions = async () => {
+    if (!window.confirm('Are you sure you want to log out of all other devices? You will remain logged in on this device.')) {
+      return;
+    }
+
+    try {
+      await axios.post('/api/auth/logout-all');
+      showToast('Logged out of all other devices');
+      fetchUserSessions(); // Refresh the sessions list
+    } catch (error) {
+      showToast(error.response?.data?.detail || 'Failed to logout other sessions', 'error');
+    }
+  };
+
+  // Store current session ID
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+
+  // Load user sessions on component mount
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetchUserSessions();
+    }
+  }, [currentUser?.id, fetchUserSessions]);
 
   return (
     <div className="content-area" style={{ paddingTop: '16px' }}>
@@ -461,6 +515,134 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
               </span>
             </label>
           </div>
+        </div>
+
+        {/* Active Sessions */}
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '16px', 
+          border: `1px solid ${colors.border}`, 
+          borderRadius: '8px',
+          backgroundColor: colors.background
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <label style={{ fontWeight: '500', color: colors.primary, fontSize: '14px' }}>
+              <i className="fas fa-desktop" style={{ marginRight: '8px', color: colors.accent }}></i>
+              Active Sessions
+            </label>
+            <button 
+              onClick={logoutAllSessions}
+              style={{ 
+                backgroundColor: colors.danger,
+                color: 'white',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500'
+              }}
+              disabled={loading}
+            >
+              <i className="fas fa-sign-out-alt" style={{ marginRight: '4px' }}></i>
+              Logout All Other Devices
+            </button>
+          </div>
+          
+          {loadingSessions ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: colors.secondary }}>
+              <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+              Loading sessions...
+            </div>
+          ) : userSessions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: colors.secondary }}>
+              No active sessions found
+            </div>
+          ) : (
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {userSessions.map((session) => (
+                <div 
+                  key={session.id} 
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    marginBottom: '8px',
+                    backgroundColor: colors.backgroundSecondary,
+                    borderRadius: '6px',
+                    border: `1px solid ${colors.border}`
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      marginBottom: '4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: colors.primary
+                    }}>
+                      <i className="fas fa-circle" 
+                         style={{ 
+                           marginRight: '8px', 
+                           color: session.id === currentSessionId ? colors.success : colors.secondary,
+                           fontSize: '8px'
+                         }} 
+                      />
+                      {session.device_name || 'Unknown Device'}
+                      {session.id === currentSessionId && (
+                        <span style={{ 
+                          marginLeft: '8px',
+                          backgroundColor: colors.accent,
+                          color: 'white',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          fontSize: '10px',
+                          fontWeight: '600'
+                        }}>
+                          CURRENT
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: colors.secondary,
+                      lineHeight: '1.4'
+                    }}>
+                      <div>
+                        <i className="fas fa-globe" style={{ marginRight: '4px' }}></i>
+                        {session.ip_address || 'Unknown IP'}
+                      </div>
+                      <div>
+                        <i className="fas fa-clock" style={{ marginRight: '4px' }}></i>
+                        Last active: {new Date(session.last_activity).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  {session.id !== currentSessionId && (
+                    <button
+                      onClick={() => revokeSession(session.id, session.device_name || 'Unknown Device')}
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${colors.danger}`,
+                        color: colors.danger,
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}
+                      disabled={loading}
+                    >
+                      <i className="fas fa-times" style={{ marginRight: '4px' }}></i>
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Account Info */}
