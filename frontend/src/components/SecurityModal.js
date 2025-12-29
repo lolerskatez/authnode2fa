@@ -15,6 +15,12 @@ const SecurityModal = ({ isOpen, onClose, currentUser, colors, isMobile }) => {
   const [showDisableTwoFA, setShowDisableTwoFA] = useState(false);
   const [toast, setToast] = useState(null);
   const [globalSettings, setGlobalSettings] = useState({ totp_enforcement: 'optional' });
+  
+  // WebAuthn states
+  const [webauthnStatus, setWebauthnStatus] = useState(null);
+  const [loadingWebauthn, setLoadingWebauthn] = useState(false);
+  const [showWebauthnSetup, setShowWebauthnSetup] = useState(false);
+  const [webauthnDeviceName, setWebauthnDeviceName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -25,6 +31,15 @@ const SecurityModal = ({ isOpen, onClose, currentUser, colors, isMobile }) => {
         })
         .catch(err => {
           console.error('Error loading 2FA status:', err);
+        });
+
+      // Load WebAuthn status
+      axios.get('/api/webauthn/status')
+        .then(res => {
+          setWebauthnStatus(res.data);
+        })
+        .catch(err => {
+          console.log('WebAuthn not available:', err.message);
         });
 
       // Load global settings to show enforcement policy
@@ -107,6 +122,123 @@ const SecurityModal = ({ isOpen, onClose, currentUser, colors, isMobile }) => {
       showToast('Error disabling 2FA: ' + (err.response?.data?.detail || err.message));
     } finally {
       setTwoFALoading(false);
+    }
+  };
+
+  const handleWebauthnRegister = async () => {
+    if (!webauthnDeviceName.trim()) {
+      showToast('Please enter a device name');
+      return;
+    }
+
+    // Check if WebAuthn is supported
+    if (!window.PublicKeyCredential) {
+      showToast('WebAuthn is not supported on this browser');
+      return;
+    }
+
+    setLoadingWebauthn(true);
+    try {
+      // Step 1: Get registration options from server
+      const optionsRes = await axios.post('/api/webauthn/register/options', {
+        device_name: webauthnDeviceName.trim()
+      });
+
+      const options = optionsRes.data;
+
+      // Decode challenge from base64url to ArrayBuffer
+      const challenge = Uint8Array.from(
+        atob(options.challenge.replace(/-/g, '+').replace(/_/g, '/')),
+        c => c.charCodeAt(0)
+      );
+
+      // Decode userId from base64url to ArrayBuffer
+      const userId = Uint8Array.from(
+        atob(options.user.id.replace(/-/g, '+').replace(/_/g, '/')),
+        c => c.charCodeAt(0)
+      );
+
+      // Step 2: Create credentials using WebAuthn API
+      const attestationResponse = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: {
+            name: options.rp.name,
+            id: options.rp.id
+          },
+          user: {
+            id: userId,
+            name: options.user.name,
+            displayName: options.user.displayName
+          },
+          pubKeyCredParams: options.pubKeyCredParams,
+          timeout: 60000,
+          attestation: 'direct',
+          authenticatorSelection: {
+            authenticatorAttachment: 'cross-platform', // Allow YubiKey and other cross-platform authenticators
+            userVerification: 'preferred' // Allow platform authenticators for Windows Hello, etc.
+          }
+        }
+      });
+
+      if (!attestationResponse) {
+        showToast('Registration cancelled');
+        setLoadingWebauthn(false);
+        return;
+      }
+
+      // Step 3: Send attestation to server for verification
+      await axios.post('/api/webauthn/register/complete', {
+        id: attestationResponse.id,
+        rawId: Array.from(new Uint8Array(attestationResponse.rawId)),
+        response: {
+          attestationObject: Array.from(
+            new Uint8Array(attestationResponse.response.attestationObject)
+          ),
+          clientDataJSON: Array.from(
+            new Uint8Array(attestationResponse.response.clientDataJSON)
+          )
+        },
+        type: attestationResponse.type,
+        device_name: webauthnDeviceName.trim()
+      });
+
+      showToast('Security key registered successfully!');
+      setWebauthnDeviceName('');
+      setShowWebauthnSetup(false);
+      
+      // Reload WebAuthn status
+      const statusRes = await axios.get('/api/webauthn/status');
+      setWebauthnStatus(statusRes.data);
+    } catch (err) {
+      console.error('WebAuthn registration error:', err);
+      if (err.name === 'NotAllowedError') {
+        showToast('Registration cancelled or no authenticator available');
+      } else if (err.name === 'InvalidStateError') {
+        showToast('Authenticator is already registered');
+      } else {
+        showToast('Error registering security key: ' + (err.response?.data?.detail || err.message));
+      }
+    } finally {
+      setLoadingWebauthn(false);
+    }
+  };
+
+  const handleDeleteWebauthnCredential = async (credentialId) => {
+    if (!window.confirm('Are you sure you want to remove this security key?')) {
+      return;
+    }
+    setLoadingWebauthn(true);
+    try {
+      await axios.delete(`/api/webauthn/credentials/${credentialId}`);
+      showToast('Security key removed');
+      // Reload WebAuthn status
+      const res = await axios.get('/api/webauthn/status');
+      setWebauthnStatus(res.data);
+    } catch (err) {
+      showToast('Error removing security key: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoadingWebauthn(false);
     }
   };
 
@@ -622,6 +754,187 @@ const SecurityModal = ({ isOpen, onClose, currentUser, colors, isMobile }) => {
                   Disable
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* WebAuthn/Security Keys Section */}
+        {webauthnStatus && (
+          <div style={{
+            padding: '16px',
+            backgroundColor: webauthnStatus.credentials_count > 0 ? colors.infoLight : colors.backgroundSecondary,
+            borderRadius: '8px',
+            border: `1px solid ${webauthnStatus.credentials_count > 0 ? colors.infoBorder : colors.border}`,
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+              <i 
+                className={`fas fa-${webauthnStatus.credentials_count > 0 ? 'check-circle' : 'key'}`} 
+                style={{ 
+                  fontSize: '20px', 
+                  color: webauthnStatus.credentials_count > 0 ? colors.success : colors.warning, 
+                  marginRight: '12px' 
+                }}
+              />
+              <div>
+                <h3 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: '16px', fontWeight: '600' }}>
+                  Security Keys
+                </h3>
+                <p style={{ margin: 0, color: colors.secondary, fontSize: '13px' }}>
+                  {webauthnStatus.credentials_count > 0 
+                    ? `${webauthnStatus.credentials_count} key${webauthnStatus.credentials_count !== 1 ? 's' : ''} registered` 
+                    : 'No security keys registered'}
+                </p>
+              </div>
+            </div>
+
+            {/* List of registered credentials */}
+            {webauthnStatus.credentials && webauthnStatus.credentials.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                {webauthnStatus.credentials.map((cred) => (
+                  <div 
+                    key={cred.id}
+                    style={{
+                      backgroundColor: colors.background,
+                      padding: '12px',
+                      borderRadius: '6px',
+                      marginBottom: '8px',
+                      border: `1px solid ${colors.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: colors.primary, fontWeight: '500', fontSize: '13px', marginBottom: '4px' }}>
+                        <i className="fas fa-usb" style={{ marginRight: '8px' }}></i>
+                        {cred.device_name}
+                      </div>
+                      <div style={{ color: colors.secondary, fontSize: '11px' }}>
+                        Registered: {new Date(cred.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteWebauthnCredential(cred.id)}
+                      disabled={loadingWebauthn}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: colors.danger,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: loadingWebauthn ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        opacity: loadingWebauthn ? 0.6 : 1
+                      }}
+                    >
+                      <i className="fas fa-trash" style={{ marginRight: '4px' }}></i>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Security Key Button */}
+            <div style={{ display: 'flex', gap: '8px', flexDirection: isMobile ? 'column' : 'row' }}>
+              {!showWebauthnSetup ? (
+                <button
+                  onClick={() => setShowWebauthnSetup(true)}
+                  disabled={loadingWebauthn}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    backgroundColor: colors.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: loadingWebauthn ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    opacity: loadingWebauthn ? 0.6 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <i className="fas fa-plus-circle" style={{ marginRight: '8px' }}></i>
+                  {loadingWebauthn ? 'Adding...' : 'Register Security Key'}
+                </button>
+              ) : (
+                <>
+                  <div style={{ flex: 1, marginBottom: '12px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      color: colors.primary,
+                      fontSize: '13px',
+                      fontWeight: '500'
+                    }}>
+                      Device Name (e.g., "YubiKey", "Windows Hello"):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., My Security Key"
+                      value={webauthnDeviceName}
+                      onChange={(e) => setWebauthnDeviceName(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        marginBottom: '12px',
+                        border: `2px solid ${colors.border}`,
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.primary,
+                        boxSizing: 'border-box'
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleWebauthnRegister}
+                      disabled={loadingWebauthn || !webauthnDeviceName.trim()}
+                      style={{
+                        flex: 1,
+                        padding: '12px 16px',
+                        backgroundColor: colors.success,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: (loadingWebauthn || !webauthnDeviceName.trim()) ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        opacity: (loadingWebauthn || !webauthnDeviceName.trim()) ? 0.5 : 1
+                      }}
+                    >
+                      <i className="fas fa-check" style={{ marginRight: '8px' }}></i>
+                      Register
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowWebauthnSetup(false);
+                        setWebauthnDeviceName('');
+                      }}
+                      disabled={loadingWebauthn}
+                      style={{
+                        flex: 1,
+                        padding: '12px 16px',
+                        backgroundColor: colors.border,
+                        color: colors.primary,
+                        border: `2px solid ${colors.border}`,
+                        borderRadius: '6px',
+                        cursor: loadingWebauthn ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        opacity: loadingWebauthn ? 0.5 : 1
+                      }}
+                    >
+                      <i className="fas fa-times" style={{ marginRight: '8px' }}></i>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

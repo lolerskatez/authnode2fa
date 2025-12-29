@@ -265,28 +265,19 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
     try {
       setLoadingWebauthn(true);
 
-      // Initiate registration
-      const initResponse = await axios.post('/api/webauthn/register/initiate', {
+      // Register the security key
+      const response = await axios.post('/api/webauthn/register', {
         device_name: webauthnDeviceName.trim()
       });
 
-      // Register credential with browser
-      const credentialResponse = await WebAuthnHelper.registerCredential(initResponse.data);
-
-      // Complete registration on server
-      await axios.post('/api/webauthn/register/complete', {
-        device_name: webauthnDeviceName.trim(),
-        credential: credentialResponse
-      });
-
-      showToast('WebAuthn security key registered successfully!');
+      showToast('Security key registered successfully!');
       setShowWebauthnSetup(false);
       setWebauthnDeviceName('');
       loadWebauthnStatus(); // Refresh status
 
     } catch (error) {
       console.error('WebAuthn registration failed:', error);
-      showToast(error.message || 'WebAuthn registration failed', 'error');
+      showToast(error.response?.data?.detail || error.message || 'Failed to register security key', 'error');
     } finally {
       setLoadingWebauthn(false);
     }

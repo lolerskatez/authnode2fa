@@ -82,6 +82,8 @@ class GlobalSettings(Base):
     totp_enabled = Column(Boolean, default=False)  # Whether 2FA system is enabled
     totp_enforcement = Column(String, default="optional")  # optional, admin_only, or required_all
     totp_grace_period_days = Column(Integer, default=7)  # Days before forced enrollment
+    webauthn_enabled = Column(Boolean, default=True)  # Whether WebAuthn/Security Keys are enabled
+    webauthn_enforcement = Column(String, default="optional")  # optional, admin_only, or required_all
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -128,6 +128,8 @@ class GlobalSettingsBase(BaseModel):
     totp_enabled: bool = False  # Whether 2FA system is enabled
     totp_enforcement: str = "optional"  # optional, admin_only, or required_all
     totp_grace_period_days: int = 7  # Days before forced enrollment
+    webauthn_enabled: bool = True  # Whether WebAuthn/Security Keys are enabled
+    webauthn_enforcement: str = "optional"  # optional, admin_only, or required_all
 
 
 class GlobalSettingsCreate(GlobalSettingsBase):
@@ -140,6 +142,8 @@ class GlobalSettingsUpdate(BaseModel):
     totp_enabled: Optional[bool] = None
     totp_enforcement: Optional[str] = None
     totp_grace_period_days: Optional[int] = None
+    webauthn_enabled: Optional[bool] = None
+    webauthn_enforcement: Optional[str] = None
 
 
 class GlobalSettings(GlobalSettingsBase):

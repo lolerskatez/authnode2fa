@@ -59,7 +59,7 @@ const SettingsView = ({
 
   const [testEmailInput, setTestEmailInput] = useState('');
   const [smtpLoading, setSmtpLoading] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true, totp_enabled: false, totp_enforcement: 'optional', totp_grace_period_days: 7 });
+  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true, totp_enabled: false, totp_enforcement: 'optional', totp_grace_period_days: 7, webauthn_enabled: true, webauthn_enforcement: 'optional' });
   const [globalSettingsLoading, setGlobalSettingsLoading] = useState(false);
   
   // Session Management States
@@ -205,7 +205,9 @@ const SettingsView = ({
               signup_enabled: res.data.signup_enabled !== false,
               totp_enabled: res.data.totp_enabled || false,
               totp_enforcement: res.data.totp_enforcement || 'optional',
-              totp_grace_period_days: res.data.totp_grace_period_days || 7
+              totp_grace_period_days: res.data.totp_grace_period_days || 7,
+              webauthn_enabled: res.data.webauthn_enabled !== false,
+              webauthn_enforcement: res.data.webauthn_enforcement || 'optional'
             });
           }
         })
@@ -647,6 +649,37 @@ const SettingsView = ({
       showToast('Grace period updated');
     } catch (err) {
       showToast('Error updating grace period: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFAEnforcementSaving(false);
+    }
+  };
+
+  const handleWebauthnToggle = async () => {
+    setTwoFAEnforcementSaving(true);
+    try {
+      const newEnabled = !globalSettings.webauthn_enabled;
+      await axios.put('/api/admin/settings', {
+        webauthn_enabled: newEnabled
+      });
+      setGlobalSettings({ ...globalSettings, webauthn_enabled: newEnabled });
+      showToast(newEnabled ? 'WebAuthn enabled' : 'WebAuthn disabled');
+    } catch (err) {
+      showToast('Error updating WebAuthn: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFAEnforcementSaving(false);
+    }
+  };
+
+  const handleWebauthnEnforcementChange = async (value) => {
+    setTwoFAEnforcementSaving(true);
+    try {
+      await axios.put('/api/admin/settings', {
+        webauthn_enforcement: value
+      });
+      setGlobalSettings({ ...globalSettings, webauthn_enforcement: value });
+      showToast('WebAuthn enforcement policy updated');
+    } catch (err) {
+      showToast('Error updating WebAuthn policy: ' + (err.response?.data?.detail || err.message));
     } finally {
       setTwoFAEnforcementSaving(false);
     }
@@ -1142,6 +1175,164 @@ const SettingsView = ({
                       )}
                     </div>
                   )}
+                </>
+              )}
+
+              {/* WebAuthn/Security Keys Settings */}
+              {currentUser && currentUser.role === 'admin' && (
+                <>
+                  <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+                    <i className="fas fa-key" style={{ marginRight: '8px', color: colors.accent }}></i>
+                    Security Keys (WebAuthn)
+                  </h3>
+
+                  {/* WebAuthn System Status */}
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: colors.background,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                          <i className="fas fa-shield-alt" style={{ marginRight: '8px', color: colors.accent }}></i>
+                          WebAuthn Status
+                        </h4>
+                        <p style={{ margin: 0, color: colors.secondary, fontSize: '12px' }}>
+                          {globalSettings.webauthn_enabled ? 'Users can register security keys' : 'Security keys are disabled'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleWebauthnToggle}
+                        disabled={twoFAEnforcementSaving}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: globalSettings.webauthn_enabled ? colors.success : colors.danger,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: twoFAEnforcementSaving ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          opacity: twoFAEnforcementSaving ? 0.6 : 1,
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <i className={`fas fa-${globalSettings.webauthn_enabled ? 'check' : 'times'}`} style={{ marginRight: '6px' }}></i>
+                        {twoFAEnforcementSaving ? 'Updating...' : (globalSettings.webauthn_enabled ? 'Enabled' : 'Disabled')}
+                      </button>
+                    </div>
+                    <div style={{
+                      padding: '10px 12px',
+                      backgroundColor: colors.infoLight,
+                      borderRadius: '6px',
+                      border: `1px solid ${colors.infoBorder}`,
+                      fontSize: '12px',
+                      color: colors.secondary
+                    }}>
+                      <i className="fas fa-info-circle" style={{ marginRight: '6px', color: colors.info }}></i>
+                      {globalSettings.webauthn_enabled 
+                        ? 'Users can register FIDO2 security keys for passwordless login.' 
+                        : 'Users cannot register new security keys. Existing keys can still be used.'}
+                    </div>
+
+                    {/* Enforcement Policy - Only visible when WebAuthn is enabled */}
+                    {globalSettings.webauthn_enabled && (
+                      <div style={{
+                        padding: '16px',
+                        backgroundColor: colors.background,
+                        borderRadius: '8px',
+                        border: `1px solid ${colors.border}`,
+                        marginTop: '16px'
+                      }}>
+                        <h4 style={{ margin: '0 0 12px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                          <i className="fas fa-cog" style={{ marginRight: '8px', color: colors.accent }}></i>
+                          Enforcement Policy
+                        </h4>
+                        <p style={{ margin: '0 0 12px 0', color: colors.secondary, fontSize: '13px' }}>
+                          Control how strictly WebAuthn security keys are enforced across your application:
+                        </p>
+
+                        {[
+                          {
+                            value: 'optional',
+                            label: 'Optional',
+                            description: 'Users can choose to enable a Security Key for their account. Users can delete their security key(s).',
+                            icon: 'check-circle'
+                          },
+                          {
+                            value: 'admin_only',
+                            label: 'Required for Admins',
+                            description: 'All admins must enroll a Security Key. Regular users remain optional. Admins cannot delete a Security Key without another Security Key existing. Users can delete their security key(s) even if no other security key exists.',
+                            icon: 'user-shield'
+                          },
+                          {
+                            value: 'required_all',
+                            label: 'Required for All Users',
+                            description: 'All users and admins must enroll a Security Key. No one can delete a Security Key without another Security Key existing.',
+                            icon: 'lock'
+                          }
+                        ].map(option => (
+                          <button
+                            key={option.value}
+                            onClick={() => handleWebauthnEnforcementChange(option.value)}
+                            disabled={twoFAEnforcementSaving}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              marginBottom: '8px',
+                              backgroundColor: globalSettings.webauthn_enforcement === option.value ? colors.accentLight : colors.backgroundSecondary,
+                              border: `2px solid ${globalSettings.webauthn_enforcement === option.value ? colors.accent : colors.border}`,
+                              borderRadius: '6px',
+                              cursor: twoFAEnforcementSaving ? 'not-allowed' : 'pointer',
+                              textAlign: 'left',
+                              transition: 'all 0.2s',
+                              opacity: twoFAEnforcementSaving ? 0.6 : 1
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                backgroundColor: globalSettings.webauthn_enforcement === option.value ? colors.accent : colors.border,
+                                color: globalSettings.webauthn_enforcement === option.value ? 'white' : colors.secondary,
+                                flexShrink: 0,
+                                fontSize: '12px'
+                              }}>
+                                <i className={`fas fa-${option.icon}`}></i>
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{
+                                  color: colors.primary,
+                                  fontWeight: '600',
+                                  fontSize: '13px',
+                                  marginBottom: '2px'
+                                }}>
+                                  {option.label}
+                                  {globalSettings.webauthn_enforcement === option.value && (
+                                    <span style={{ marginLeft: '6px', color: colors.accent, fontSize: '11px' }}>✓</span>
+                                  )}
+                                </div>
+                                <div style={{
+                                  color: colors.secondary,
+                                  fontSize: '12px'
+                                }}>
+                                  {option.description}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
