@@ -239,22 +239,8 @@ function Auth({ onLoginSuccess }) {
     } catch (err) {
       setError(err.response?.data?.detail || `${mode === 'login' ? 'Login' : 'Signup'} failed`);
       console.error(err);
-      setError('');
-
-      const res = await axios.get('/api/auth/oidc/login');
-      if (res.data.authorization_url) {
-        // Redirect to the authorization URL
-        window.location.href = res.data.authorization_url;
-      } else {
-        setError('Failed to get authorization URL from server.');
-        console.error('No authorization_url in response:', res.data);
-      }
-    } catch (err) {
-      const errorMsg = err.response?.data?.detail || err.message || 'SSO login failed. Please try again.';
-      setError(`SSO login failed: ${errorMsg}`);
-      console.error('SSO login error:', err);
     } finally {
-      setSsoLoading(false);
+      setLoading(false);
     }
   };
 
