@@ -172,6 +172,27 @@ def check_users_exist(db: Session = Depends(get_db)):
     user_count = db.query(models.User).count()
     return {"has_users": user_count > 0}
 
+@router.get("/login-settings")
+def get_login_settings(db: Session = Depends(get_db)):
+    """Get public login settings (unauthenticated endpoint)"""
+    try:
+        settings = db.query(models.GlobalSettings).first()
+        if settings:
+            return {
+                "webauthn_enabled": settings.webauthn_enabled if hasattr(settings, 'webauthn_enabled') else True,
+                "signup_enabled": settings.signup_enabled if hasattr(settings, 'signup_enabled') else True
+            }
+        return {
+            "webauthn_enabled": True,
+            "signup_enabled": True
+        }
+    except Exception as e:
+        # Default to enabled if error
+        return {
+            "webauthn_enabled": True,
+            "signup_enabled": True
+        }
+
 @router.post("/suggest-username")
 def suggest_username(data: dict, db: Session = Depends(get_db)):
     """Generate a suggested username based on full name and/or email"""

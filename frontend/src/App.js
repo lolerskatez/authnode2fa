@@ -319,6 +319,10 @@ const App = () => {
     setCurrentView({ main, sub });
   };
 
+  const handleLoginSuccess = useCallback((token) => {
+    setIsAuthenticated(true);
+  }, []);
+
   return (
     <div className="App">
       {loading ? (
@@ -329,7 +333,7 @@ const App = () => {
           </div>
         </div>
       ) : !isAuthenticated ? (
-        <Auth onLoginSuccess={loadUserData} />
+        <Auth onLoginSuccess={handleLoginSuccess} />
       ) : (
         <div className="container">
           <header>

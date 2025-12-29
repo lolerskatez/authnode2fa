@@ -38,6 +38,7 @@ function Auth({ onLoginSuccess }) {
   // WebAuthn states
   const [webauthnSupported, setWebauthnSupported] = useState(false);
   const [webauthnLoading, setWebauthnLoading] = useState(false);
+  const [webauthnEnabled, setWebauthnEnabled] = useState(true);
 
   const handleOidcCallback = useCallback(async (code, state) => {
     // Prevent double processing (React StrictMode calls useEffect twice)
@@ -131,6 +132,19 @@ function Auth({ onLoginSuccess }) {
     };
 
     loadSignupEnabled();
+
+    // Load WebAuthn enabled setting from server
+    const loadWebauthnEnabled = async () => {
+      try {
+        const res = await axios.get('/api/auth/login-settings');
+        setWebauthnEnabled(res.data.webauthn_enabled !== false);
+      } catch (err) {
+        // Default to enabled if error
+        setWebauthnEnabled(true);
+      }
+    };
+
+    loadWebauthnEnabled();
 
     // Assume WebAuthn is supported - the actual WebAuthn calls will fail gracefully if not supported
     // Don't check navigator.credentials during initialization to avoid illegal invocation errors
@@ -250,22 +264,42 @@ function Auth({ onLoginSuccess }) {
       setWebauthnLoading(true);
       setError('');
       
-      const helper = new WebAuthnHelper();
-      const credential = await helper.authenticate(email);
+      if (!email) {
+        setError('Please enter your email address');
+        setWebauthnLoading(false);
+        return;
+      }
       
-      const res = await axios.post('/api/auth/webauthn/verify', {
-        email,
+      // Step 1: Get authentication options from server
+      const optionsRes = await axios.post('/api/webauthn/authenticate/options', {
+        email: email.trim()
+      });
+      
+      const options = optionsRes.data;
+      
+      // Step 2: Use WebAuthnHelper to authenticate with the credential
+      const credential = await WebAuthnHelper.authenticateCredential(options);
+      
+      // Step 3: Send credential to server for verification
+      const res = await axios.post('/api/webauthn/authenticate/complete', {
+        email: email.trim(),
         credential: credential
       });
       
       const token = res.data.access_token;
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setWebauthnLoading(false);
       onLoginSuccess(token);
     } catch (err) {
-      setError(err.message || 'WebAuthn authentication failed');
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else if (err.name === 'NotAllowedError') {
+        setError('Authentication cancelled or no authenticator available');
+      } else {
+        setError(err.message || 'WebAuthn authentication failed');
+      }
       console.error(err);
-    } finally {
       setWebauthnLoading(false);
     }
   };
@@ -285,7 +319,7 @@ function Auth({ onLoginSuccess }) {
   const handleEnrollmentComplete = async () => {
     try {
       setEnrollmentLoading(true);
-      const res = await axios.post('/api/auth/2fa/enable', {
+      await axios.post('/api/auth/2fa/enable', {
         secret: enrollmentSecret,
         totp_code: enrollmentCode
       }, {
@@ -309,7 +343,7 @@ function Auth({ onLoginSuccess }) {
     try {
       setForgotPasswordLoading(true);
       setError('');
-      const res = await axios.post('/api/auth/password-reset', {
+      await axios.post('/api/auth/password-reset', {
         email: forgotPasswordEmail
       });
       setResetToken(true);
@@ -498,7 +532,7 @@ function Auth({ onLoginSuccess }) {
                 {loading ? 'Processing...' : (mode === 'login' ? 'Login' : 'Sign Up')}
               </button>
 
-              {mode === 'login' && webauthnSupported && !isInitialSetup && (
+              {mode === 'login' && webauthnSupported && webauthnEnabled && !isInitialSetup && (
                 <div style={{ textAlign: 'center', marginTop: '16px' }}>
                   <div style={{ 
                     height: '1px', 

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, crud, auth
 from ..rate_limit import limiter, SENSITIVE_API_RATE_LIMIT
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 import json
 import base64
@@ -183,6 +183,166 @@ def complete_registration(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Failed to complete registration: {str(e)}")
+
+
+@router.post("/authenticate/options")
+def get_authentication_options(
+    request: Request,
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    """Get authentication options for WebAuthn login"""
+    try:
+        email = data.get("email", "").strip()
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        # Find user by email
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get user's WebAuthn credentials
+        credentials = db.query(models.WebAuthnCredential).filter(
+            models.WebAuthnCredential.user_id == user.id
+        ).all()
+        
+        if not credentials:
+            raise HTTPException(status_code=400, detail="User has no registered security keys")
+        
+        # Generate challenge
+        challenge = generate_challenge()
+        
+        # Store challenge in database for later verification
+        webauthn_challenge = models.WebAuthnChallenge(
+            user_id=user.id,
+            challenge=challenge,
+            challenge_type="authentication",
+            expires_at=datetime.utcnow() + timedelta(minutes=5),
+            created_at=datetime.utcnow()
+        )
+        db.add(webauthn_challenge)
+        db.commit()
+        
+        # Build allowCredentials list
+        allow_credentials = []
+        for cred in credentials:
+            allow_credentials.append({
+                "type": "public-key",
+                "id": cred.credential_id,
+                "transports": cred.transports or ["usb", "nfc", "ble", "internal"]
+            })
+        
+        return {
+            "challenge": challenge,
+            "timeout": 60000,
+            "rpId": "localhost",
+            "allowCredentials": allow_credentials,
+            "userVerification": "preferred"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to get authentication options: {str(e)}")
+
+
+@router.post("/authenticate/complete")
+def complete_authentication(
+    request: Request,
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    """Complete WebAuthn authentication and return JWT token"""
+    try:
+        email = data.get("email", "").strip()
+        credential_data = data.get("credential", {})
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        if not credential_data:
+            raise HTTPException(status_code=400, detail="Credential data is required")
+        
+        # Find user by email
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get the credential ID from response
+        credential_id = credential_data.get("id", "")
+        
+        if not credential_id:
+            raise HTTPException(status_code=400, detail="Invalid credential data")
+        
+        # Find the credential
+        credential = db.query(models.WebAuthnCredential).filter(
+            models.WebAuthnCredential.user_id == user.id,
+            models.WebAuthnCredential.credential_id == credential_id
+        ).first()
+        
+        if not credential:
+            raise HTTPException(status_code=400, detail="Credential not found or does not belong to user")
+        
+        # Parse client data
+        response_data = credential_data.get("response", {})
+        client_data_json = response_data.get("clientDataJSON", "")
+        
+        if not client_data_json:
+            raise HTTPException(status_code=400, detail="Missing client data")
+        
+        # Decode and validate client data
+        try:
+            import base64
+            # Convert base64url to base64 and add padding
+            b64_str = client_data_json.replace('-', '+').replace('_', '/')
+            # Add padding if needed
+            padding = 4 - (len(b64_str) % 4)
+            if padding != 4:
+                b64_str += '=' * padding
+            client_data_bytes = base64.b64decode(b64_str)
+            client_data = json.loads(client_data_bytes.decode('utf-8'))
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid client data: {str(e)}")
+        
+        if client_data.get("type") != "webauthn.get":
+            raise HTTPException(status_code=400, detail="Invalid client data type")
+        
+        # Update last used timestamp
+        credential.last_used_at = datetime.utcnow()
+        db.commit()
+        
+        # Create audit log
+        crud.create_audit_log(
+            db,
+            user_id=user.id,
+            action="webauthn_login",
+            resource_type="webauthn_credential",
+            resource_id=credential.id,
+            status="success",
+            details={"device_name": credential.device_name}
+        )
+        
+        # Generate JWT token
+        access_token = auth.create_access_token(data={"sub": str(user.id)})
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "role": user.role
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to complete authentication: {str(e)}")
 
 
 @router.delete("/credentials/{credential_id}")
