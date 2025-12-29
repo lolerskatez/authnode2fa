@@ -33,6 +33,8 @@ class ApplicationBase(BaseModel):
     name: str
     secret: str
     backup_key: str
+    otp_type: Optional[str] = "TOTP"
+    counter: Optional[int] = 0
     icon: Optional[str] = None
     color: Optional[str] = '#6B46C1'
     category: Optional[str] = "Personal"
@@ -296,6 +298,8 @@ class ApplicationExportData(BaseModel):
     """Single application for export"""
     name: str
     secret: str
+    otp_type: Optional[str] = "TOTP"
+    counter: Optional[int] = 0
     icon: Optional[str] = None
     color: Optional[str] = None
     category: Optional[str] = None

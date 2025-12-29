@@ -44,9 +44,16 @@ def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, 
     try:
         image_bytes = file.file.read()
         
-        # Extract QR data first to get both secret and issuer
+        # Extract QR data with OTP type and counter
         qr_data = utils.extract_qr_data(image_bytes)
-        secret = utils.extract_secret_from_qr_data(qr_data)
+        qr_info = utils.extract_secret_from_qr_data(qr_data)
+        if not qr_info:
+            raise ValueError("Could not extract secret from QR code")
+        
+        secret = qr_info["secret"]
+        otp_type = qr_info["otp_type"]
+        counter = qr_info["counter"]
+        
         issuer = utils.extract_issuer_from_qr_data(qr_data)
         
         # Determine service name for icon
@@ -60,7 +67,9 @@ def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, 
             secret=secret, 
             backup_key=backup_key,
             icon=icon,
-            color=color
+            color=color,
+            otp_type=otp_type,
+            counter=counter
         )
         return crud.create_application(db, app, current_user.id)
     except ValueError as e:
@@ -134,7 +143,18 @@ def get_code(request: Request, app_id: int, current_user: models.User = Depends(
     if not app or app.user_id != current_user.id:
         raise HTTPException(status_code=404)
     decrypted_secret = cipher.decrypt(app.secret.encode()).decode()
-    code = utils.generate_totp_code(decrypted_secret)
+    
+    # Generate code based on OTP type
+    if app.otp_type == "HOTP":
+        # Increment counter and generate code
+        code = utils.generate_totp_code(decrypted_secret, app.otp_type, app.counter)
+        # Update counter in database for HOTP
+        app.counter += 1
+        db.commit()
+    else:
+        # TOTP
+        code = utils.generate_totp_code(decrypted_secret, app.otp_type, app.counter)
+    
     return {"code": code}
 
 @router.put("/{app_id}", response_model=schemas.Application)

@@ -38,23 +38,41 @@ def extract_qr_data(image_bytes: bytes) -> str:
     except Exception as e:
         raise ValueError(f"Failed to decode QR code: {str(e)}")
 
-def extract_secret_from_qr(image_bytes: bytes) -> str:
-    """Extract TOTP secret from QR code image using OpenCV"""
+def extract_secret_from_qr(image_bytes: bytes) -> dict:
+    """Extract TOTP/HOTP secret, type, and counter from QR code image using OpenCV"""
     qr_data = extract_qr_data(image_bytes)
     return extract_secret_from_qr_data(qr_data)
 
-def extract_secret_from_qr_data(qr_data: str) -> str:
-    """Extract TOTP secret from QR code data string"""
-    # QR codes for TOTP are in otpauth:// format
-    # Example: otpauth://totp/Example:user@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example
+def extract_secret_from_qr_data(qr_data: str) -> dict:
+    """Extract TOTP/HOTP secret, type, and counter from QR code data string"""
     if 'otpauth://' in qr_data:
-        # Extract secret parameter from otpauth URL
-        match = re.search(r'secret=([A-Z2-7]+)', qr_data, re.IGNORECASE)
-        if match:
-            return match.group(1).upper()
+        # Extract secret parameter
+        secret_match = re.search(r'secret=([A-Z2-7]+)', qr_data, re.IGNORECASE)
+        if not secret_match:
+            return None
+        
+        secret = secret_match.group(1).upper()
+        
+        # Extract OTP type (totp/hotp)
+        type_match = re.search(r'otpauth://(totp|hotp)', qr_data, re.IGNORECASE)
+        otp_type = type_match.group(1).upper() if type_match else "TOTP"
+        
+        # Extract counter for HOTP
+        counter_match = re.search(r'counter=(\d+)', qr_data, re.IGNORECASE)
+        counter = int(counter_match.group(1)) if counter_match else 0
+        
+        return {
+            "secret": secret,
+            "otp_type": otp_type,
+            "counter": counter
+        }
     
     # If no otpauth format, assume the data is the secret directly
-    return qr_data.upper()
+    return {
+        "secret": qr_data.upper(),
+        "otp_type": "TOTP",
+        "counter": 0
+    }
 
 def extract_issuer_from_qr_data(qr_data: str) -> str:
     """Extract issuer/service name from QR code data"""
@@ -273,9 +291,14 @@ def get_service_color(service_name: str) -> str:
     # Default fallback
     return '#6B46C1'
 
-def generate_totp_code(secret: str) -> str:
-    totp = pyotp.TOTP(secret)
-    return totp.now()
+def generate_totp_code(secret: str, otp_type: str = "TOTP", counter: int = 0) -> str:
+    """Generate TOTP or HOTP code based on type"""
+    if otp_type == "HOTP":
+        hotp = pyotp.HOTP(secret)
+        return hotp.at(counter)
+    else:  # TOTP
+        totp = pyotp.TOTP(secret)
+        return totp.now()
 
 def generate_backup_key() -> str:
     return pyotp.random_base32()

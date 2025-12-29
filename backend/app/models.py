@@ -32,6 +32,8 @@ class Application(Base):
     color = Column(String, nullable=True, default='#6B46C1')  # Background color for the icon
     secret = Column(Text)  # Encrypted
     backup_key = Column(String)
+    otp_type = Column(String, default="TOTP")  # TOTP or HOTP
+    counter = Column(Integer, default=0)  # For HOTP counter
     category = Column(String, default="Personal")  # Work, Personal, Security
     favorite = Column(Boolean, default=False)
     display_order = Column(Integer, default=0)  # For user-defined ordering
