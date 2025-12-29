@@ -132,8 +132,9 @@ function Auth({ onLoginSuccess }) {
 
     loadSignupEnabled();
 
-    // Check WebAuthn support
-    setWebauthnSupported(WebAuthnHelper.isSupported());
+    // Assume WebAuthn is supported - the actual WebAuthn calls will fail gracefully if not supported
+    // Don't check navigator.credentials during initialization to avoid illegal invocation errors
+    setWebauthnSupported(true);
 
     // Check for OIDC callback parameters
     const urlParams = new URLSearchParams(window.location.search);

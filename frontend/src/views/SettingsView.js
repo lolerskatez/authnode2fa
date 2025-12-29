@@ -112,13 +112,35 @@ const SettingsView = ({
   const [totalAuditLogs, setTotalAuditLogs] = useState(0);
   const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
 
+  // Audit Logs Function - defined before useEffect that uses it
+  const fetchAuditLogs = useCallback(async () => {
+    if (currentUser?.role !== 'admin') return;
+
+    try {
+      setAuditLogsLoading(true);
+      const params = {};
+      if (auditLogsFilter.user_id) params.user_id = auditLogsFilter.user_id;
+      if (auditLogsFilter.action) params.action = auditLogsFilter.action;
+      if (auditLogsFilter.status) params.status = auditLogsFilter.status;
+      if (auditLogsFilter.limit) params.limit = auditLogsFilter.limit;
+      if (auditLogsFilter.offset) params.offset = auditLogsFilter.offset;
+
+      const response = await axios.get('/api/admin/audit-logs', { params });
+      setAuditLogs(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error);
+    } finally {
+      setAuditLogsLoading(false);
+    }
+  }, [auditLogsFilter, currentUser?.role]);
+
   // Load sessions
   useEffect(() => {
     const loadSessions = async () => {
       try {
         setSessionsLoading(true);
         const response = await axios.get('/api/users/sessions');
-        setSessions(response.data || []);
+        setSessions(response.data.sessions || []);
       } catch (err) {
         console.error('Failed to load sessions:', err);
         setSessions([]);
@@ -462,28 +484,7 @@ const SettingsView = ({
   };
 
   // Audit Logs Functions
-  const fetchAuditLogs = useCallback(async () => {
-    if (currentUser?.role !== 'admin') return;
-
-    try {
-      setAuditLogsLoading(true);
-      const params = {};
-      if (auditLogsFilter.user_id) params.user_id = auditLogsFilter.user_id;
-      if (auditLogsFilter.action) params.action = auditLogsFilter.action;
-      if (auditLogsFilter.status) params.status = auditLogsFilter.status;
-      if (auditLogsFilter.limit) params.limit = auditLogsFilter.limit;
-      if (auditLogsFilter.offset) params.offset = auditLogsFilter.offset;
-
-      const response = await axios.get('/api/admin/audit-logs', { params });
-      setAuditLogs(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch audit logs:', error);
-      showToast('Failed to load audit logs', 'error');
-    } finally {
-      setAuditLogsLoading(false);
-    }
-  }, [auditLogsFilter, currentUser?.role]);
-
+  
   const handleAuditLogsFilterChange = (field, value) => {
     setAuditLogsFilter(prev => ({
       ...prev,

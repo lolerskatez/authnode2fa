@@ -243,8 +243,14 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
       const response = await axios.get('/api/webauthn/status');
       setWebauthnStatus(response.data);
     } catch (error) {
-      console.error('Failed to load WebAuthn status:', error);
-      setWebauthnStatus({ enabled: false, credentials_count: 0, credentials: [] });
+      if (error.response?.status === 404) {
+        // WebAuthn endpoint not available
+        console.log('WebAuthn endpoint not available');
+        setWebauthnStatus({ enabled: false, credentials_count: 0, credentials: [], endpoint_available: false });
+      } else {
+        console.error('Failed to load WebAuthn status:', error);
+        setWebauthnStatus({ enabled: false, credentials_count: 0, credentials: [] });
+      }
     } finally {
       setLoadingWebauthn(false);
     }
@@ -773,7 +779,15 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
               )}
             </div>
             
-            {!webauthnSupported ? (
+            {webauthnStatus?.endpoint_available === false ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: colors.secondary }}>
+                <i className="fas fa-info-circle" style={{ fontSize: '24px', marginBottom: '8px', color: colors.info }}></i>
+                <div>Security Key feature is not enabled</div>
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                  Contact your administrator to enable WebAuthn support
+                </div>
+              </div>
+            ) : !webauthnSupported ? (
               <div style={{ textAlign: 'center', padding: '20px', color: colors.secondary }}>
                 <i className="fas fa-exclamation-triangle" style={{ fontSize: '24px', marginBottom: '8px', color: colors.warning }}></i>
                 <div>WebAuthn is not supported in this browser</div>
