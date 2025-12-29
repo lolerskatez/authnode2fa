@@ -1,22 +1,121 @@
-# Production Deployment Guide
+# Deployment Guide
 
-## Quick Start
+Complete instructions for deploying authnode2fa in all environments.
+
+## Quick Navigation
+
+- **Just want to deploy?** → Jump to [Production Deployment](#production-docker-recommended)
+- **Local development?** → Jump to [Local Development](#local-development)
+- **Security checklist?** → See [SECURITY.md](SECURITY.md)
+- **Need help?** → Jump to [Troubleshooting](#troubleshooting)
+
+---
+
+## Production Deployment (Docker - Recommended)
 
 ### Prerequisites
-- Docker & Docker Compose (latest versions)
-- A domain name pointing to your server
-- SSL certificate (recommended: use Let's Encrypt)
 
-### 1. Clone and Configure
+- Linux server (Ubuntu 20.04+, Debian 11+, or similar)
+- Docker and Docker Compose installed
+- Domain name configured
+- 2GB RAM minimum (4GB+ recommended)
+- 10GB disk space minimum
+
+### Step 1: Server Preparation
 
 ```bash
-git clone https://github.com/yourusername/authnode2fa.git
-cd authnode2fa
+# SSH into your server
+ssh user@your-server-ip
 
-# Copy and configure environment
-cp .env.docker.example .env.docker
-nano .env.docker  # Edit with your production values
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker (if not already installed)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
+
+### Step 2: Clone Repository
+
+```bash
+# Choose a deployment directory
+mkdir -p /opt/authnode2fa
+cd /opt/authnode2fa
+
+# Clone repository
+git clone https://github.com/lolerskatez/authnode2fa.git .
+```
+
+### Step 3: Configure Environment
+
+```bash
+# Copy production template
+cp .env.docker.example .env.docker
+
+# Edit with your settings
+nano .env.docker
+```
+
+**Required configuration:**
+
+```bash
+# 1. Generate encryption key
+python3 -c "from cryptography.fernet import Fernet; print('ENCRYPTION_KEY=' + Fernet.generate_key().decode())"
+# Copy output to: ENCRYPTION_KEY=...
+
+# 2. Generate database password
+openssl rand -base64 32
+# Copy output to: POSTGRES_PASSWORD=...
+
+# 3. Set your domain
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+FRONTEND_URL=https://yourdomain.com
+BACKEND_URL=https://yourdomain.com/api
+
+# 4. Optional: Configure OIDC
+OIDC_CLIENT_ID=your-client-id
+OIDC_CLIENT_SECRET=your-client-secret
+OIDC_PROVIDER_URL=https://your-oidc-provider
+```
+
+### Step 4: Deploy
+
+```bash
+# Start all services
+docker-compose --env-file .env.docker up -d
+
+# Verify services are running
+docker-compose ps
+
+# Check logs
+docker-compose logs -f backend
+```
+
+### Step 5: SSL Certificate (Let's Encrypt)
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Get certificate
+sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+
+# Update nginx config with certificate paths
+# Edit docker-compose.yml to mount certificates
+```
+
+### Step 6: Access Application
+
+Visit:
+- **Frontend**: `https://yourdomain.com`
+- **API Docs**: `https://yourdomain.com/api/docs`
+- **Default admin**: `admin@example.com` / auto-generated (check logs)
 
 ### 2. Generate Required Secrets
 

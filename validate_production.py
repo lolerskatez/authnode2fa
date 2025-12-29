@@ -46,8 +46,6 @@ class ProductionValidator:
             ".env.example": "Environment template",
             ".env.docker.example": "Docker env template",
             "DEPLOYMENT.md": "Deployment guide",
-            "QUICK_START_PRODUCTION.md": "Quick start guide",
-            "DEPLOYMENT_CHECKLIST.md": "Pre-launch checklist",
         }
         
         for file_path, description in required_files.items():
@@ -141,10 +139,10 @@ class ProductionValidator:
         print("\n📚 CHECKING DOCUMENTATION...")
         
         docs = [
-            ("QUICK_START_PRODUCTION.md", "Quick start guide"),
-            ("DEPLOYMENT.md", "Detailed deployment guide"),
-            ("DEPLOYMENT_CHECKLIST.md", "Pre-deployment checklist"),
             ("README.md", "Project README"),
+            ("DEPLOYMENT.md", "Deployment guide (all environments)"),
+            ("SECURITY.md", "Security & configuration guide"),
+            ("CHANGELOG.md", "Version history"),
         ]
         
         for doc_file, description in docs:
@@ -208,8 +206,9 @@ class ProductionValidator:
         if self.failed == 0:
             print("\n✅ APPLICATION IS PRODUCTION READY!")
             print("\nNext steps:")
-            print("1. Review QUICK_START_PRODUCTION.md")
-            print("2. Configure .env.docker with your settings")
+            print("1. Review README.md for features")
+            print("2. See DEPLOYMENT.md for setup guide")
+            print("3. Configure .env.docker with your settings")
             print("3. Run: docker-compose --env-file .env.docker up -d")
             return 0
         else:
