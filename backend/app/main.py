@@ -114,8 +114,8 @@ def read_root():
             }
             
             body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f5f7fa;
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
@@ -124,9 +124,9 @@ def read_root():
             }
             
             .container {
-                background: white;
+                background: #ffffff;
                 border-radius: 12px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                 max-width: 600px;
                 width: 100%;
                 padding: 60px 40px;
@@ -149,7 +149,7 @@ def read_root():
             }
             
             .version {
-                color: #667eea;
+                color: #4361ee;
                 font-size: 14px;
                 font-weight: 600;
                 letter-spacing: 1px;
@@ -157,7 +157,7 @@ def read_root():
             }
             
             .subtitle {
-                color: #666;
+                color: #718096;
                 font-size: 16px;
                 margin-top: 15px;
                 line-height: 1.6;
@@ -171,60 +171,60 @@ def read_root():
             }
             
             .link-btn {
-                padding: 15px 25px;
+                padding: 10px 16px;
                 border: none;
-                border-radius: 8px;
+                border-radius: 6px;
                 font-size: 14px;
                 font-weight: 600;
                 cursor: pointer;
                 text-decoration: none;
                 display: flex;
                 flex-direction: column;
-                gap: 5px;
-                transition: all 0.3s ease;
+                gap: 8px;
+                transition: all 0.3s;
                 align-items: center;
                 justify-content: center;
             }
             
             .link-btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             }
             
             .docs-btn {
-                background: #667eea;
+                background: #4361ee;
                 color: white;
             }
             
             .docs-btn:hover {
-                background: #5568d3;
+                background: #3449d0;
             }
             
             .redoc-btn {
-                background: #f5a623;
+                background: #4361ee;
                 color: white;
             }
             
             .redoc-btn:hover {
-                background: #e39615;
+                background: #3449d0;
             }
             
             .health-btn {
-                background: #27ae60;
+                background: #4361ee;
                 color: white;
             }
             
             .health-btn:hover {
-                background: #229954;
+                background: #3449d0;
             }
             
             .schema-btn {
-                background: #e74c3c;
+                background: #4361ee;
                 color: white;
             }
             
             .schema-btn:hover {
-                background: #c0392b;
+                background: #3449d0;
             }
             
             .icon {
@@ -239,13 +239,13 @@ def read_root():
             .footer {
                 margin-top: 40px;
                 padding-top: 30px;
-                border-top: 1px solid #eee;
-                color: #999;
+                border-top: 1px solid #e2e8f0;
+                color: #718096;
                 font-size: 12px;
             }
             
             .footer a {
-                color: #667eea;
+                color: #4361ee;
                 text-decoration: none;
             }
             
@@ -290,9 +290,9 @@ def read_root():
                     <span class="icon">💚</span>
                     <span class="label">Health Check</span>
                 </a>
-                <a href="/api/openapi.json" class="link-btn schema-btn">
-                    <span class="icon">⚙️</span>
-                    <span class="label">OpenAPI Schema</span>
+                <a href="/api/schema" class="link-btn schema-btn">
+                    <span class="icon">🔧</span>
+                    <span class="label">API Schema</span>
                 </a>
             </div>
             
@@ -340,8 +340,8 @@ def health_check():
             }}
             
             body {{
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f5f7fa;
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
@@ -350,9 +350,9 @@ def health_check():
             }}
             
             .container {{
-                background: white;
+                background: #ffffff;
                 border-radius: 12px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                 max-width: 500px;
                 width: 100%;
                 padding: 50px 40px;
@@ -390,7 +390,7 @@ def health_check():
             }}
             
             .status-grid {{
-                background: #f8f9fa;
+                background: #f5f7fa;
                 border-radius: 8px;
                 padding: 25px;
                 margin-bottom: 30px;
@@ -401,7 +401,7 @@ def health_check():
                 display: flex;
                 justify-content: space-between;
                 padding: 12px 0;
-                border-bottom: 1px solid #e0e0e0;
+                border-bottom: 1px solid #e2e8f0;
             }}
             
             .status-item:last-child {{
@@ -409,7 +409,7 @@ def health_check():
             }}
             
             .status-label {{
-                color: #666;
+                color: #718096;
                 font-weight: 600;
             }}
             
@@ -419,13 +419,13 @@ def health_check():
             }}
             
             .footer {{
-                color: #999;
+                color: #718096;
                 font-size: 12px;
                 margin-top: 20px;
             }}
             
             .footer a {{
-                color: #667eea;
+                color: #4361ee;
                 text-decoration: none;
             }}
             
@@ -478,6 +478,367 @@ def health_check():
                 <p><a href="/">← Back to Dashboard</a></p>
             </div>
         </div>
+    </body>
+    </html>
+    """
+
+
+@app.get("/api/schema", response_class=HTMLResponse)
+def schema_viewer():
+    """Beautiful visual schema viewer with download option"""
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>API Schema - 2FA Manager</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f5f7fa;
+                min-height: 100vh;
+                padding: 20px;
+            }
+            
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+            
+            .header {
+                background: #ffffff;
+                border-radius: 12px;
+                padding: 40px;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            }
+            
+            .header h1 {
+                color: #333;
+                margin-bottom: 10px;
+                font-size: 32px;
+            }
+            
+            .header p {
+                color: #718096;
+                margin-bottom: 25px;
+                font-size: 16px;
+            }
+            
+            .button-group {
+                display: flex;
+                gap: 15px;
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                padding: 10px 16px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.3s;
+            }
+            
+            .btn-primary {
+                background: #4361ee;
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                background: #3449d0;
+                box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+            }
+            
+            .btn-secondary {
+                background: #ffffff;
+                color: #4361ee;
+                border: 1px solid #e2e8f0;
+            }
+            
+            .btn-secondary:hover {
+                background: #f5f7fa;
+                border-color: #4361ee;
+            }
+            
+            .schema-card {
+                background: #ffffff;
+                border-radius: 12px;
+                padding: 30px;
+                margin-bottom: 20px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                border: 1px solid #e2e8f0;
+            }
+            
+            .schema-card h2 {
+                color: #333;
+                margin-bottom: 20px;
+                padding-bottom: 0;
+                border-bottom: none;
+                font-size: 18px;
+                font-weight: 600;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+                margin-top: 0;
+            }
+            
+            .info-item {
+                padding: 12px;
+                background: #f5f7fa;
+                border-radius: 6px;
+                border-left: none;
+                border: 1px solid #e2e8f0;
+            }
+            
+            .info-label {
+                font-size: 12px;
+                color: #718096;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+                font-weight: 600;
+            }
+            
+            .info-value {
+                font-size: 16px;
+                color: #4361ee;
+                font-weight: 700;
+            }
+            
+            .code-block {
+                background: #1e1e1e;
+                color: #d4d4d4;
+                padding: 20px;
+                border-radius: 8px;
+                overflow-x: auto;
+                margin-top: 15px;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            
+            .code-block code {
+                display: block;
+            }
+            
+            .highlight {
+                color: #4ec9b0;
+            }
+            
+            .footer {
+                text-align: center;
+                margin-top: 40px;
+                padding: 20px;
+                color: #718096;
+            }
+            
+            .footer a {
+                color: #4361ee;
+                text-decoration: underline;
+            }
+            
+            .footer a:hover {
+                opacity: 0.8;
+            }
+            
+            .nav-link {
+                display: inline-block;
+                margin-top: 20px;
+                color: #4361ee;
+                text-decoration: none;
+                font-weight: 600;
+            }
+            
+            .nav-link:hover {
+                text-decoration: underline;
+            }
+            
+            @media (max-width: 768px) {
+                .header {
+                    padding: 25px;
+                }
+                
+                .header h1 {
+                    font-size: 24px;
+                }
+                
+                .button-group {
+                    flex-direction: column;
+                }
+                
+                .btn {
+                    width: 100%;
+                    justify-content: center;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🔧 OpenAPI Schema</h1>
+                <p>Complete API specification for 2FA Manager. Download the schema or explore it through our interactive documentation.</p>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="downloadSchema()">
+                        📥 Download JSON
+                    </button>
+                    <a href="/api/docs" class="btn btn-secondary">
+                        📖 Swagger UI
+                    </a>
+                    <a href="/api/redoc" class="btn btn-secondary">
+                        📚 ReDoc
+                    </a>
+                    <a href="/" class="btn btn-secondary">
+                        🏠 Dashboard
+                    </a>
+                </div>
+            </div>
+            
+            <div class="schema-card">
+                <h2>📋 Schema Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Title</div>
+                        <div class="info-value" id="schema-title">Loading...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Version</div>
+                        <div class="info-value" id="schema-version">Loading...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Endpoints</div>
+                        <div class="info-value" id="schema-endpoints">Loading...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Schemas</div>
+                        <div class="info-value" id="schema-models">Loading...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="schema-card">
+                <h2>🛣️ Available Endpoints</h2>
+                <div id="endpoints-list" style="margin-top: 15px;"></div>
+            </div>
+            
+            <div class="schema-card">
+                <h2>📊 Data Models</h2>
+                <div id="models-list" style="margin-top: 15px;"></div>
+            </div>
+            
+            <div class="footer">
+                <p>OpenAPI Schema Version 3.0.0 • <a href="https://github.com/lolerskatez/authnode2fa" target="_blank">View on GitHub</a></p>
+            </div>
+        </div>
+        
+        <script>
+            async function loadSchema() {
+                try {
+                    const response = await fetch('/api/openapi.json');
+                    const schema = await response.json();
+                    
+                    // Update schema info
+                    document.getElementById('schema-title').textContent = schema.info.title || 'Unknown';
+                    document.getElementById('schema-version').textContent = schema.info.version || 'Unknown';
+                    document.getElementById('schema-endpoints').textContent = Object.keys(schema.paths || {}).length;
+                    document.getElementById('schema-models').textContent = Object.keys(schema.components?.schemas || {}).length;
+                    
+                    // Build endpoints list
+                    const endpointsList = document.getElementById('endpoints-list');
+                    const paths = schema.paths || {};
+                    
+                    Object.entries(paths).forEach(([path, methods]) => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;';
+                        
+                        const methodsHtml = Object.entries(methods)
+                            .filter(([key]) => ['get', 'post', 'put', 'delete', 'patch'].includes(key))
+                            .map(([method, details]) => {
+                                const colors = {
+                                    get: '#3b82f6',
+                                    post: '#10b981',
+                                    put: '#f59e0b',
+                                    delete: '#ef4444',
+                                    patch: '#8b5cf6'
+                                };
+                                return \`<span style="display: inline-block; background: \${colors[method] || '#999'}; color: white; padding: 4px 12px; border-radius: 4px; margin-right: 8px; font-weight: 600; font-size: 12px;">\${method.toUpperCase()}</span>\`;
+                            })
+                            .join('');
+                        
+                        div.innerHTML = \`
+                            <div style="margin-bottom: 8px;">\${methodsHtml}</div>
+                            <code style="color: #667eea; font-weight: 600;">\${path}</code>
+                        \`;
+                        endpointsList.appendChild(div);
+                    });
+                    
+                    // Build models list
+                    const modelsList = document.getElementById('models-list');
+                    const schemas = schema.components?.schemas || {};
+                    
+                    Object.entries(schemas).forEach(([name, schema_def]) => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;';
+                        
+                        const properties = schema_def.properties ? Object.keys(schema_def.properties).length : 0;
+                        div.innerHTML = \`
+                            <div style="font-weight: 600; color: #333; margin-bottom: 5px;">\${name}</div>
+                            <div style="font-size: 13px; color: #666;">
+                                \${schema_def.description || 'No description'}<br>
+                                <span style="color: #999;">Fields: \${properties}</span>
+                            </div>
+                        \`;
+                        modelsList.appendChild(div);
+                    });
+                    
+                } catch (error) {
+                    console.error('Error loading schema:', error);
+                    document.getElementById('endpoints-list').innerHTML = '<p style="color: #e74c3c;">Error loading schema</p>';
+                }
+            }
+            
+            function downloadSchema() {
+                fetch('/api/openapi.json')
+                    .then(response => response.json())
+                    .then(schema => {
+                        const dataStr = JSON.stringify(schema, null, 2);
+                        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                        const url = URL.createObjectURL(dataBlob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = '2fa-manager-openapi-schema.json';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(error => {
+                        console.error('Error downloading schema:', error);
+                        alert('Error downloading schema');
+                    });
+            }
+            
+            // Load schema on page load
+            document.addEventListener('DOMContentLoaded', loadSchema);
+        </script>
     </body>
     </html>
     """
