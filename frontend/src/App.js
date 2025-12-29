@@ -5,6 +5,7 @@ import MainLayout from './layouts/MainLayout';
 import AuthenticatorView from './views/AuthenticatorView';
 import SettingsView from './views/SettingsView';
 import ProfileView from './views/ProfileView';
+import SecurityModal from './components/SecurityModal';
 import './App.css';
 
 // Configure axios defaults
@@ -26,20 +27,66 @@ const App = () => {
   const [timers, setTimers] = useState({});
   const [progresses, setProgresses] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [currentView, setCurrentView] = useState({ main: 'applications', sub: 'general' });
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState({ totp_enabled: false });
+  const [currentView, setCurrentView] = useState(() => {
+    // Restore view from localStorage on mount
+    const saved = localStorage.getItem('currentView');
+    return saved ? JSON.parse(saved) : { main: 'applications', sub: 'general' };
+  });
   const [appSettings, setAppSettings] = useState({
     theme: 'light',
     autoLock: 5,
     codeFormat: 'spaced'
   });
 
-  // Load settings from server after authentication or reset to defaults when logged out
+  // Validate token on mount (page refresh)
+  useEffect(() => {
+    const validateToken = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken && !currentUser) {
+        try {
+          // Verify token is still valid by calling /api/auth/me
+          const response = await axios.get('/api/auth/me', {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          setCurrentUser(response.data);
+          setIsAuthenticated(true);
+        } catch (error) {
+          // Token is invalid, clear it
+          localStorage.removeItem('token');
+          delete axios.defaults.headers.common['Authorization'];
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+        }
+      }
+      setLoading(false);
+    };
+
+    if (isAuthenticated && !currentUser) {
+      validateToken();
+    } else if (!isAuthenticated) {
+      setLoading(false);
+    }
+  }, [currentUser, isAuthenticated]);
   useEffect(() => {
     if (isAuthenticated && currentUser) {
       // Load user-specific settings from database via /api/auth/me endpoint
       if (currentUser.settings) {
         setAppSettings(currentUser.settings);
       }
+      // Load global settings to check if 2FA system is enabled
+      axios.get('/api/admin/settings')
+        .then(res => {
+          if (res.data) {
+            setGlobalSettings({
+              totp_enabled: res.data.totp_enabled || false
+            });
+          }
+        })
+        .catch(err => {
+          console.log('Global settings not available:', err.message);
+        });
     } else {
       // Reset to defaults when not authenticated
       setAppSettings({
@@ -47,6 +94,7 @@ const App = () => {
         autoLock: 5,
         codeFormat: 'spaced'
       });
+      setGlobalSettings({ totp_enabled: false });
     }
   }, [isAuthenticated, currentUser]);
 
@@ -76,6 +124,13 @@ const App = () => {
       document.body.classList.remove('theme-dark', 'theme-light');
     }
   }, [appSettings.theme]);
+
+  // Persist currentView to localStorage
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem('currentView', JSON.stringify(currentView));
+    }
+  }, [currentView, isAuthenticated]);
 
   // Auto-lock functionality
   useEffect(() => {
@@ -109,10 +164,29 @@ const App = () => {
     };
   }, [isAuthenticated, appSettings.autoLock]);
 
-  const generateCode = useCallback(() => {
-    const code = Math.floor(100000 + Math.random() * 900000);
-    return code.toString().replace(/(\d{3})(\d{3})/, '$1 $2');
+  // Fetch real TOTP code from API
+  const fetchCode = useCallback(async (appId) => {
+    try {
+      const response = await axios.get(`/api/applications/${appId}/code`);
+      const code = response.data.code;
+      // Format code with space in middle if needed
+      return code.toString().replace(/(\d{3})(\d{3})/, '$1 $2');
+    } catch (error) {
+      console.error(`Failed to fetch code for app ${appId}:`, error);
+      return '--- ---';
+    }
   }, []);
+
+  // Fetch codes for all accounts
+  const fetchAllCodes = useCallback(async (appIds) => {
+    const newCodes = {};
+    await Promise.all(
+      appIds.map(async (appId) => {
+        newCodes[appId] = await fetchCode(appId);
+      })
+    );
+    return newCodes;
+  }, [fetchCode]);
 
   const loadUserData = useCallback(async () => {
     try {
@@ -135,20 +209,28 @@ const App = () => {
         favorite: app.favorite || false
       })));
       
-      // Initialize codes and timers
-      const initialCodes = {};
+      // Initialize timers and progresses
       const initialTimers = {};
       const initialProgresses = {};
       
-      applications.forEach((app, index) => {
-        initialCodes[app.id] = generateCode();
-        initialTimers[app.id] = (index * 5) % 30;
-        initialProgresses[app.id] = ((30 - ((index * 5) % 30)) / 30) * 100;
+      // Calculate time remaining in current 30-second period
+      const now = Math.floor(Date.now() / 1000);
+      const timeRemaining = 30 - (now % 30);
+      
+      applications.forEach((app) => {
+        initialTimers[app.id] = timeRemaining;
+        initialProgresses[app.id] = ((30 - timeRemaining) / 30) * 100;
       });
       
-      setCodes(initialCodes);
       setTimers(initialTimers);
       setProgresses(initialProgresses);
+      
+      // Fetch real TOTP codes from API
+      if (applications.length > 0) {
+        const appIds = applications.map(app => app.id);
+        const initialCodes = await fetchAllCodes(appIds);
+        setCodes(initialCodes);
+      }
     } catch (error) {
       console.error('Failed to load user data:', error);
       if (error.response?.status === 401) {
@@ -157,7 +239,7 @@ const App = () => {
     } finally {
       setLoading(false);
     }
-  }, [generateCode]);
+  }, [fetchAllCodes]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -178,36 +260,48 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const updateTimers = () => {
-      const newTimers = { ...timers };
-      const newProgresses = { ...progresses };
-      const newCodes = { ...codes };
-      let updated = false;
+    const updateTimers = async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const timeRemaining = 30 - (now % 30);
+      
+      const newTimers = {};
+      const newProgresses = {};
+      const expiredIds = [];
 
-      Object.keys(newTimers).forEach(key => {
-        newTimers[key] -= 1;
-        if (newTimers[key] <= 0) {
-          newTimers[key] = 30;
-          newCodes[key] = generateCode();
-          updated = true;
+      Object.keys(timers).forEach(key => {
+        const previousTime = timers[key];
+        newTimers[key] = timeRemaining;
+        newProgresses[key] = ((30 - timeRemaining) / 30) * 100;
+        
+        // Detect when we've crossed into a new 30-second period
+        if (previousTime <= 1 && timeRemaining > 25) {
+          expiredIds.push(key);
         }
-        newProgresses[key] = ((30 - newTimers[key]) / 30) * 100;
       });
 
       setTimers(newTimers);
       setProgresses(newProgresses);
-      if (updated) {
+      
+      // Fetch new codes for expired timers
+      if (expiredIds.length > 0) {
+        const newCodes = { ...codes };
+        await Promise.all(
+          expiredIds.map(async (id) => {
+            newCodes[id] = await fetchCode(parseInt(id));
+          })
+        );
         setCodes(newCodes);
       }
     };
 
     const interval = setInterval(updateTimers, 1000);
     return () => clearInterval(interval);
-  }, [timers, progresses, codes, generateCode]);
+  }, [timers, codes, fetchCode]);
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('appSettings'); // Clear settings so next user doesn't see this user's theme
+    localStorage.removeItem('currentView'); // Clear view state
     delete axios.defaults.headers.common['Authorization'];
     setIsAuthenticated(false);
     setCurrentUser(null);
@@ -265,6 +359,8 @@ const App = () => {
                   selectedCategory={selectedCategory}
                   onCategoryChange={setSelectedCategory}
                   appSettings={appSettings}
+                  onSecurityClick={() => setShowSecurityModal(true)}
+                  twoFAEnabled={globalSettings.totp_enabled}
                 />
                 <div className="app-content">
                   {currentView.main === 'applications' && (
@@ -316,6 +412,8 @@ const App = () => {
                     selectedCategory={selectedCategory}
                     onCategoryChange={setSelectedCategory}
                     appSettings={appSettings}
+                    onSecurityClick={() => setShowSecurityModal(true)}
+                    twoFAEnabled={globalSettings.totp_enabled}
                   />
                   <div className="app-content">
                     {currentView.main === 'applications' && (
@@ -359,6 +457,31 @@ const App = () => {
           </div>
         </div>
       )}
+
+      {/* Security Modal */}
+      <SecurityModal 
+        isOpen={showSecurityModal}
+        onClose={() => setShowSecurityModal(false)}
+        currentUser={currentUser}
+        colors={{
+          primary: appSettings.theme === 'dark' ? '#e2e8f0' : '#2d3748',
+          secondary: appSettings.theme === 'dark' ? '#cbd5e0' : '#718096',
+          accent: '#5a67d8',
+          success: '#48bb78',
+          warning: '#ed8936',
+          danger: '#f56565',
+          info: '#4299e1',
+          background: appSettings.theme === 'dark' ? '#1a202c' : '#ffffff',
+          backgroundSecondary: appSettings.theme === 'dark' ? '#2d3748' : '#f7fafc',
+          border: appSettings.theme === 'dark' ? '#4a5568' : '#e2e8f0',
+          accentLight: appSettings.theme === 'dark' ? 'rgba(90, 103, 216, 0.15)' : 'rgba(90, 103, 216, 0.1)',
+          infoLight: appSettings.theme === 'dark' ? 'rgba(66, 153, 225, 0.15)' : 'rgba(66, 153, 225, 0.1)',
+          infoBorder: appSettings.theme === 'dark' ? 'rgba(66, 153, 225, 0.3)' : 'rgba(66, 153, 225, 0.2)',
+          warningLight: appSettings.theme === 'dark' ? 'rgba(237, 137, 54, 0.15)' : 'rgba(237, 137, 54, 0.1)',
+          warningBorder: appSettings.theme === 'dark' ? 'rgba(237, 137, 54, 0.3)' : 'rgba(237, 137, 54, 0.2)'
+        }}
+        isMobile={isMobile}
+      />
     </div>
   );
 };

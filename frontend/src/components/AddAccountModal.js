@@ -16,7 +16,7 @@ const AddAccountModal = ({
   codes,
   timers,
   progresses,
-  generateCode,
+  fetchCode,
   appSettings
 }) => {
   const serviceIcons = {
@@ -213,10 +213,14 @@ const AddAccountModal = ({
           favorite: newAccount.favorite || accountFavorite
         }]);
 
-        // Initialize code, timer, and progress
-        const newCodes = { ...codes, [newAccount.id]: generateCode() };
-        const newTimers = { ...timers, [newAccount.id]: 30 };
-        const newProgresses = { ...progresses, [newAccount.id]: 100 };
+        // Initialize timer and progress, fetch real code from API
+        const now = Math.floor(Date.now() / 1000);
+        const timeRemaining = 30 - (now % 30);
+        
+        const newCode = await fetchCode(newAccount.id);
+        const newCodes = { ...codes, [newAccount.id]: newCode };
+        const newTimers = { ...timers, [newAccount.id]: timeRemaining };
+        const newProgresses = { ...progresses, [newAccount.id]: ((30 - timeRemaining) / 30) * 100 };
 
         onCodesChange(newCodes);
         onTimersChange(newTimers);

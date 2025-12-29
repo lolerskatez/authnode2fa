@@ -5,6 +5,7 @@ alembic==1.12.1
 # psycopg2-binary==2.9.9  # Commented out for local SQLite testing
 python-multipart==0.0.6
 pyotp==2.9.0
+qrcode[pil]==7.4.2
 cryptography==41.0.7
 pyzbar==0.1.9
 numpy>=1.24.0  # Required by pyzbar for image processing
@@ -15,5 +16,6 @@ passlib[bcrypt]==1.7.4
 argon2-cffi>=21.3.0  # Password hashing backend
 aiosmtplib==2.0.2
 python-dotenv==1.0.0
+slowapi==0.1.9  # Rate limiting for API endpoints
 pytest==7.4.3
 httpx==0.25.2

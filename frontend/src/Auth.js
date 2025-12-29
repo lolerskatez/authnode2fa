@@ -18,6 +18,14 @@ function Auth({ onLoginSuccess }) {
   const [loginPageTheme, setLoginPageTheme] = useState('light');
   const [oidcCallbackProcessed, setOidcCallbackProcessed] = useState(false);
   const [signupEnabled, setSignupEnabled] = useState(true);
+  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
+  const [enrollmentData, setEnrollmentData] = useState(null);
+  const [enrollmentStep, setEnrollmentStep] = useState('qr'); // 'qr' or 'verify'
+  const [enrollmentQRCode, setEnrollmentQRCode] = useState('');
+  const [enrollmentSecret, setEnrollmentSecret] = useState('');
+  const [enrollmentBackupCodes, setEnrollmentBackupCodes] = useState([]);
+  const [enrollmentCode, setEnrollmentCode] = useState('');
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 
   const handleOidcCallback = useCallback(async (code, state) => {
     // Prevent double processing (React StrictMode calls useEffect twice)
@@ -188,16 +196,59 @@ function Auth({ onLoginSuccess }) {
         : { email, username, name, password };
 
       const res = await axios.post(endpoint, payload);
-      const token = res.data.access_token;
-
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      onLoginSuccess(token);
+      
+      // Check if 2FA enrollment is required
+      if (res.data.requires_2fa_enrollment) {
+        // Setup enrollment modal
+        const setupRes = await axios.post('/api/auth/2fa/setup');
+        setEnrollmentData({ token: res.data.access_token, email, mode });
+        setEnrollmentQRCode(setupRes.data.qr_code);
+        setEnrollmentSecret(setupRes.data.secret);
+        setEnrollmentBackupCodes(setupRes.data.backup_codes);
+        setEnrollmentStep('qr');
+        setShowEnrollmentModal(true);
+      } else {
+        // Normal login
+        const token = res.data.access_token;
+        localStorage.setItem('token', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        onLoginSuccess(token);
+      }
     } catch (err) {
       setError(err.response?.data?.detail || `${mode === 'login' ? 'Login' : 'Signup'} failed`);
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnrollmentComplete = async () => {
+    if (!enrollmentCode || enrollmentCode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    try {
+      setEnrollmentLoading(true);
+      await axios.post('/api/auth/2fa/enable', {
+        secret: enrollmentSecret,
+        totp_code: enrollmentCode,
+        backup_codes: enrollmentBackupCodes
+      }, {
+        headers: {
+          Authorization: `Bearer ${enrollmentData.token}`
+        }
+      });
+
+      // Enrollment complete, proceed with login
+      localStorage.setItem('token', enrollmentData.token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${enrollmentData.token}`;
+      setShowEnrollmentModal(false);
+      onLoginSuccess(enrollmentData.token);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to enable 2FA');
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -396,6 +447,236 @@ function Auth({ onLoginSuccess }) {
           </>
         )}
       </div>
+
+      {/* 2FA Enrollment Modal */}
+      {showEnrollmentModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: loginPageTheme === 'dark' ? '#1e1e1e' : '#ffffff',
+            borderRadius: '8px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h2 style={{
+              margin: '0 0 8px 0',
+              color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+              fontSize: '24px',
+              fontWeight: '600'
+            }}>
+              Enable Two-Factor Authentication
+            </h2>
+            <p style={{
+              margin: '0 0 24px 0',
+              color: loginPageTheme === 'dark' ? '#aaaaaa' : '#666666',
+              fontSize: '14px'
+            }}>
+              2FA is required to continue. Please set it up now to secure your account.
+            </p>
+
+            {enrollmentStep === 'qr' && (
+              <>
+                <div style={{
+                  backgroundColor: loginPageTheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  padding: '24px',
+                  borderRadius: '8px',
+                  marginBottom: '24px',
+                  textAlign: 'center'
+                }}>
+                  {enrollmentQRCode && (
+                    <img src={enrollmentQRCode} alt="2FA QR Code" style={{
+                      maxWidth: '200px',
+                      width: '100%',
+                      marginBottom: '16px'
+                    }} />
+                  )}
+                  <p style={{
+                    margin: '0 0 12px 0',
+                    color: loginPageTheme === 'dark' ? '#cccccc' : '#555555',
+                    fontSize: '13px'
+                  }}>
+                    Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    color: loginPageTheme === 'dark' ? '#888888' : '#999999',
+                    fontSize: '12px'
+                  }}>
+                    Manual Entry: <code style={{
+                      backgroundColor: loginPageTheme === 'dark' ? '#333333' : '#eeeeee',
+                      padding: '2px 6px',
+                      borderRadius: '3px'
+                    }}>{enrollmentSecret}</code>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setEnrollmentStep('verify')}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    backgroundColor: '#4361ee',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    marginTop: '16px'
+                  }}
+                >
+                  Next: Verify Code
+                </button>
+              </>
+            )}
+
+            {enrollmentStep === 'verify' && (
+              <>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Enter the 6-digit code from your authenticator app:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="000000"
+                    value={enrollmentCode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setEnrollmentCode(val);
+                    }}
+                    maxLength="6"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '20px',
+                      letterSpacing: '8px',
+                      textAlign: 'center',
+                      border: `2px solid ${loginPageTheme === 'dark' ? '#444444' : '#dddddd'}`,
+                      borderRadius: '6px',
+                      backgroundColor: loginPageTheme === 'dark' ? '#2a2a2a' : '#f9f9f9',
+                      color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                      boxSizing: 'border-box'
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                <div style={{
+                  backgroundColor: loginPageTheme === 'dark' ? '#2a2a2a' : '#f0f0f0',
+                  padding: '16px',
+                  borderRadius: '6px',
+                  marginBottom: '24px'
+                }}>
+                  <h4 style={{
+                    margin: '0 0 12px 0',
+                    color: loginPageTheme === 'dark' ? '#ffffff' : '#333333',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}>
+                    Backup Codes (Save these in a safe place):
+                  </h4>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '8px',
+                    marginBottom: '12px'
+                  }}>
+                    {enrollmentBackupCodes.map((code, idx) => (
+                      <code key={idx} style={{
+                        backgroundColor: loginPageTheme === 'dark' ? '#333333' : '#ffffff',
+                        padding: '6px 8px',
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        color: loginPageTheme === 'dark' ? '#aaaaaa' : '#666666',
+                        fontFamily: 'monospace'
+                      }}>
+                        {code}
+                      </code>
+                    ))}
+                  </div>
+                  <p style={{
+                    margin: 0,
+                    fontSize: '12px',
+                    color: loginPageTheme === 'dark' ? '#888888' : '#999999'
+                  }}>
+                    Use these codes if you lose access to your authenticator app
+                  </p>
+                </div>
+
+                {error && (
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#ffcccc',
+                    color: '#cc0000',
+                    borderRadius: '6px',
+                    marginBottom: '16px',
+                    fontSize: '13px'
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleEnrollmentComplete}
+                  disabled={enrollmentLoading || enrollmentCode.length !== 6}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    backgroundColor: '#4361ee',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: enrollmentLoading || enrollmentCode.length !== 6 ? 'not-allowed' : 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    opacity: enrollmentLoading || enrollmentCode.length !== 6 ? 0.6 : 1
+                  }}
+                >
+                  {enrollmentLoading ? 'Setting up...' : 'Complete & Login'}
+                </button>
+
+                <button
+                  onClick={() => setEnrollmentStep('qr')}
+                  disabled={enrollmentLoading}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    backgroundColor: 'transparent',
+                    color: '#4361ee',
+                    border: `2px solid #4361ee`,
+                    borderRadius: '6px',
+                    cursor: enrollmentLoading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    marginTop: '8px',
+                    opacity: enrollmentLoading ? 0.6 : 1
+                  }}
+                >
+                  Back
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

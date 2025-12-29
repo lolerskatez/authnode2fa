@@ -17,6 +17,7 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    requires_2fa_enrollment: Optional[bool] = None
 
 class User(UserBase):
     id: int
@@ -114,10 +115,21 @@ class UserPreferences(UserPreferencesBase):
 class GlobalSettingsBase(BaseModel):
     login_page_theme: str = "light"  # light, dark, or auto
     signup_enabled: bool = True  # Whether signup is allowed on the login page
+    totp_enabled: bool = False  # Whether 2FA system is enabled
+    totp_enforcement: str = "optional"  # optional, admin_only, or required_all
+    totp_grace_period_days: int = 7  # Days before forced enrollment
 
 
 class GlobalSettingsCreate(GlobalSettingsBase):
     pass
+
+
+class GlobalSettingsUpdate(BaseModel):
+    login_page_theme: Optional[str] = None
+    signup_enabled: Optional[bool] = None
+    totp_enabled: Optional[bool] = None
+    totp_enforcement: Optional[str] = None
+    totp_grace_period_days: Optional[int] = None
 
 
 class GlobalSettings(GlobalSettingsBase):
@@ -176,3 +188,26 @@ class OIDCConfig(OIDCConfigBase):
 
     class Config:
         from_attributes = True
+
+
+class TOTP2FASetup(BaseModel):
+    """2FA setup request with TOTP code verification"""
+    totp_code: str
+
+
+class TOTP2FAVerify(BaseModel):
+    """2FA verification request during login"""
+    totp_code: str
+
+
+class TOTP2FASetupResponse(BaseModel):
+    """Response containing TOTP secret and QR code"""
+    secret: str
+    qr_code: str  # Base64 encoded QR code image
+    backup_codes: List[str]  # Single-use backup codes
+
+
+class TOTP2FADisable(BaseModel):
+    """Request to disable 2FA with password confirmation"""
+    password: str
+    totp_code: Optional[str] = None  # Optional if 2FA is already enabled

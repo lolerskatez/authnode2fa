@@ -10,7 +10,9 @@ const MainLayout = ({
   isMobile,
   selectedCategory,
   onCategoryChange,
-  appSettings
+  appSettings,
+  onSecurityClick,
+  twoFAEnabled
 }) => {
   // Theme-aware color helpers
   const getThemeColors = () => {
@@ -153,6 +155,19 @@ const MainLayout = ({
               <i className="fas fa-user-circle"></i>
               <span>Profile</span>
             </div>
+            {twoFAEnabled && (
+              <div 
+                className="category-item"
+                onClick={() => {
+                  if (onSecurityClick) onSecurityClick();
+                  setShowUserMenu(false);
+                }}
+                style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
+              >
+                <i className="fas fa-shield-alt"></i>
+                <span>Security</span>
+              </div>
+            )}
             {currentUser?.role === 'admin' && (
               <div 
                 className="category-item"
@@ -171,7 +186,7 @@ const MainLayout = ({
         )}
       </div>
 
-        {currentView.main !== 'settings' && (
+      {currentView.main !== 'settings' && (
           <div style={{ marginTop: '30px', paddingBottom: '20px', borderBottom: `1px solid ${colors.border}` }}>
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
               Navigation
@@ -187,8 +202,8 @@ const MainLayout = ({
           </div>
         )}
 
-        {/* Dynamic content based on current view */}
-        {currentView.main === 'applications' && (
+      {/* Dynamic content based on current view */}
+      {currentView.main === 'applications' && (
           <div style={{ marginTop: '20px' }}>
             <div 
               className={`category-item ${selectedCategory === 'all' ? 'active' : ''}`}
@@ -236,7 +251,7 @@ const MainLayout = ({
           </div>
         )}
 
-        {currentView.main === 'settings' && (
+      {currentView.main === 'settings' && (
           <div style={{ marginTop: '20px' }}>
             <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${colors.border}` }}>
               <div 
@@ -279,6 +294,16 @@ const MainLayout = ({
             )}
             {currentUser?.role === 'admin' && (
               <div 
+                className={`category-item ${currentView.sub === 'oidc' ? 'active' : ''}`}
+                onClick={() => onViewChange('settings', 'oidc')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-key"></i>
+                <span>OIDC SSO</span>
+              </div>
+            )}
+            {currentUser?.role === 'admin' && (
+              <div 
                 className={`category-item ${currentView.sub === 'user-management' ? 'active' : ''}`}
                 onClick={() => onViewChange('settings', 'user-management')}
                 style={{ cursor: 'pointer' }}
@@ -290,7 +315,7 @@ const MainLayout = ({
           </div>
         )}
 
-        <div style={{ padding: '20px 16px', marginTop: 'auto' }}>
+      <div style={{ padding: '20px 16px', marginTop: 'auto' }}>
           <button 
             onClick={onLogout}
             style={{

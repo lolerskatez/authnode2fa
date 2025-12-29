@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import AddAccountModal from '../components/AddAccountModal';
 import AccountCard from '../components/AccountCard';
@@ -50,11 +50,17 @@ const AuthenticatorView = ({
     return account.category === selectedCategory;
   });
 
-  // Generate random 6-digit codes
-  const generateCode = () => {
-    const code = Math.floor(100000 + Math.random() * 900000);
-    return code.toString().replace(/(\d{3})(\d{3})/, '$1 $2');
-  };
+  // Fetch real TOTP code from backend API
+  const fetchCode = useCallback(async (appId) => {
+    try {
+      const response = await axios.get(`/api/applications/${appId}/code`);
+      const code = response.data.code;
+      return code.toString().replace(/(\d{3})(\d{3})/, '$1 $2');
+    } catch (error) {
+      console.error('Failed to fetch TOTP code:', error);
+      return '--- ---';
+    }
+  }, []);
 
   const handleContextMenu = (e, account) => {
     e.preventDefault();
@@ -190,7 +196,7 @@ const AuthenticatorView = ({
             codes={codes}
             timers={timers}
             progresses={progresses}
-            generateCode={generateCode}
+            fetchCode={fetchCode}
             appSettings={appSettings}
           />
         )}
@@ -335,7 +341,7 @@ const AuthenticatorView = ({
           codes={codes}
           timers={timers}
           progresses={progresses}
-          generateCode={generateCode}
+          fetchCode={fetchCode}
           appSettings={appSettings}
         />
       )}

@@ -59,8 +59,22 @@ const SettingsView = ({
 
   const [testEmailInput, setTestEmailInput] = useState('');
   const [smtpLoading, setSmtpLoading] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true });
+  const [globalSettings, setGlobalSettings] = useState({ login_page_theme: 'light', signup_enabled: true, totp_enabled: false, totp_enforcement: 'optional', totp_grace_period_days: 7 });
   const [globalSettingsLoading, setGlobalSettingsLoading] = useState(false);
+  
+  // 2FA States
+  const [twoFAStatus, setTwoFAStatus] = useState({ totp_enabled: false, is_admin: false });
+  const [twoFALoading, setTwoFALoading] = useState(false);
+  const [showTwoFASetup, setShowTwoFASetup] = useState(false);
+  const [twoFASetupData, setTwoFASetupData] = useState(null);
+  const [twoFAVerifyCode, setTwoFAVerifyCode] = useState('');
+  const [twoFASetupStep, setTwoFASetupStep] = useState('qr');
+  const [twoFABackupCodes, setTwoFABackupCodes] = useState([]);
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
+  const [disableTwoFAPassword, setDisableTwoFAPassword] = useState('');
+  const [disableTwoFACode, setDisableTwoFACode] = useState('');
+  const [showDisableTwoFA, setShowDisableTwoFA] = useState(false);
+  const [twoFAEnforcementSaving, setTwoFAEnforcementSaving] = useState(false);
   
   const [oidcSettings, setOidcSettings] = useState(() => ({
     enabled: false,
@@ -81,6 +95,17 @@ const SettingsView = ({
   const [oidcLoading, setOidcLoading] = useState(false);
   const [oidcAdvanced, setOidcAdvanced] = useState(false);
   const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
+
+  // Load 2FA status
+  useEffect(() => {
+    axios.get('/api/auth/2fa/status')
+      .then(res => {
+        setTwoFAStatus(res.data);
+      })
+      .catch(err => {
+        console.log('2FA status not available:', err.message);
+      });
+  }, []);
 
   // Load SMTP settings from backend if admin
   useEffect(() => {
@@ -114,7 +139,10 @@ const SettingsView = ({
           if (res.data) {
             setGlobalSettings({
               login_page_theme: res.data.login_page_theme || 'light',
-              signup_enabled: res.data.signup_enabled !== false
+              signup_enabled: res.data.signup_enabled !== false,
+              totp_enabled: res.data.totp_enabled || false,
+              totp_enforcement: res.data.totp_enforcement || 'optional',
+              totp_grace_period_days: res.data.totp_grace_period_days || 7
             });
           }
         })
@@ -357,6 +385,128 @@ const SettingsView = ({
     return 'Unknown Browser';
   };
 
+  // 2FA Handlers
+  const handleSetup2FA = async () => {
+    setTwoFALoading(true);
+    try {
+      const res = await axios.post('/api/auth/2fa/setup');
+      setTwoFASetupData(res.data);
+      setTwoFABackupCodes(res.data.backup_codes);
+      setShowTwoFASetup(true);
+      setTwoFASetupStep('qr');
+    } catch (err) {
+      showToast('Error setting up 2FA: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleComplete2FAEnrollment = async () => {
+    if (!twoFAVerifyCode || twoFAVerifyCode.length !== 6) {
+      showToast('Please enter a valid 6-digit code');
+      return;
+    }
+    setTwoFALoading(true);
+    try {
+      await axios.post('/api/auth/2fa/enable', {
+        secret: twoFASetupData.secret,
+        totp_code: twoFAVerifyCode,
+        backup_codes: twoFABackupCodes
+      });
+      setTwoFAStatus({ ...twoFAStatus, totp_enabled: true });
+      setShowBackupCodes(true);
+      setTwoFAVerifyCode('');
+      showToast('2FA enabled successfully!');
+    } catch (err) {
+      showToast('Error enabling 2FA: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!disableTwoFAPassword) {
+      showToast('Please enter your password');
+      return;
+    }
+    setTwoFALoading(true);
+    try {
+      await axios.post('/api/auth/2fa/disable', {
+        password: disableTwoFAPassword,
+        totp_code: disableTwoFACode
+      });
+      setTwoFAStatus({ ...twoFAStatus, totp_enabled: false });
+      setDisableTwoFAPassword('');
+      setDisableTwoFACode('');
+      setShowDisableTwoFA(false);
+      showToast('2FA disabled successfully');
+    } catch (err) {
+      showToast('Error disabling 2FA: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleEnable2FASystem = async () => {
+    setTwoFAEnforcementSaving(true);
+    try {
+      const newEnabled = !globalSettings.totp_enabled;
+      await axios.put('/api/admin/settings', {
+        totp_enabled: newEnabled,
+        totp_enforcement: newEnabled ? 'optional' : globalSettings.totp_enforcement
+      });
+      setGlobalSettings({ 
+        ...globalSettings, 
+        totp_enabled: newEnabled,
+        totp_enforcement: newEnabled ? 'optional' : globalSettings.totp_enforcement
+      });
+      showToast('Settings saved');
+      if (newEnabled) {
+        setTimeout(() => {
+          showToast('2FA system enabled with optional enforcement policy');
+        }, 1000);
+      } else {
+        setTimeout(() => {
+          showToast('2FA system disabled');
+        }, 1000);
+      }
+    } catch (err) {
+      showToast('Error updating 2FA system: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFAEnforcementSaving(false);
+    }
+  };
+
+  const handleTOTPEnforcementChange = async (value) => {
+    setTwoFAEnforcementSaving(true);
+    try {
+      await axios.put('/api/admin/settings', {
+        totp_enforcement: value
+      });
+      setGlobalSettings({ ...globalSettings, totp_enforcement: value });
+      showToast('2FA enforcement policy updated');
+    } catch (err) {
+      showToast('Error updating 2FA policy: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFAEnforcementSaving(false);
+    }
+  };
+
+  const handleGracePeriodChange = async (days) => {
+    setTwoFAEnforcementSaving(true);
+    try {
+      await axios.put('/api/admin/settings', {
+        totp_grace_period_days: days
+      });
+      setGlobalSettings({ ...globalSettings, totp_grace_period_days: days });
+      showToast('Grace period updated');
+    } catch (err) {
+      showToast('Error updating grace period: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFAEnforcementSaving(false);
+    }
+  };
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -384,115 +534,6 @@ const SettingsView = ({
       )}
 
       <div className="content-area" style={{ paddingTop: '12px' }}>
-        <div className="content-header" style={{ marginBottom: '12px' }}>
-          <h2>Settings</h2>
-        </div>
-
-        {/* Settings Tabs */}
-        <div style={{
-          display: 'flex',
-          borderBottom: `2px solid ${colors.border}`,
-          marginBottom: '24px',
-          gap: '0'
-        }}>
-          <button
-            onClick={() => onTabChange('general')}
-            style={{
-              padding: '12px 20px',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              borderBottom: activeTab === 'general' ? `3px solid ${colors.accent}` : 'none',
-              backgroundColor: 'transparent',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: activeTab === 'general' ? '600' : '500',
-              color: activeTab === 'general' ? colors.accent : colors.primary,
-              transition: 'all 0.2s'
-            }}
-          >
-            <i className="fas fa-sliders-h"></i> General
-          </button>
-          <button
-            onClick={() => onTabChange('security')}
-            style={{
-              padding: '12px 20px',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              borderBottom: activeTab === 'security' ? `3px solid ${colors.accent}` : 'none',
-              backgroundColor: 'transparent',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: activeTab === 'security' ? '600' : '500',
-              color: activeTab === 'security' ? colors.accent : colors.primary,
-              transition: 'all 0.2s'
-            }}
-          >
-            <i className="fas fa-shield-alt"></i> Security
-          </button>
-          {currentUser && currentUser.role === 'admin' && (
-            <button
-              onClick={() => onTabChange('smtp')}
-              style={{
-                padding: '12px 20px',
-                borderTop: 'none',
-                borderLeft: 'none',
-                borderRight: 'none',
-                borderBottom: activeTab === 'smtp' ? `3px solid ${colors.accent}` : 'none',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === 'smtp' ? '600' : '500',
-                color: activeTab === 'smtp' ? colors.accent : colors.primary,
-                transition: 'all 0.2s'
-              }}
-            >
-              <i className="fas fa-envelope"></i> SMTP
-            </button>
-          )}
-          {currentUser && currentUser.role === 'admin' && (
-            <button
-              onClick={() => onTabChange('oidc')}
-              style={{
-                padding: '12px 20px',
-                borderTop: 'none',
-                borderLeft: 'none',
-                borderRight: 'none',
-                borderBottom: activeTab === 'oidc' ? `3px solid ${colors.accent}` : 'none',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === 'oidc' ? '600' : '500',
-                color: activeTab === 'oidc' ? colors.accent : colors.primary,
-                transition: 'all 0.2s'
-              }}
-            >
-              <i className="fas fa-key"></i> OIDC SSO
-            </button>
-          )}
-          {currentUser && currentUser.role === 'admin' && (
-            <button
-              onClick={() => onTabChange('user-management')}
-              style={{
-                padding: '12px 20px',
-                borderTop: 'none',
-                borderLeft: 'none',
-                borderRight: 'none',
-                borderBottom: activeTab === 'user-management' ? `3px solid ${colors.accent}` : 'none',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === 'user-management' ? '600' : '500',
-                color: activeTab === 'user-management' ? colors.accent : colors.primary,
-                transition: 'all 0.2s'
-              }}
-            >
-              <i className="fas fa-users-cog"></i> User Management
-            </button>
-          )}
-        </div>
-
         {/* General Settings Tab */}
         {activeTab === 'general' && (
           <div>
@@ -737,7 +778,255 @@ const SettingsView = ({
         {activeTab === 'security' && (
           <div>
             <div style={{ maxWidth: '600px' }}>
-              <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>Security & Sessions</h3>
+              {/* Two-Factor Authentication (2FA) System Settings (Admin Only) */}
+              {currentUser && currentUser.role === 'admin' && (
+                <>
+                  <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+                    <i className="fas fa-shield-alt" style={{ marginRight: '8px', color: colors.accent }}></i>
+                    Two-Factor Authentication (2FA) System
+                  </h3>
+
+                  {/* Enable/Disable 2FA System */}
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: colors.background,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                          <i className="fas fa-power-off" style={{ marginRight: '8px', color: colors.accent }}></i>
+                          2FA System Status
+                        </h4>
+                        <p style={{ margin: 0, color: colors.secondary, fontSize: '12px' }}>
+                          {globalSettings.totp_enabled ? 'System is enabled' : 'System is disabled'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleEnable2FASystem}
+                        disabled={twoFAEnforcementSaving}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: globalSettings.totp_enabled ? colors.danger : colors.success,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: twoFAEnforcementSaving ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          opacity: twoFAEnforcementSaving ? 0.6 : 1,
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <i className={`fas fa-${globalSettings.totp_enabled ? 'toggle-off' : 'toggle-on'}`} style={{ marginRight: '6px' }}></i>
+                        {twoFAEnforcementSaving ? 'Updating...' : (globalSettings.totp_enabled ? 'Disable 2FA' : 'Enable 2FA')}
+                      </button>
+                    </div>
+                    {!globalSettings.totp_enabled && (
+                      <div style={{
+                        padding: '10px 12px',
+                        backgroundColor: colors.warningLight,
+                        borderRadius: '6px',
+                        border: `1px solid ${colors.warningBorder}`,
+                        fontSize: '12px',
+                        color: colors.secondary
+                      }}>
+                        <i className="fas fa-info-circle" style={{ marginRight: '6px', color: colors.warning }}></i>
+                        Enable the 2FA system to configure enforcement policies. Personal enrollment is available from your profile menu.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Enforcement Policy - Only visible when 2FA is enabled */}
+                  {globalSettings.totp_enabled && (
+                    <div style={{
+                      padding: '16px',
+                      backgroundColor: colors.background,
+                      borderRadius: '8px',
+                      border: `1px solid ${colors.border}`,
+                      marginBottom: '16px'
+                    }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                        <i className="fas fa-cog" style={{ marginRight: '8px', color: colors.accent }}></i>
+                        Enforcement Policy
+                      </h4>
+                      <p style={{ margin: '0 0 12px 0', color: colors.secondary, fontSize: '13px' }}>
+                        Control how strictly 2FA is enforced across your application:
+                      </p>
+
+                      {[
+                        {
+                          value: 'optional',
+                          label: 'Optional',
+                          description: 'Users can choose to enable 2FA for their account.',
+                          icon: 'check-circle'
+                        },
+                        {
+                          value: 'admin_only',
+                          label: 'Required for Admins',
+                          description: 'All admins must enroll in 2FA. Regular users remain optional.',
+                          icon: 'user-shield'
+                        },
+                        {
+                          value: 'required_all',
+                          label: 'Required for All Users',
+                          description: 'All users and admins must enroll in 2FA.',
+                          icon: 'lock'
+                        }
+                      ].map(option => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleTOTPEnforcementChange(option.value)}
+                          disabled={twoFAEnforcementSaving}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            marginBottom: '8px',
+                            backgroundColor: globalSettings.totp_enforcement === option.value ? colors.accentLight : colors.backgroundSecondary,
+                            border: `2px solid ${globalSettings.totp_enforcement === option.value ? colors.accent : colors.border}`,
+                            borderRadius: '6px',
+                            cursor: twoFAEnforcementSaving ? 'not-allowed' : 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.2s',
+                            opacity: twoFAEnforcementSaving ? 0.6 : 1
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              backgroundColor: globalSettings.totp_enforcement === option.value ? colors.accent : colors.border,
+                              color: globalSettings.totp_enforcement === option.value ? 'white' : colors.secondary,
+                              flexShrink: 0,
+                              fontSize: '12px'
+                            }}>
+                              <i className={`fas fa-${option.icon}`}></i>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{
+                                color: colors.primary,
+                                fontWeight: '600',
+                                fontSize: '13px',
+                                marginBottom: '2px'
+                              }}>
+                                {option.label}
+                                {globalSettings.totp_enforcement === option.value && (
+                                  <span style={{ marginLeft: '6px', color: colors.accent, fontSize: '11px' }}>✓</span>
+                                )}
+                              </div>
+                              <div style={{
+                                color: colors.secondary,
+                                fontSize: '12px'
+                              }}>
+                                {option.description}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Grace Period - Only visible when enforcement is not optional */}
+                  {globalSettings.totp_enabled && globalSettings.totp_enforcement !== 'optional' && (
+                    <div style={{
+                      padding: '16px',
+                      backgroundColor: colors.background,
+                      borderRadius: '8px',
+                      border: `1px solid ${colors.border}`,
+                      marginBottom: '24px'
+                    }}>
+                      <h4 style={{ margin: '0 0 8px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                        <i className="fas fa-calendar-alt" style={{ marginRight: '8px', color: colors.accent }}></i>
+                        Grace Period Before Forced Enrollment
+                      </h4>
+                      <p style={{ margin: '0 0 12px 0', color: colors.secondary, fontSize: '12px' }}>
+                        Number of days users can continue logging in before being forced to enroll in 2FA.
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="365"
+                          value={globalSettings.totp_grace_period_days}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            if (val >= 0 && val <= 365) {
+                              setGlobalSettings({ ...globalSettings, totp_grace_period_days: val });
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value) || 7;
+                            handleGracePeriodChange(val);
+                          }}
+                          style={{
+                            width: '100px',
+                            padding: '10px 12px',
+                            fontSize: '14px',
+                            border: `2px solid ${colors.border}`,
+                            borderRadius: '6px',
+                            backgroundColor: colors.backgroundSecondary,
+                            color: colors.primary,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <span style={{ color: colors.secondary, fontSize: '13px' }}>
+                          days
+                        </span>
+                      </div>
+                      {globalSettings.totp_grace_period_days === 0 && (
+                        <div style={{
+                          marginTop: '10px',
+                          padding: '8px 10px',
+                          backgroundColor: colors.warningLight,
+                          borderRadius: '6px',
+                          border: `1px solid ${colors.warningBorder}`,
+                          fontSize: '11px',
+                          color: colors.secondary
+                        }}>
+                          <i className="fas fa-exclamation-triangle" style={{ marginRight: '6px', color: colors.warning }}></i>
+                          Users will be required to enroll immediately on their next login.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Note for non-admin users */}
+              {currentUser && currentUser.role !== 'admin' && (
+                <>
+                  <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+                    <i className="fas fa-shield-alt" style={{ marginRight: '8px', color: colors.accent }}></i>
+                    Security
+                  </h3>
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: colors.backgroundSecondary,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    marginBottom: '24px'
+                  }}>
+                    <p style={{ margin: 0, color: colors.secondary, fontSize: '13px' }}>
+                      <i className="fas fa-info-circle" style={{ marginRight: '6px', color: colors.accent }}></i>
+                      To manage your personal 2FA settings, use the <strong>Security</strong> option in your profile menu (top right).
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Sessions Section */}
+              <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+                <i className="fas fa-laptop" style={{ marginRight: '8px', color: colors.accent }}></i>
+                Sessions
+              </h3>
 
               {/* Current Device */}
               <div style={{
@@ -1859,6 +2148,259 @@ const SettingsView = ({
             isEmbedded={true}
             appSettings={appSettings}
           />
+        )}
+
+        {/* 2FA Disable Modal */}
+        {showDisableTwoFA && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: colors.background,
+              borderRadius: '8px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+            }}>
+              <h2 style={{
+                margin: '0 0 8px 0',
+                color: colors.primary,
+                fontSize: '24px',
+                fontWeight: '600'
+              }}>
+                Disable 2FA
+              </h2>
+              <p style={{
+                margin: '0 0 24px 0',
+                color: colors.secondary,
+                fontSize: '14px'
+              }}>
+                To disable 2FA, please confirm your password and provide your current TOTP code:
+              </p>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: colors.primary,
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={disableTwoFAPassword}
+                  onChange={(e) => setDisableTwoFAPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `2px solid ${colors.border}`,
+                    borderRadius: '6px',
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.primary,
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: colors.primary,
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  6-Digit Code from Authenticator
+                </label>
+                <input
+                  type="text"
+                  placeholder="000000"
+                  value={disableTwoFACode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setDisableTwoFACode(val);
+                  }}
+                  maxLength="6"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    fontSize: '20px',
+                    letterSpacing: '8px',
+                    textAlign: 'center',
+                    border: `2px solid ${colors.border}`,
+                    borderRadius: '6px',
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.primary,
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={handleDisable2FA}
+                disabled={twoFALoading || !disableTwoFAPassword || disableTwoFACode.length !== 6}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: colors.danger,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: twoFALoading || !disableTwoFAPassword || disableTwoFACode.length !== 6 ? 'not-allowed' : 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  marginBottom: '8px',
+                  opacity: twoFALoading || !disableTwoFAPassword || disableTwoFACode.length !== 6 ? 0.6 : 1
+                }}
+              >
+                {twoFALoading ? 'Disabling...' : 'Disable 2FA'}
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowDisableTwoFA(false);
+                  setDisableTwoFAPassword('');
+                  setDisableTwoFACode('');
+                }}
+                disabled={twoFALoading}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: 'transparent',
+                  color: colors.accent,
+                  border: `2px solid ${colors.accent}`,
+                  borderRadius: '6px',
+                  cursor: twoFALoading ? 'not-allowed' : 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  opacity: twoFALoading ? 0.6 : 1
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Backup Codes Modal */}
+        {showBackupCodes && twoFABackupCodes && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: colors.background,
+              borderRadius: '8px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+            }}>
+              <h2 style={{
+                margin: '0 0 8px 0',
+                color: colors.primary,
+                fontSize: '24px',
+                fontWeight: '600'
+              }}>
+                Backup Codes
+              </h2>
+              <p style={{
+                margin: '0 0 24px 0',
+                color: colors.secondary,
+                fontSize: '14px'
+              }}>
+                Save these codes in a safe place. Use them if you lose access to your authenticator app.
+              </p>
+
+              <div style={{
+                backgroundColor: colors.backgroundSecondary,
+                padding: '16px',
+                borderRadius: '6px',
+                marginBottom: '24px'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '8px'
+                }}>
+                  {twoFABackupCodes.map((code, idx) => (
+                    <code key={idx} style={{
+                      backgroundColor: colors.border,
+                      padding: '8px',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      color: colors.primary,
+                      fontFamily: 'monospace',
+                      textAlign: 'center'
+                    }}>
+                      {code}
+                    </code>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(twoFABackupCodes.join('\n'));
+                  showToast('Backup codes copied to clipboard');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: colors.accent,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  marginBottom: '8px'
+                }}
+              >
+                <i className="fas fa-copy" style={{ marginRight: '6px' }}></i>
+                Copy All Codes
+              </button>
+
+              <button
+                onClick={() => setShowBackupCodes(false)}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: 'transparent',
+                  color: colors.accent,
+                  border: `2px solid ${colors.accent}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

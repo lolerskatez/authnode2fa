@@ -2,28 +2,29 @@ import React, { useState, useEffect } from 'react';
 import './Auth.css';
 
 function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings }) {
-  // Theme-aware color helpers - uses CSS variables from App.css
+  // Theme-aware color helpers
   const getThemeColors = () => {
-    const getVar = (varName) => {
-      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-    };
-    
     const isDark = appSettings?.theme === 'dark';
     return {
-      primary: getVar('--text-primary'),
-      secondary: getVar('--text-secondary'),
-      tertiary: getVar('--text-secondary'),
-      accent: getVar('--accent-color'),
-      border: getVar('--border-color'),
-      background: getVar('--bg-primary'),
-      backgroundSecondary: getVar('--bg-secondary'),
+      primary: isDark ? '#e2e8f0' : '#2d3748',
+      secondary: isDark ? '#a0aec0' : '#718096',
+      tertiary: isDark ? '#cbd5e0' : '#4a5568',
+      accent: isDark ? '#63b3ed' : '#4361ee',
+      border: isDark ? '#4a5568' : '#e2e8f0',
+      background: isDark ? '#2d3748' : '#ffffff',
+      backgroundSecondary: isDark ? '#1a202c' : '#f7fafc',
       adminBg: isDark ? '#1e3a5f' : '#bee3f8',
       adminText: isDark ? '#63b3ed' : '#2c5aa0',
-      userBg: isDark ? '#22433a' : '#f0fff4',
+      userBg: isDark ? '#22433a' : '#c6f6d5',
       userText: isDark ? '#68d391' : '#22543d',
+      ssoBg: isDark ? '#2c4a6e' : '#e6f3ff',
+      ssoText: isDark ? '#90cdf4' : '#0066cc',
+      localBg: isDark ? '#2d4a3e' : '#f0fff4',
+      localText: isDark ? '#9ae6b4' : '#276749',
       success: isDark ? '#48bb78' : '#48bb78',
-      danger: isDark ? '#f56565' : '#f56565',
-      dangerLight: isDark ? '#9b2c2c' : '#fed7d7'
+      danger: isDark ? '#fc8181' : '#f56565',
+      dangerLight: isDark ? '#9b2c2c' : '#fed7d7',
+      avatarBg: isDark ? '#4a5568' : '#a0aec0'
     };
   };
 
@@ -357,7 +358,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                           width: '36px',
                           height: '36px',
                           borderRadius: '50%',
-                          backgroundColor: colors.secondary,
+                          backgroundColor: colors.avatarBg,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -390,8 +391,8 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                     <td style={{ padding: '12px' }}>
                       <span style={{
                         padding: '4px 12px',
-                        backgroundColor: user.is_sso_user ? '#e6f3ff' : '#f0f9ff',
-                        color: user.is_sso_user ? '#0066cc' : '#0066cc',
+                        backgroundColor: user.is_sso_user ? colors.ssoBg : colors.localBg,
+                        color: user.is_sso_user ? colors.ssoText : colors.localText,
                         borderRadius: '4px',
                         fontSize: '12px',
                         fontWeight: '500',
@@ -756,7 +757,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                             width: '36px',
                             height: '36px',
                             borderRadius: '50%',
-                            backgroundColor: colors.secondary,
+                            backgroundColor: colors.avatarBg,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -789,8 +790,8 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                       <td style={{ padding: '12px' }}>
                         <span style={{
                           padding: '4px 12px',
-                          backgroundColor: user.is_sso_user ? '#e6f3ff' : '#f0f9ff',
-                          color: user.is_sso_user ? '#0066cc' : '#0066cc',
+                          backgroundColor: user.is_sso_user ? colors.ssoBg : colors.localBg,
+                          color: user.is_sso_user ? colors.ssoText : colors.localText,
                           borderRadius: '4px',
                           fontSize: '12px',
                           fontWeight: '500',

@@ -17,6 +17,8 @@ class User(Base):
     is_sso_user = Column(Boolean, default=False)  # True for SSO users, False for local users
     role = Column(String, default="user")  # admin or user
     settings = Column(JSON, default={"theme": "light", "autoLock": 5, "codeFormat": "spaced"})  # User preferences
+    totp_secret = Column(String, nullable=True)  # TOTP secret for 2FA (encrypted)
+    totp_enabled = Column(Boolean, default=False)  # Whether TOTP 2FA is enabled
     created_at = Column(DateTime, default=datetime.utcnow)
 
     applications = relationship("Application", back_populates="owner")
@@ -72,6 +74,9 @@ class GlobalSettings(Base):
     id = Column(Integer, primary_key=True, index=True)
     login_page_theme = Column(String, default="light")  # Theme for login/signup page: light, dark, or auto
     signup_enabled = Column(Boolean, default=True)  # Whether signup is allowed on the login page
+    totp_enabled = Column(Boolean, default=False)  # Whether 2FA system is enabled
+    totp_enforcement = Column(String, default="optional")  # optional, admin_only, or required_all
+    totp_grace_period_days = Column(Integer, default=7)  # Days before forced enrollment
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -97,3 +102,17 @@ class OIDCConfig(Base):
     user_groups = Column(JSON, default=["users"])  # Groups that map to user role
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class OIDCState(Base):
+    """
+    Stores OIDC state tokens for CSRF protection during OAuth2 flows.
+    State tokens are hashed for security and automatically expire after 15 minutes.
+    """
+    __tablename__ = "oidc_states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    state_hash = Column(String, unique=True, index=True)  # SHA256 hash of the state token
+    nonce = Column(String, nullable=True)  # Optional nonce for ID token validation
+    expires_at = Column(DateTime, index=True)  # When this state expires
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)

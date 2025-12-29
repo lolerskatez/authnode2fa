@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth, utils
+from ..rate_limit import limiter, API_RATE_LIMIT, SENSITIVE_API_RATE_LIMIT
 from cryptography.fernet import Fernet
 import os
 
@@ -11,11 +12,13 @@ cipher = Fernet(key)
 router = APIRouter()
 
 @router.get("/", response_model=list[schemas.Application])
-def get_applications(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@limiter.limit(API_RATE_LIMIT)
+def get_applications(request: Request, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     return crud.get_applications(db, current_user.id)
 
 @router.post("/", response_model=schemas.Application)
-def create_application(app: schemas.ApplicationCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@limiter.limit(API_RATE_LIMIT)
+def create_application(request: Request, app: schemas.ApplicationCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     # Auto-detect icon if not provided
     if not app.icon:
         app.icon = utils.get_service_icon(app.name)
@@ -25,7 +28,8 @@ def create_application(app: schemas.ApplicationCreate, current_user: models.User
     return crud.create_application(db, app, current_user.id)
 
 @router.post("/upload-qr")
-def upload_qr(file: UploadFile = File(...), name: str = None, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     try:
         image_bytes = file.file.read()
         
@@ -52,7 +56,8 @@ def upload_qr(file: UploadFile = File(...), name: str = None, current_user: mode
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{app_id}/code")
-def get_code(app_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@limiter.limit(API_RATE_LIMIT)
+def get_code(request: Request, app_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     app = crud.get_application(db, app_id)
     if not app or app.user_id != current_user.id:
         raise HTTPException(status_code=404)
@@ -61,14 +66,16 @@ def get_code(app_id: int, current_user: models.User = Depends(auth.get_current_u
     return {"code": code}
 
 @router.put("/{app_id}", response_model=schemas.Application)
-def update_application(app_id: int, app_update: schemas.ApplicationUpdate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@limiter.limit(API_RATE_LIMIT)
+def update_application(request: Request, app_id: int, app_update: schemas.ApplicationUpdate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     app = crud.get_application(db, app_id)
     if not app or app.user_id != current_user.id:
         raise HTTPException(status_code=404)
     return crud.update_application(db, app_id, app_update)
 
 @router.delete("/{app_id}")
-def delete_application(app_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@limiter.limit(API_RATE_LIMIT)
+def delete_application(request: Request, app_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     app = crud.get_application(db, app_id)
     if not app or app.user_id != current_user.id:
         raise HTTPException(status_code=404)

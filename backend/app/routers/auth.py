@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth
+from ..rate_limit import limiter, LOGIN_RATE_LIMIT, SIGNUP_RATE_LIMIT, TOTP_VERIFY_RATE_LIMIT
+from ..oidc_state import generate_secure_state, store_oidc_state, validate_oidc_state
 from datetime import timedelta
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 import os
@@ -11,7 +13,8 @@ from urllib.parse import urlencode
 router = APIRouter()
 
 @router.post("/signup", response_model=schemas.Token)
-def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@limiter.limit(SIGNUP_RATE_LIMIT)
+def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     # Check if user already exists
     existing_user = crud.get_user_by_email(db, user.email)
     if existing_user:
@@ -29,11 +32,48 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login", response_model=schemas.Token)
-def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+@limiter.limit(LOGIN_RATE_LIMIT)
+def login(request: Request, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     # Authenticate user
     user = crud.authenticate_user(db, credentials.email, credentials.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Get global settings to check 2FA enforcement
+    global_settings = crud.get_global_settings(db)
+    totp_enforcement = global_settings.totp_enforcement  # optional, admin_only, or required_all
+    
+    # Check if user needs to enroll in 2FA
+    requires_enrollment = False
+    if totp_enforcement == "admin_only" and user.role == "admin" and not user.totp_enabled:
+        # Admins need to enroll when enforcement is admin_only
+        requires_enrollment = True
+    elif totp_enforcement == "required_all" and not user.totp_enabled:
+        # All users need to enroll when enforcement is required_all
+        requires_enrollment = True
+    
+    # If enrollment is required, return a temporary token and flag
+    if requires_enrollment:
+        # Generate a temporary token valid only for 2FA setup (valid for 15 minutes)
+        access_token = auth.create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=timedelta(minutes=15)
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "requires_2fa_enrollment": True
+        }
+    
+    # If user has 2FA enabled, they need to provide TOTP code
+    if user.totp_enabled:
+        # For now, return a temporary token that can be used to complete 2FA verification
+        # The frontend will need to provide the TOTP code in a separate request
+        # Return status 202 (Accepted) to indicate 2FA is required
+        return {
+            "access_token": f"2fa_required_{user.id}",
+            "token_type": "2fa_pending"
+        }
     
     # Generate token - sub must be a string
     access_token = auth.create_access_token(
@@ -168,13 +208,19 @@ async def oidc_login(request: Request, db: Session = Depends(get_db)):
     # Ensure no trailing slash for consistency
     redirect_uri = redirect_uri.rstrip('/')
     
+    # Generate a cryptographically secure state token for CSRF protection
+    state = generate_secure_state()
+    
+    # Store the state in the database with expiration
+    store_oidc_state(db, state, expiration_minutes=15)
+    
     # Build authorization URL
     params = {
         'client_id': config.client_id,
         'response_type': 'code',
         'scope': config.scope,
         'redirect_uri': redirect_uri,
-        'state': 'random_state'  # In production, use proper state management
+        'state': state  # Use the secure state token
     }
     
     auth_url = f"{config.authorization_endpoint}?{urlencode(params)}"
@@ -186,6 +232,13 @@ async def oidc_callback(code: str, state: str, request: Request, db: Session = D
     config = crud.get_oidc_config(db)
     if not config.enabled:
         raise HTTPException(status_code=400, detail="OIDC not enabled")
+    
+    # Validate the state token to prevent CSRF attacks
+    if not validate_oidc_state(db, state, delete_after_validation=True):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired state token. Please try logging in again."
+        )
     
     # Get redirect URI - must match what was used in the login request and configured in OIDC provider
     if config.redirect_uri:
@@ -324,3 +377,184 @@ async def oidc_discover_endpoints(issuer_url: str):
             "success": False,
             "error": str(e)
         }
+
+@router.post("/2fa/setup")
+def setup_2fa(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Generate TOTP secret and QR code for 2FA setup"""
+    import pyotp
+    import qrcode
+    import io
+    import base64
+    
+    # Generate TOTP secret
+    secret = pyotp.random_base32()
+    
+    # Create TOTP object for generating QR code
+    totp = pyotp.TOTP(secret)
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(totp.provisioning_uri(name=current_user.email, issuer_name='SecureAuth'))
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64 PNG
+    img_buffer = io.BytesIO()
+    img.save(img_buffer, format='PNG')
+    img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+    
+    # Generate backup codes (10 codes)
+    import secrets
+    backup_codes = [secrets.token_hex(4).upper() for _ in range(10)]
+    
+    # Store temporary secret in user object (not yet enabled)
+    # We'll use a property to avoid database update until verification
+    
+    return {
+        "secret": secret,
+        "qr_code": f"data:image/png;base64,{img_base64}",
+        "backup_codes": backup_codes
+    }
+
+@router.post("/2fa/verify")
+def verify_2fa_setup(setup_data: schemas.TOTP2FASetup, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Verify TOTP code and enable 2FA"""
+    import pyotp
+    
+    # The client should have the secret from the setup endpoint
+    # For this endpoint, we need the secret to be passed or stored temporarily
+    # Since we can't store state in a stateless API, we'll expect the setup data to include the secret
+    raise HTTPException(status_code=501, detail="Use POST /2fa/enable instead")
+
+@router.post("/2fa/enable")
+@limiter.limit(TOTP_VERIFY_RATE_LIMIT)
+def enable_2fa(request: Request, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Enable 2FA for user with TOTP secret and verification code"""
+    import pyotp
+    from cryptography.fernet import Fernet
+    
+    secret = data.get("secret")
+    totp_code = data.get("totp_code")
+    backup_codes = data.get("backup_codes", [])
+    
+    if not secret or not totp_code:
+        raise HTTPException(status_code=400, detail="Missing secret or TOTP code")
+    
+    # Verify the TOTP code
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(totp_code, valid_window=1):
+        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+    
+    # Encrypt the secret before storing
+    encryption_key = os.getenv("ENCRYPTION_KEY")
+    if not encryption_key:
+        raise HTTPException(status_code=500, detail="Encryption key not configured")
+    
+    cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
+    encrypted_secret = cipher.encrypt(secret.encode()).decode()
+    
+    # Update user with encrypted TOTP secret and enabled flag
+    current_user.totp_secret = encrypted_secret
+    current_user.totp_enabled = True
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "success": True,
+        "message": "2FA enabled successfully",
+        "backup_codes": backup_codes  # Return backup codes one more time for user to save
+    }
+
+@router.post("/2fa/disable")
+def disable_2fa(disable_data: schemas.TOTP2FADisable, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Disable 2FA for user with password verification"""
+    # Verify password
+    if not auth.verify_password(disable_data.password, current_user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # If user has 2FA enabled, verify the TOTP code before disabling
+    if current_user.totp_enabled and disable_data.totp_code:
+        import pyotp
+        from cryptography.fernet import Fernet
+        
+        encryption_key = os.getenv("ENCRYPTION_KEY")
+        cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
+        
+        try:
+            decrypted_secret = cipher.decrypt(current_user.totp_secret.encode()).decode()
+            totp = pyotp.TOTP(decrypted_secret)
+            
+            if not totp.verify(disable_data.totp_code, valid_window=1):
+                raise HTTPException(status_code=401, detail="Invalid TOTP code")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Failed to verify 2FA")
+    
+    # Disable 2FA
+    current_user.totp_enabled = False
+    current_user.totp_secret = None
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "success": True,
+        "message": "2FA disabled successfully"
+    }
+
+@router.get("/2fa/status")
+def get_2fa_status(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Get current 2FA status for user"""
+    return {
+        "totp_enabled": current_user.totp_enabled,
+        "is_admin": current_user.role == "admin"
+    }
+
+@router.post("/login/verify-2fa", response_model=schemas.Token)
+@limiter.limit(TOTP_VERIFY_RATE_LIMIT)
+def verify_login_2fa(request: Request, data: dict, db: Session = Depends(get_db)):
+    """Verify TOTP code and complete login"""
+    import pyotp
+    from cryptography.fernet import Fernet
+    
+    totp_code = data.get("totp_code")
+    email = data.get("email")
+    
+    if not totp_code or not email:
+        raise HTTPException(status_code=400, detail="Missing TOTP code or email")
+    
+    # Get user by email
+    user = crud.get_user_by_email(db, email)
+    if not user or not user.totp_enabled:
+        raise HTTPException(status_code=400, detail="Invalid request")
+    
+    # Decrypt TOTP secret
+    encryption_key = os.getenv("ENCRYPTION_KEY")
+    if not encryption_key:
+        raise HTTPException(status_code=500, detail="Encryption key not configured")
+    
+    cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
+    
+    try:
+        decrypted_secret = cipher.decrypt(user.totp_secret.encode()).decode()
+        totp = pyotp.TOTP(decrypted_secret)
+        
+        if not totp.verify(totp_code, valid_window=1):
+            raise HTTPException(status_code=401, detail="Invalid TOTP code")
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail="Failed to verify TOTP code")
+    
+    # Generate token - sub must be a string
+    access_token = auth.create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
