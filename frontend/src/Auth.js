@@ -34,6 +34,7 @@ function Auth({ onLoginSuccess }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resetTokenLoading, setResetTokenLoading] = useState(false);
+  const [passwordResetEnabled, setPasswordResetEnabled] = useState(true);
 
   // WebAuthn states
   const [webauthnSupported, setWebauthnSupported] = useState(false);
@@ -138,9 +139,11 @@ function Auth({ onLoginSuccess }) {
       try {
         const res = await axios.get('/api/auth/login-settings');
         setWebauthnEnabled(res.data.webauthn_enabled !== false);
+        setPasswordResetEnabled(res.data.password_reset_enabled !== false);
       } catch (err) {
         // Default to enabled if error
         setWebauthnEnabled(true);
+        setPasswordResetEnabled(true);
       }
     };
 
@@ -493,7 +496,7 @@ function Auth({ onLoginSuccess }) {
                 />
               </div>
 
-              {mode === 'login' && !isInitialSetup && (
+              {mode === 'login' && passwordResetEnabled && !isInitialSetup && (
                 <div style={{ textAlign: 'right', marginBottom: '16px' }}>
                   <button
                     type="button"
@@ -877,7 +880,7 @@ function Auth({ onLoginSuccess }) {
           zIndex: 1000
         }}>
           <div style={{
-            backgroundColor: loginPageTheme === 'dark' ? '#1e1e1e' : '#ffffff',
+            backgroundColor: loginPageTheme === 'dark' ? '#2d3748' : '#ffffff',
             borderRadius: '8px',
             padding: '32px',
             maxWidth: '400px',
@@ -998,8 +1001,8 @@ function Auth({ onLoginSuccess }) {
               {error && (
                 <div style={{
                   padding: '12px',
-                  backgroundColor: '#ffcccc',
-                  color: '#cc0000',
+                  backgroundColor: loginPageTheme === 'dark' ? '#3d2626' : '#ffcccc',
+                  color: loginPageTheme === 'dark' ? '#ff9999' : '#cc0000',
                   borderRadius: '6px',
                   marginBottom: '16px',
                   fontSize: '13px'
@@ -1044,7 +1047,7 @@ function Auth({ onLoginSuccess }) {
                   padding: '12px 20px',
                   backgroundColor: 'transparent',
                   color: '#4361ee',
-                  border: `2px solid #4361ee`,
+                  border: `2px solid ${loginPageTheme === 'dark' ? '#5a7fd4' : '#4361ee'}`,
                   borderRadius: '6px',
                   cursor: (resetToken ? resetTokenLoading : forgotPasswordLoading) ? 'not-allowed' : 'pointer',
                   fontSize: '14px',

@@ -177,20 +177,29 @@ def get_login_settings(db: Session = Depends(get_db)):
     """Get public login settings (unauthenticated endpoint)"""
     try:
         settings = db.query(models.GlobalSettings).first()
+        smtp_config = db.query(models.SMTPConfig).first()
+        smtp_enabled = smtp_config.enabled if smtp_config else False
+        
         if settings:
+            # Password reset is only enabled if both the setting is enabled AND SMTP is configured
+            password_reset_enabled = (settings.password_reset_enabled if hasattr(settings, 'password_reset_enabled') else True) and smtp_enabled
+            
             return {
                 "webauthn_enabled": settings.webauthn_enabled if hasattr(settings, 'webauthn_enabled') else True,
-                "signup_enabled": settings.signup_enabled if hasattr(settings, 'signup_enabled') else True
+                "signup_enabled": settings.signup_enabled if hasattr(settings, 'signup_enabled') else True,
+                "password_reset_enabled": password_reset_enabled
             }
         return {
             "webauthn_enabled": True,
-            "signup_enabled": True
+            "signup_enabled": True,
+            "password_reset_enabled": False
         }
     except Exception as e:
         # Default to enabled if error
         return {
             "webauthn_enabled": True,
-            "signup_enabled": True
+            "signup_enabled": True,
+            "password_reset_enabled": False
         }
 
 @router.post("/suggest-username")

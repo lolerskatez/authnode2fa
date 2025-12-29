@@ -686,6 +686,22 @@ const SettingsView = ({
     }
   };
 
+  const handlePasswordResetToggle = async () => {
+    setTwoFAEnforcementSaving(true);
+    try {
+      const newEnabled = !globalSettings.password_reset_enabled;
+      await axios.put('/api/admin/settings', {
+        password_reset_enabled: newEnabled
+      });
+      setGlobalSettings({ ...globalSettings, password_reset_enabled: newEnabled });
+      showToast(newEnabled ? 'Password reset enabled' : 'Password reset disabled');
+    } catch (err) {
+      showToast('Error updating password reset: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setTwoFAEnforcementSaving(false);
+    }
+  };
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -1333,6 +1349,75 @@ const SettingsView = ({
                         ))}
                       </div>
                     )}
+                  </div>
+                </>
+              )}
+
+              {/* Password Reset Settings */}
+              {currentUser && currentUser.role === 'admin' && (
+                <>
+                  <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+                    <i className="fas fa-key" style={{ marginRight: '8px', color: colors.accent }}></i>
+                    Password Reset
+                  </h3>
+
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: colors.background,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                          <i className="fas fa-unlock-alt" style={{ marginRight: '8px', color: colors.accent }}></i>
+                          Password Reset Status
+                        </h4>
+                        <p style={{ margin: 0, color: colors.secondary, fontSize: '12px' }}>
+                          {globalSettings.password_reset_enabled && smtpSettings.enabled ? 'Users can reset their passwords via email' : 'Password reset is disabled'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handlePasswordResetToggle}
+                        disabled={twoFAEnforcementSaving || !smtpSettings.enabled}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: (globalSettings.password_reset_enabled && smtpSettings.enabled) ? colors.success : colors.danger,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: (twoFAEnforcementSaving || !smtpSettings.enabled) ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          opacity: (twoFAEnforcementSaving || !smtpSettings.enabled) ? 0.6 : 1,
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <i className={`fas fa-${(globalSettings.password_reset_enabled && smtpSettings.enabled) ? 'check' : 'times'}`} style={{ marginRight: '6px' }}></i>
+                        {twoFAEnforcementSaving ? 'Updating...' : ((globalSettings.password_reset_enabled && smtpSettings.enabled) ? 'Enabled' : 'Disabled')}
+                      </button>
+                    </div>
+                    <div style={{
+                      padding: '10px 12px',
+                      backgroundColor: colors.infoLight,
+                      borderRadius: '6px',
+                      border: `1px solid ${colors.infoBorder}`,
+                      fontSize: '12px',
+                      color: colors.secondary
+                    }}>
+                      <i className="fas fa-info-circle" style={{ marginRight: '6px', color: colors.info }}></i>
+                      {globalSettings.password_reset_enabled
+                        ? 'Users can request password reset links via email when they forget their password.'
+                        : 'Users cannot request password reset links. They must contact an administrator.'}
+                      {!smtpSettings.enabled && (
+                        <div style={{ marginTop: '8px', color: colors.warning }}>
+                          <i className="fas fa-exclamation-triangle" style={{ marginRight: '6px' }}></i>
+                          Password reset requires SMTP to be configured and enabled.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
