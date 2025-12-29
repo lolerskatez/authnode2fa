@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './Auth.css';
+import WebAuthnHelper from './utils/WebAuthnHelper';
 
 function Auth({ onLoginSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' or 'signup'
@@ -33,6 +34,10 @@ function Auth({ onLoginSuccess }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resetTokenLoading, setResetTokenLoading] = useState(false);
+
+  // WebAuthn states
+  const [webauthnSupported, setWebauthnSupported] = useState(false);
+  const [webauthnLoading, setWebauthnLoading] = useState(false);
 
   const handleOidcCallback = useCallback(async (code, state) => {
     // Prevent double processing (React StrictMode calls useEffect twice)
@@ -126,6 +131,9 @@ function Auth({ onLoginSuccess }) {
     };
 
     loadSignupEnabled();
+
+    // Check WebAuthn support
+    setWebauthnSupported(WebAuthnHelper.isSupported());
 
     // Check for OIDC callback parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -403,6 +411,64 @@ function Auth({ onLoginSuccess }) {
               <button type="submit" className="auth-submit" disabled={loading}>
                 {loading ? 'Processing...' : (mode === 'login' ? 'Login' : 'Sign Up')}
               </button>
+
+              {mode === 'login' && webauthnSupported && !isInitialSetup && (
+                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                  <div style={{ 
+                    height: '1px', 
+                    backgroundColor: '#e0e6ed', 
+                    marginBottom: '16px',
+                    position: 'relative'
+                  }}>
+                    <span style={{
+                      backgroundColor: loginPageTheme === 'dark' ? '#1e1e1e' : '#ffffff',
+                      padding: '0 12px',
+                      fontSize: '12px',
+                      color: '#718096',
+                      position: 'absolute',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      top: '-8px'
+                    }}>
+                      or
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleWebauthnLogin}
+                    disabled={webauthnLoading || !email}
+                    style={{
+                      width: '100%',
+                      padding: '12px 20px',
+                      backgroundColor: '#6b46c1',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: webauthnLoading || !email ? 'not-allowed' : 'pointer',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      opacity: webauthnLoading || !email ? 0.6 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <i className="fas fa-key"></i>
+                    {webauthnLoading ? 'Authenticating...' : 'Login with Security Key'}
+                  </button>
+                  {!email && (
+                    <p style={{ 
+                      fontSize: '12px', 
+                      color: '#718096', 
+                      marginTop: '8px',
+                      marginBottom: '0'
+                    }}>
+                      Enter your email address first
+                    </p>
+                  )}
+                </div>
+              )}
 
               {mode === 'login' && oidcConfig && (
                 <>
