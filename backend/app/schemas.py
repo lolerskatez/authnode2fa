@@ -37,6 +37,11 @@ class ApplicationBase(BaseModel):
     color: Optional[str] = '#6B46C1'
     category: Optional[str] = "Personal"
     favorite: Optional[bool] = False
+    display_order: Optional[int] = 0
+    username: Optional[str] = None
+    url: Optional[str] = None
+    notes: Optional[str] = None
+    custom_fields: Optional[Dict[str, Any]] = None
 
 class ApplicationCreate(ApplicationBase):
     pass
@@ -48,6 +53,11 @@ class ApplicationUpdate(BaseModel):
     secret: Optional[str] = None
     category: Optional[str] = None
     favorite: Optional[bool] = None
+    display_order: Optional[int] = None
+    username: Optional[str] = None
+    url: Optional[str] = None
+    notes: Optional[str] = None
+    custom_fields: Optional[Dict[str, Any]] = None
 
 class Application(ApplicationBase):
     id: int
@@ -285,6 +295,11 @@ class ApplicationExportData(BaseModel):
     color: Optional[str] = None
     category: Optional[str] = None
     favorite: Optional[bool] = False
+    display_order: Optional[int] = 0
+    username: Optional[str] = None
+    url: Optional[str] = None
+    notes: Optional[str] = None
+    custom_fields: Optional[Dict[str, Any]] = None
 
 
 class ExportResponse(BaseModel):

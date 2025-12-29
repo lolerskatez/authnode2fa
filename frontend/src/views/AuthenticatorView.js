@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import AddAccountModal from '../components/AddAccountModal';
 import AccountCard from '../components/AccountCard';
+import AccountMetadataModal from '../components/AccountMetadataModal';
 import ContextMenu from '../components/ContextMenu';
 import '../App.css';
 
@@ -47,6 +48,13 @@ const AuthenticatorView = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [debounceTimer, setDebounceTimer] = useState(null);
+
+  // Metadata modal state
+  const [selectedAccountForMetadata, setSelectedAccountForMetadata] = useState(null);
+
+  // Drag and drop state
+  const [draggedAccount, setDraggedAccount] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   // Update filtered accounts to use backend API with debounced search
   const fetchFilteredAccounts = useCallback(async () => {
@@ -255,6 +263,85 @@ const AuthenticatorView = ({
     setSelectedAccount(null);
   };
 
+  // Metadata modal handlers
+  const handleShowMetadata = (account) => {
+    setSelectedAccountForMetadata(account);
+  };
+
+  const handleCloseMetadata = () => {
+    setSelectedAccountForMetadata(null);
+  };
+
+  const handleAccountUpdate = (updatedAccount) => {
+    onAccountsChange(
+      accounts.map(acc => acc.id === updatedAccount.id ? updatedAccount : acc)
+    );
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, account) => {
+    setDraggedAccount(account);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.outerHTML);
+    e.target.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedAccount(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+
+    if (!draggedAccount) return;
+
+    const draggedIndex = filteredAccounts.findIndex(acc => acc.id === draggedAccount.id);
+    if (draggedIndex === -1 || draggedIndex === dropIndex) return;
+
+    // Reorder the accounts array
+    const newAccounts = [...filteredAccounts];
+    const [removed] = newAccounts.splice(draggedIndex, 1);
+    newAccounts.splice(dropIndex, 0, removed);
+
+    // Update display_order for all affected accounts
+    const updatePromises = newAccounts.map((account, index) => {
+      const newOrder = index + 1; // 1-based ordering
+      if (account.display_order !== newOrder) {
+        return axios.put(`/api/applications/${account.id}`, {
+          display_order: newOrder
+        });
+      }
+      return Promise.resolve();
+    });
+
+    try {
+      await Promise.all(updatePromises);
+      // Update the accounts with new display_order values
+      onAccountsChange(newAccounts.map((acc, index) => ({
+        ...acc,
+        display_order: index + 1
+      })));
+    } catch (error) {
+      console.error('Failed to update account order:', error);
+      alert('Failed to update account order. Please try again.');
+    }
+
+    setDraggedAccount(null);
+  };
+
   if (isMobile) {
     return (
       <>
@@ -385,17 +472,34 @@ const AuthenticatorView = ({
         </div>
 
         <div className="accounts-grid">
-          {filteredAccounts.map(account => (
-            <AccountCard
+          {filteredAccounts.map((account, index) => (
+            <div
               key={account.id}
-              account={account}
-              code={codes[account.id]}
-              timer={timers[account.id]}
-              progress={progresses[account.id]}
-              onContextMenu={(e) => handleContextMenu(e, account)}
-              isMobile={false}
-              codeFormat={appSettings?.codeFormat || 'spaced'}
-            />
+              draggable={!isMobile}
+              onDragStart={(e) => handleDragStart(e, account)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              style={{
+                opacity: draggedAccount?.id === account.id ? 0.5 : 1,
+                border: dragOverIndex === index ? '2px dashed #4361ee' : 'none',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <AccountCard
+                account={account}
+                code={codes[account.id]}
+                timer={timers[account.id]}
+                progress={progresses[account.id]}
+                onContextMenu={(e) => handleContextMenu(e, account)}
+                isMobile={false}
+                codeFormat={appSettings?.codeFormat || 'spaced'}
+                onShowMetadata={handleShowMetadata}
+                appSettings={appSettings}
+              />
+            </div>
           ))}
         </div>
 
@@ -470,6 +574,15 @@ const AuthenticatorView = ({
               Add Your First Account
             </button>
           </div>
+        )}
+
+        {selectedAccountForMetadata && (
+          <AccountMetadataModal
+            account={selectedAccountForMetadata}
+            onClose={handleCloseMetadata}
+            onAccountUpdate={handleAccountUpdate}
+            appSettings={appSettings}
+          />
         )}
       </div>
 

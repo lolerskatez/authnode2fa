@@ -34,6 +34,11 @@ class Application(Base):
     backup_key = Column(String)
     category = Column(String, default="Personal")  # Work, Personal, Security
     favorite = Column(Boolean, default=False)
+    display_order = Column(Integer, default=0)  # For user-defined ordering
+    username = Column(String, nullable=True)  # Username for this account
+    url = Column(String, nullable=True)  # Website/service URL
+    notes = Column(Text, nullable=True)  # User notes and reminders
+    custom_fields = Column(JSON, nullable=True)  # Flexible custom fields
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
