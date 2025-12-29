@@ -244,6 +244,105 @@ function Auth({ onLoginSuccess }) {
     }
   };
 
+  const handleWebauthnLogin = async () => {
+    try {
+      setWebauthnLoading(true);
+      setError('');
+      
+      const helper = new WebAuthnHelper();
+      const credential = await helper.authenticate(email);
+      
+      const res = await axios.post('/api/auth/webauthn/verify', {
+        email,
+        credential: credential
+      });
+      
+      const token = res.data.access_token;
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      onLoginSuccess(token);
+    } catch (err) {
+      setError(err.message || 'WebAuthn authentication failed');
+      console.error(err);
+    } finally {
+      setWebauthnLoading(false);
+    }
+  };
+
+  const handleSSOLogin = async () => {
+    try {
+      setSsoLoading(true);
+      const res = await axios.get('/api/auth/oidc/login');
+      window.location.href = res.data.authorization_url;
+    } catch (err) {
+      setError('Failed to initiate SSO login');
+      console.error(err);
+      setSsoLoading(false);
+    }
+  };
+
+  const handleEnrollmentComplete = async () => {
+    try {
+      setEnrollmentLoading(true);
+      const res = await axios.post('/api/auth/2fa/enable', {
+        secret: enrollmentSecret,
+        totp_code: enrollmentCode
+      }, {
+        headers: { Authorization: `Bearer ${enrollmentData.token}` }
+      });
+      
+      localStorage.setItem('token', enrollmentData.token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${enrollmentData.token}`;
+      setShowEnrollmentModal(false);
+      onLoginSuccess(enrollmentData.token);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to enable 2FA');
+      console.error(err);
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    try {
+      setForgotPasswordLoading(true);
+      setError('');
+      const res = await axios.post('/api/auth/password-reset', {
+        email: forgotPasswordEmail
+      });
+      setResetToken(true);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to send reset email');
+      console.error(err);
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handlePasswordResetConfirm = async (e) => {
+    e.preventDefault();
+    try {
+      setResetTokenLoading(true);
+      setError('');
+      const res = await axios.post('/api/auth/password-reset/confirm', {
+        token: resetToken,
+        new_password: newPassword
+      });
+      const token = res.data.access_token;
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setShowForgotPassword(false);
+      onLoginSuccess(token);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to reset password');
+      console.error(err);
+    } finally {
+      setResetTokenLoading(false);
+    }
+  };
+
   return (
     <div className="auth-container">
       <div className="auth-card">
