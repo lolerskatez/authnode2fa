@@ -1,7 +1,7 @@
 """Add OIDCState table for OAuth2 state management
 
 Revision ID: 010_add_oidc_state_table
-Revises: 5cf678704ab4
+Revises: 009_add_totp_system_settings
 Create Date: 2024-12-29 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '010_add_oidc_state_table'
-down_revision = '5cf678704ab4'
+down_revision = '009_add_totp_system_settings'
 branch_labels = None
 depends_on = None
 
