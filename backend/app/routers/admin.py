@@ -212,3 +212,66 @@ def update_oidc_config(
     from .. import crud
     config = crud.update_oidc_config(db, config_update)
     return config
+
+
+# Audit Log Endpoints
+@router.get("/audit-logs", response_model=list[schemas.AuditLogResponse])
+def get_audit_logs(
+    request: Request,
+    user_id: int = None,
+    action: str = None,
+    status: str = None,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get audit logs (admin only)"""
+    from .. import crud
+    
+    # Validate limit and offset
+    if limit > 1000:
+        limit = 1000
+    if offset < 0:
+        offset = 0
+    
+    # Get audit logs
+    logs = crud.get_audit_logs(
+        db,
+        user_id=user_id,
+        action=action,
+        status=status,
+        limit=limit,
+        offset=offset
+    )
+    
+    return logs
+
+
+@router.get("/audit-logs/user/{user_id}", response_model=list[schemas.AuditLogResponse])
+def get_user_audit_logs(
+    request: Request,
+    user_id: int,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get audit logs for a specific user (admin only)"""
+    from .. import crud
+    
+    # Verify user exists
+    user = crud.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Validate limit and offset
+    if limit > 1000:
+        limit = 1000
+    if offset < 0:
+        offset = 0
+    
+    # Get audit logs
+    logs = crud.get_audit_logs(db, user_id=user_id, limit=limit, offset=offset)
+    
+    return logs

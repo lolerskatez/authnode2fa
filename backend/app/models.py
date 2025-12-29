@@ -116,3 +116,83 @@ class OIDCState(Base):
     nonce = Column(String, nullable=True)  # Optional nonce for ID token validation
     expires_at = Column(DateTime, index=True)  # When this state expires
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class PasswordResetToken(Base):
+    """
+    Stores password reset tokens for self-service account recovery.
+    Tokens are single-use and expire after 1 hour.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    token_hash = Column(String, unique=True, index=True)  # SHA256 hash of the reset token
+    used = Column(Boolean, default=False)
+    used_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, index=True)  # Expires in 1 hour
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User")
+
+
+class BackupCode(Base):
+    """
+    Stores encrypted backup codes for 2FA recovery.
+    Each user gets 10 codes during TOTP setup.
+    Each code can be used only once.
+    """
+    __tablename__ = "backup_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    code_hash = Column(String, unique=True, index=True)  # SHA256 hash of the backup code
+    used = Column(Boolean, default=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User")
+
+
+class UserSession(Base):
+    """
+    Tracks active user sessions for device management and security.
+    Sessions include device info, IP address, and browser info.
+    """
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    token_jti = Column(String, unique=True, index=True)  # JWT ID for token revocation
+    device_name = Column(String, nullable=True)  # Device name (e.g., "Chrome on Windows")
+    device_fingerprint = Column(String, nullable=True)  # Device fingerprint hash
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    last_activity = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, index=True)  # Session expiration time
+    revoked = Column(Boolean, default=False)
+
+    user = relationship("User")
+
+
+class AuditLog(Base):
+    """
+    Stores audit logs for security and compliance.
+    Logs all important actions: login, logout, account changes, etc.
+    """
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    action = Column(String, index=True)  # login, logout, account_added, password_changed, etc
+    resource_type = Column(String, nullable=True)  # user, account, settings
+    resource_id = Column(Integer, nullable=True)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    status = Column(String, default="success")  # success, failed
+    details = Column(JSON, nullable=True)  # Additional context
+    reason = Column(String, nullable=True)  # Failure reason if status is failed
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User")

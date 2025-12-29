@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import os
+import secrets
+import hashlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,6 +28,25 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+def hash_token(token: str) -> str:
+    """Hash a token using SHA256"""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+def generate_token(length: int = 32) -> str:
+    """Generate a secure random token"""
+    return secrets.token_urlsafe(length)
+
+def generate_backup_codes(count: int = 10, length: int = 8) -> list[str]:
+    """Generate backup codes for 2FA recovery"""
+    codes = []
+    for _ in range(count):
+        # Generate format: XXXX-XXXX (e.g., A1B2-C3D4)
+        code = ''.join(secrets.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(length))
+        # Format as XXXX-XXXX
+        formatted_code = f"{code[:4]}-{code[4:]}"
+        codes.append(formatted_code)
+    return codes
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()

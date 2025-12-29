@@ -187,3 +187,190 @@ def link_existing_user_to_oidc(db: Session, user_id: int, oidc_id: str):
         db.commit()
         db.refresh(user)
     return user
+
+
+# Password Reset Functions
+def create_password_reset_token(db: Session, user_id: int, expires_in_hours: int = 1):
+    """Create a password reset token for a user"""
+    from datetime import datetime, timedelta
+    
+    token = auth.generate_token()
+    token_hash = auth.hash_token(token)
+    
+    reset_token = models.PasswordResetToken(
+        user_id=user_id,
+        token_hash=token_hash,
+        expires_at=datetime.utcnow() + timedelta(hours=expires_in_hours)
+    )
+    db.add(reset_token)
+    db.commit()
+    return token  # Return unhashed token to send to user
+
+def validate_password_reset_token(db: Session, token: str):
+    """Validate a password reset token and return the user if valid"""
+    from datetime import datetime
+    
+    token_hash = auth.hash_token(token)
+    reset_token = db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.token_hash == token_hash,
+        models.PasswordResetToken.used == False,
+        models.PasswordResetToken.expires_at > datetime.utcnow()
+    ).first()
+    
+    if not reset_token:
+        return None
+    
+    return reset_token.user
+
+def complete_password_reset(db: Session, token: str, new_password: str):
+    """Complete password reset: hash token, find token, update password"""
+    from datetime import datetime
+    
+    token_hash = auth.hash_token(token)
+    reset_token = db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.token_hash == token_hash,
+        models.PasswordResetToken.used == False,
+        models.PasswordResetToken.expires_at > datetime.utcnow()
+    ).first()
+    
+    if not reset_token:
+        return None
+    
+    # Update password
+    user = reset_token.user
+    user.password_hash = auth.hash_password(new_password)
+    reset_token.used = True
+    reset_token.used_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+# Backup Code Functions
+def create_backup_codes(db: Session, user_id: int):
+    """Create backup codes for a user"""
+    codes = auth.generate_backup_codes(count=10)
+    
+    for code in codes:
+        code_hash = auth.hash_token(code)
+        backup_code = models.BackupCode(
+            user_id=user_id,
+            code_hash=code_hash
+        )
+        db.add(backup_code)
+    
+    db.commit()
+    return codes
+
+def use_backup_code(db: Session, user_id: int, code: str):
+    """Use a backup code (mark as used)"""
+    from datetime import datetime
+    
+    code_hash = auth.hash_token(code)
+    backup_code = db.query(models.BackupCode).filter(
+        models.BackupCode.user_id == user_id,
+        models.BackupCode.code_hash == code_hash,
+        models.BackupCode.used == False
+    ).first()
+    
+    if not backup_code:
+        return False
+    
+    backup_code.used = True
+    backup_code.used_at = datetime.utcnow()
+    db.commit()
+    return True
+
+def get_unused_backup_codes_count(db: Session, user_id: int):
+    """Get count of unused backup codes"""
+    return db.query(models.BackupCode).filter(
+        models.BackupCode.user_id == user_id,
+        models.BackupCode.used == False
+    ).count()
+
+
+# Session Functions
+def create_user_session(db: Session, user_id: int, token_jti: str, ip_address: str = None, user_agent: str = None, expires_at = None):
+    """Create a new user session"""
+    session = models.UserSession(
+        user_id=user_id,
+        token_jti=token_jti,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        expires_at=expires_at
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
+def get_user_sessions(db: Session, user_id: int, exclude_revoked: bool = True):
+    """Get all sessions for a user"""
+    query = db.query(models.UserSession).filter(models.UserSession.user_id == user_id)
+    if exclude_revoked:
+        query = query.filter(models.UserSession.revoked == False)
+    return query.order_by(models.UserSession.created_at.desc()).all()
+
+def revoke_session(db: Session, session_id: int):
+    """Revoke a specific session"""
+    session = db.query(models.UserSession).filter(models.UserSession.id == session_id).first()
+    if session:
+        session.revoked = True
+        db.commit()
+        return True
+    return False
+
+def revoke_all_user_sessions(db: Session, user_id: int, exclude_session_id: int = None):
+    """Revoke all sessions for a user except optionally one (current session)"""
+    query = db.query(models.UserSession).filter(
+        models.UserSession.user_id == user_id,
+        models.UserSession.revoked == False
+    )
+    if exclude_session_id:
+        query = query.filter(models.UserSession.id != exclude_session_id)
+    
+    query.update({"revoked": True})
+    db.commit()
+
+
+# Audit Log Functions
+def create_audit_log(db: Session, user_id: int = None, action: str = None, resource_type: str = None, 
+                     resource_id: int = None, ip_address: str = None, user_agent: str = None,
+                     status: str = "success", reason: str = None, details: dict = None):
+    """Create an audit log entry"""
+    audit_log = models.AuditLog(
+        user_id=user_id,
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        status=status,
+        reason=reason,
+        details=details
+    )
+    db.add(audit_log)
+    db.commit()
+    db.refresh(audit_log)
+    return audit_log
+
+def get_audit_logs(db: Session, user_id: int = None, action: str = None, status: str = None,
+                   start_date = None, end_date = None, limit: int = 100, offset: int = 0):
+    """Get audit logs with optional filters"""
+    from datetime import datetime
+    
+    query = db.query(models.AuditLog)
+    
+    if user_id:
+        query = query.filter(models.AuditLog.user_id == user_id)
+    if action:
+        query = query.filter(models.AuditLog.action == action)
+    if status:
+        query = query.filter(models.AuditLog.status == status)
+    if start_date:
+        query = query.filter(models.AuditLog.created_at >= start_date)
+    if end_date:
+        query = query.filter(models.AuditLog.created_at <= end_date)
+    
+    return query.order_by(models.AuditLog.created_at.desc()).limit(limit).offset(offset).all()

@@ -279,3 +279,173 @@ def generate_totp_code(secret: str) -> str:
 
 def generate_backup_key() -> str:
     return pyotp.random_base32()
+
+
+# Email utilities
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
+
+def get_smtp_config(db):
+    """Get SMTP configuration from database"""
+    from .models import SMTPConfig
+    from .smtp_encryption import decrypt_smtp_password
+    
+    config = db.query(SMTPConfig).first()
+    if not config or not config.enabled:
+        return None
+    
+    # Decrypt password if encrypted
+    password = config.password
+    try:
+        from .smtp_encryption import is_encrypted
+        if is_encrypted(password):
+            password = decrypt_smtp_password(password)
+    except:
+        pass
+    
+    return {
+        'host': config.host,
+        'port': config.port,
+        'username': config.username,
+        'password': password,
+        'from_email': config.from_email,
+        'from_name': config.from_name
+    }
+
+def send_password_reset_email(db, user_email: str, reset_token: str, app_url: str = "http://localhost:3000"):
+    """Send password reset email to user"""
+    smtp_config = get_smtp_config(db)
+    
+    if not smtp_config:
+        # Return False if SMTP not configured
+        return False
+    
+    try:
+        reset_link = f"{app_url}/auth/reset?token={reset_token}"
+        
+        # Create email
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Password Reset Request'
+        msg['From'] = f"{smtp_config['from_name']} <{smtp_config['from_email']}>"
+        msg['To'] = user_email
+        
+        # Plain text version
+        text = f"""
+Hello,
+
+You have requested to reset your password. Click the link below to set a new password:
+
+{reset_link}
+
+This link will expire in 1 hour.
+
+If you did not request this, please ignore this email.
+
+Best regards,
+{smtp_config['from_name']}
+"""
+        
+        # HTML version
+        html = f"""
+<html>
+  <body>
+    <p>Hello,</p>
+    <p>You have requested to reset your password. Click the link below to set a new password:</p>
+    <p><a href="{reset_link}">Reset Password</a></p>
+    <p>This link will expire in 1 hour.</p>
+    <p>If you did not request this, please ignore this email.</p>
+    <p>Best regards,<br>{smtp_config['from_name']}</p>
+  </body>
+</html>
+"""
+        
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(html, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send email
+        with smtplib.SMTP(smtp_config['host'], smtp_config['port']) as server:
+            server.starttls()
+            server.login(smtp_config['username'], smtp_config['password'])
+            server.send_message(msg)
+        
+        return True
+    except Exception as e:
+        print(f"Failed to send password reset email: {str(e)}")
+        return False
+
+def send_security_alert_email(db, user_email: str, event_type: str, details: dict = None, app_url: str = "http://localhost:3000"):
+    """Send security alert email to user"""
+    smtp_config = get_smtp_config(db)
+    
+    if not smtp_config:
+        return False
+    
+    try:
+        event_messages = {
+            'login': 'A new login to your account was detected',
+            'password_changed': 'Your password has been changed',
+            '2fa_enabled': 'Two-factor authentication has been enabled on your account',
+            '2fa_disabled': 'Two-factor authentication has been disabled on your account',
+            'account_added': 'A new 2FA account has been added',
+            'suspicious_activity': 'Suspicious activity detected on your account'
+        }
+        
+        event_message = event_messages.get(event_type, f'{event_type} event')
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f'Security Alert: {event_message}'
+        msg['From'] = f"{smtp_config['from_name']} <{smtp_config['from_email']}>"
+        msg['To'] = user_email
+        
+        details_text = ""
+        if details:
+            if details.get('ip_address'):
+                details_text += f"\nIP Address: {details['ip_address']}"
+            if details.get('device'):
+                details_text += f"\nDevice: {details['device']}"
+            if details.get('time'):
+                details_text += f"\nTime: {details['time']}"
+        
+        text = f"""
+Hello,
+
+{event_message}.{details_text}
+
+If this was not you, please secure your account immediately by changing your password.
+
+Settings: {app_url}/settings
+
+Best regards,
+{smtp_config['from_name']}
+"""
+        
+        html = f"""
+<html>
+  <body>
+    <p>Hello,</p>
+    <p>{event_message}.{details_text.replace(chr(10), '<br>')}</p>
+    <p>If this was not you, please secure your account immediately by changing your password.</p>
+    <p><a href="{app_url}/settings">Go to Settings</a></p>
+    <p>Best regards,<br>{smtp_config['from_name']}</p>
+  </body>
+</html>
+"""
+        
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(html, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        with smtplib.SMTP(smtp_config['host'], smtp_config['port']) as server:
+            server.starttls()
+            server.login(smtp_config['username'], smtp_config['password'])
+            server.send_message(msg)
+        
+        return True
+    except Exception as e:
+        print(f"Failed to send security alert email: {str(e)}")
+        return False

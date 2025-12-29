@@ -254,3 +254,72 @@ def update_user_preferences(
     db.refresh(prefs)
     
     return prefs
+
+
+# Session Management Endpoints
+@router.get("/sessions", response_model=schemas.SessionListResponse)
+def get_sessions(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Get all active sessions for the current user"""
+    sessions = crud.get_user_sessions(db, current_user.id, exclude_revoked=True)
+    
+    # Convert to response format
+    session_responses = [
+        schemas.UserSessionResponse(
+            id=session.id,
+            user_id=session.user_id,
+            device_name=session.device_name,
+            ip_address=session.ip_address,
+            last_activity=session.last_activity,
+            created_at=session.created_at,
+            expires_at=session.expires_at
+        )
+        for session in sessions
+    ]
+    
+    return schemas.SessionListResponse(sessions=session_responses, current_session_id=None)
+
+
+@router.delete("/sessions/{session_id}")
+def revoke_session(session_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Revoke a specific session"""
+    # Verify the session belongs to the current user
+    session = db.query(models.UserSession).filter(models.UserSession.id == session_id).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot revoke other user's sessions")
+    
+    # Revoke the session
+    success = crud.revoke_session(db, session_id)
+    
+    if success:
+        crud.create_audit_log(
+            db,
+            user_id=current_user.id,
+            action="session_revoked",
+            resource_type="session",
+            resource_id=session_id,
+            status="success"
+        )
+        return {"message": "Session revoked successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to revoke session")
+
+
+@router.post("/sessions/revoke-all")
+def revoke_all_sessions(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Revoke all sessions except the current one"""
+    # Get current token JTI from claims if available (would need to be passed through)
+    # For now, revoke all sessions which will force re-login everywhere
+    crud.revoke_all_user_sessions(db, current_user.id)
+    
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="all_sessions_revoked",
+        status="success"
+    )
+    
+    return {"message": "All sessions have been revoked. Please log in again."}

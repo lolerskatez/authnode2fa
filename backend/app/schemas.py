@@ -211,3 +211,66 @@ class TOTP2FADisable(BaseModel):
     """Request to disable 2FA with password confirmation"""
     password: str
     totp_code: Optional[str] = None  # Optional if 2FA is already enabled
+
+
+# Password Reset Schemas
+class PasswordResetRequest(BaseModel):
+    """Request to initiate password reset"""
+    email: str
+
+
+class PasswordResetConfirm(BaseModel):
+    """Confirm password reset with token and new password"""
+    token: str
+    new_password: str
+
+
+# Session Management Schemas
+class UserSessionBase(BaseModel):
+    device_name: Optional[str] = None
+    ip_address: Optional[str] = None
+
+
+class UserSessionResponse(UserSessionBase):
+    id: int
+    user_id: int
+    device_name: Optional[str] = None
+    ip_address: Optional[str] = None
+    last_activity: datetime
+    created_at: datetime
+    expires_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class SessionListResponse(BaseModel):
+    sessions: List[UserSessionResponse]
+    current_session_id: Optional[int] = None
+
+
+# Audit Log Schemas
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: Optional[int] = None
+    action: str
+    resource_type: Optional[str] = None
+    resource_id: Optional[int] = None
+    ip_address: Optional[str] = None
+    status: str
+    reason: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class AuditLogFilterRequest(BaseModel):
+    user_id: Optional[int] = None
+    action: Optional[str] = None
+    status: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    limit: int = 100
+    offset: int = 0

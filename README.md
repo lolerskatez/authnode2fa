@@ -10,14 +10,21 @@ A secure, full-stack web application for managing Two-Factor Authentication (2FA
 
 ## 🚀 Features
 
+### Core Features
 - **User Management**: OIDC SSO authentication with role-based access control
 - **2FA Application Management**: Upload QR codes, manage accounts with categories and favorites
 - **Secure Storage**: Encrypted secrets using Fernet encryption
-- **Notifications**: SMTP email notifications for security events
 - **Responsive UI**: Modern React interface with dark/light theme support
 - **Docker Deployment**: Complete containerized setup with nginx reverse proxy
 - **Admin Panel**: User and application management for administrators
 - **Settings**: Customizable themes, code formatting, and SMTP configuration
+
+### Security Features (New) ✅
+- **Password Reset**: Self-service account recovery with time-limited tokens
+- **Session Management**: Track active sessions, revoke devices, logout all sessions
+- **Backup Code Recovery**: One-time use backup codes for 2FA fallback access
+- **Audit Logging**: Comprehensive security event logging for compliance
+- **Rate Limiting**: Protected endpoints with intelligent rate limiting (already implemented)
 
 ## ⚡ Quick Start (10 minutes)
 
@@ -142,6 +149,32 @@ POSTGRES_PASSWORD=<strong-password>
 ```
 
 See [SECURITY.md](SECURITY.md) for secret generation & best practices.
+
+## 🔐 Security Features
+
+### Password Reset
+- Users can request password reset via email
+- Secure time-limited tokens (1-hour expiration)
+- Automatic logout from all sessions after reset
+- **Endpoint**: `POST /api/auth/password-reset`, `POST /api/auth/password-reset/confirm`
+
+### Session Management
+- Track all active user sessions with device information
+- Revoke individual sessions or all other sessions
+- IP address and user agent logging
+- **Endpoint**: `GET /api/users/sessions`, `DELETE /api/users/sessions/{id}`, `POST /api/users/sessions/revoke-all`
+
+### Backup Code Recovery
+- 10 automatically generated backup codes per user
+- One-time use for 2FA fallback if authenticator lost
+- Regenerate codes anytime
+- **Endpoint**: `POST /api/auth/2fa/verify-backup-code`, `GET /api/auth/2fa/backup-codes-remaining`, `POST /api/auth/2fa/regenerate-backup-codes`
+
+### Audit Logging
+- Comprehensive logging of all authentication events
+- Filter by user, action, or date (admin only)
+- Export for compliance reporting
+- **Endpoint**: `GET /api/admin/audit-logs`, `GET /api/admin/audit-logs/user/{id}`
 
 ## 📖 Usage
 
