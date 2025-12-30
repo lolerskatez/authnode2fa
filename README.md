@@ -4,9 +4,27 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green.svg)](#-production-ready)
 
-A secure, full-stack web application for managing Two-Factor Authentication (2FA) tokens with OIDC SSO integration, QR code extraction, and encrypted storage. Built with React frontend and FastAPI backend, containerized for easy deployment.
+A secure, modular, full-stack web application for managing Two-Factor Authentication (2FA) tokens with OIDC SSO integration, QR code extraction, and encrypted storage. Built with React frontend and FastAPI backend, containerized for easy deployment.
 
 **Status**: ✅ 100% Production Ready - Deploy today in 10 minutes
+
+---
+
+## 📖 Documentation First
+
+**New to the project?** Start here:
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Complete documentation hub with navigation guide
+- **[CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md)** - Full technical assessment & production readiness
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Modular architecture & design patterns
+
+**Pick your path:**
+- 🚀 **Deploy?** → [DEPLOYMENT.md](DEPLOYMENT.md)
+- 👨‍💻 **Develop?** → [backend/README.md](backend/README.md)
+- 🧪 **Test?** → [TESTING_GUIDE.md](TESTING_GUIDE.md)
+- 🔐 **Secure?** → [SECURITY.md](SECURITY.md)
+- 🔌 **API?** → [API.md](API.md)
+
+---
 
 ## 🚀 Features
 
@@ -73,14 +91,18 @@ Then:
 
 ## 📚 Documentation
 
+**Core Documentation:**
 | Document | Purpose |
 |---|---|
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Complete setup guide (all environments) |
+| [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md) | Full codebase review, architecture, security assessment |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Production deployment guide (all environments) |
 | [SECURITY.md](SECURITY.md) | Security practices & secret management |
+| [TESTING_GUIDE.md](TESTING_GUIDE.md) | Testing procedures & pre-publishing checklist |
 | [CHANGELOG.md](CHANGELOG.md) | Version history & updates |
 
-**Specific guides**:
-- [backend/README.md](backend/README.md) - Backend API documentation
+**Quick References:**
+- [API.md](API.md) - REST API documentation with examples
+- [backend/README.md](backend/README.md) - Backend architecture & setup
 - [.env.example](.env.example) - Local environment template
 - [.env.docker.example](.env.docker.example) - Production environment template
 
