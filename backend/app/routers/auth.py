@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth
-from ..rate_limit import limiter, limit_login, limit_signup, limit_totp_verify
+from ..rate_limit import limiter, limit_login, limit_signup, limit_totp_verify, TOTP_VERIFY_RATE_LIMIT
 from ..oidc_state import generate_secure_state, store_oidc_state, validate_oidc_state
 from datetime import timedelta, datetime
 from authlib.integrations.httpx_client import AsyncOAuth2Client

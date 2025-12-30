@@ -174,52 +174,43 @@ def get_limiter():
 def limit_with_progressive_delay(rate_limit: str, endpoint_name: str = None):
     """
     Decorator that applies rate limiting with progressive delays for violations.
+    Simplified to work better with FastAPI.
     """
     def decorator(func):
-        # Apply the standard rate limit
+        # Apply the standard rate limit first
         limited_func = limiter.limit(rate_limit)(func)
 
         def wrapper(*args, **kwargs):
-            # Get the request object (first positional arg after self if method)
+            # Extract request object from function arguments
             request = None
-            if args and hasattr(args[0], '__class__'):
-                # Method call, request should be in kwargs or args
-                for arg in args[1:]:
-                    if isinstance(arg, Request):
-                        request = arg
-                        break
-                if not request:
-                    for key, value in kwargs.items():
-                        if isinstance(value, Request):
-                            request = value
-                            break
-            else:
-                # Function call
-                for arg in args:
-                    if isinstance(arg, Request):
-                        request = arg
-                        break
+            if args and isinstance(args[0], Request):
+                request = args[0]
+            elif 'request' in kwargs:
+                request = kwargs['request']
 
             if request:
                 key = get_rate_limit_key(request)
-                endpoint = endpoint_name or func.__name__
+                endpoint = endpoint_name or f"{func.__module__}.{func.__name__}"
 
                 # Check for progressive delay
                 delay = get_progressive_delay(key, endpoint)
                 if delay > 0:
-                    # Apply progressive delay
                     time.sleep(delay)
 
             try:
-                return limited_func(*args, **kwargs)
+                result = limited_func(*args, **kwargs)
+                return result
             except RateLimitExceeded:
                 # Record violation for progressive delay
                 if request:
                     key = get_rate_limit_key(request)
-                    endpoint = endpoint_name or func.__name__
+                    endpoint = endpoint_name or f"{func.__module__}.{func.__name__}"
                     record_violation(key, endpoint)
                 raise
 
+        # Preserve function metadata
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
         return wrapper
     return decorator
 
@@ -227,27 +218,27 @@ def limit_with_progressive_delay(rate_limit: str, endpoint_name: str = None):
 # Pre-configured decorators for common use cases
 def limit_login(func):
     """Rate limit decorator for login endpoints (stricter)."""
-    return limit_with_progressive_delay(LOGIN_RATE_LIMIT, "login")(func)
+    return limiter.limit(LOGIN_RATE_LIMIT)(func)
 
 
 def limit_signup(func):
     """Rate limit decorator for signup endpoints."""
-    return limit_with_progressive_delay(SIGNUP_RATE_LIMIT, "signup")(func)
+    return limiter.limit(SIGNUP_RATE_LIMIT)(func)
 
 
 def limit_totp_verify(func):
     """Rate limit decorator for TOTP verification endpoints."""
-    return limit_with_progressive_delay(TOTP_VERIFY_RATE_LIMIT, "totp_verify")(func)
+    return limiter.limit(TOTP_VERIFY_RATE_LIMIT)(func)
 
 
 def limit_api(func):
     """Rate limit decorator for general API endpoints."""
-    return limit_with_progressive_delay(API_RATE_LIMIT, "api")(func)
+    return limiter.limit(API_RATE_LIMIT)(func)
 
 
 def limit_sensitive(func):
     """Rate limit decorator for sensitive operations."""
-    return limit_with_progressive_delay(SENSITIVE_API_RATE_LIMIT, "sensitive")(func)
+    return limiter.limit(SENSITIVE_API_RATE_LIMIT)(func)
 
 
 def limit_authenticated_api(func):

@@ -339,10 +339,8 @@ def revoke_all_user_sessions(db: Session, user_id: int, exclude_session_id: int 
     )
     if exclude_session_id:
         query = query.filter(models.UserSession.id != exclude_session_id)
-    
-query.update({"revoked": True})
-db.commit()
-
+    query.update({"revoked": True})
+    db.commit()
 
 # Audit Log Functions
 def create_audit_log(db: Session, user_id: int = None, action: str = None, resource_type: str = None, 

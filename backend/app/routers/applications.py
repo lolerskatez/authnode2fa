@@ -171,6 +171,7 @@ def get_code(request: Request, app_id: int, current_user: models.User = Depends(
 @router.get("/{app_id}/history", response_model=list)
 @limiter.limit(API_RATE_LIMIT)
 def get_code_history(
+    request: Request,
     app_id: int,
     limit: int = Query(50, description="Maximum number of history entries to return", ge=1, le=200),
     offset: int = Query(0, description="Number of entries to skip", ge=0),
