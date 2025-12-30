@@ -304,6 +304,163 @@ def generate_backup_key() -> str:
     return pyotp.random_base32()
 
 
+# Password Policy Functions
+import re
+import hashlib
+import requests
+from typing import List, Dict, Any, Optional
+
+
+class PasswordPolicy:
+    """Advanced password policy enforcement"""
+
+    # Default policy settings (can be made configurable)
+    MIN_LENGTH = 8
+    REQUIRE_UPPERCASE = True
+    REQUIRE_LOWERCASE = True
+    REQUIRE_DIGITS = True
+    REQUIRE_SPECIAL_CHARS = True
+    PREVENT_COMMON_PASSWORDS = True
+    MAX_REPEATED_CHARS = 3  # Max consecutive repeated characters
+
+    COMMON_PASSWORDS = {
+        "password", "123456", "123456789", "qwerty", "abc123", "password123",
+        "admin", "letmein", "welcome", "monkey", "1234567890", "password1",
+        "qwerty123", "welcome123", "admin123", "root", "user", "guest"
+    }
+
+    @classmethod
+    def validate_password(cls, password: str) -> Dict[str, Any]:
+        """
+        Validate password against policy requirements.
+        Returns dict with 'valid': bool and 'errors': list of error messages.
+        """
+        errors = []
+
+        # Length check
+        if len(password) < cls.MIN_LENGTH:
+            errors.append(f"Password must be at least {cls.MIN_LENGTH} characters long")
+
+        # Character requirements
+        if cls.REQUIRE_UPPERCASE and not re.search(r'[A-Z]', password):
+            errors.append("Password must contain at least one uppercase letter")
+
+        if cls.REQUIRE_LOWERCASE and not re.search(r'[a-z]', password):
+            errors.append("Password must contain at least one lowercase letter")
+
+        if cls.REQUIRE_DIGITS and not re.search(r'\d', password):
+            errors.append("Password must contain at least one digit")
+
+        if cls.REQUIRE_SPECIAL_CHARS and not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]', password):
+            errors.append("Password must contain at least one special character")
+
+        # Repeated characters check
+        if re.search(r'(.)\1{' + str(cls.MAX_REPEATED_CHARS) + r',}', password):
+            errors.append(f"Password cannot contain more than {cls.MAX_REPEATED_CHARS} consecutive repeated characters")
+
+        # Common password check
+        if cls.PREVENT_COMMON_PASSWORDS and password.lower() in cls.COMMON_PASSWORDS:
+            errors.append("Password is too common. Please choose a more unique password")
+
+        # Sequential characters check (basic)
+        if re.search(r'(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)', password.lower()):
+            errors.append("Password cannot contain sequential characters")
+
+        if re.search(r'(?:012|123|234|345|456|567|678|789|890|901)', password):
+            errors.append("Password cannot contain sequential digits")
+
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors
+        }
+
+    @classmethod
+    def check_password_breach(cls, password: str) -> Dict[str, Any]:
+        """
+        Check if password has been breached using HaveIBeenPwned API.
+        Uses k-anonymity: only sends first 5 chars of hash.
+        Returns dict with 'breached': bool and 'count': int (breach count).
+        """
+        try:
+            # Hash the password
+            sha1_hash = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+
+            # Send first 5 chars to API
+            prefix = sha1_hash[:5]
+            suffix = sha1_hash[5:]
+
+            response = requests.get(f"https://api.pwnedpasswords.com/range/{prefix}", timeout=5)
+            response.raise_for_status()
+
+            # Check if our suffix appears in the response
+            lines = response.text.split('\n')
+            for line in lines:
+                if line.startswith(suffix):
+                    count = int(line.split(':')[1])
+                    return {
+                        "breached": True,
+                        "count": count,
+                        "message": f"This password has been seen in {count:,} data breaches"
+                    }
+
+            return {
+                "breached": False,
+                "count": 0,
+                "message": "Password not found in known breaches"
+            }
+
+        except requests.RequestException:
+            # If API is unavailable, don't block registration but log warning
+            return {
+                "breached": False,
+                "count": 0,
+                "message": "Could not check password against breach database",
+                "error": True
+            }
+
+
+def hash_password_for_history(password: str) -> str:
+    """Hash password for history storage (different from auth hash for security)"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def check_password_history(db, user_id: int, password: str, history_limit: int = 5) -> bool:
+    """
+    Check if password has been used recently.
+    Returns True if password is acceptable (not in history), False if it's been used recently.
+    """
+    from . import models
+
+    # Hash the password for comparison
+    password_hash = hash_password_for_history(password)
+
+    # Get recent password history
+    recent_passwords = db.query(models.PasswordHistory).filter(
+        models.PasswordHistory.user_id == user_id
+    ).order_by(models.PasswordHistory.created_at.desc()).limit(history_limit).all()
+
+    # Check if this password hash matches any recent password
+    for old_password in recent_passwords:
+        if old_password.password_hash == password_hash:
+            return False
+
+    return True
+
+
+def add_password_to_history(db, user_id: int, password: str):
+    """Add a password to the user's history"""
+    from . import models
+
+    password_hash = hash_password_for_history(password)
+
+    history_entry = models.PasswordHistory(
+        user_id=user_id,
+        password_hash=password_hash
+    )
+
+    db.add(history_entry)
+    db.commit()
+
 # Email utilities
 import smtplib
 from email.mime.text import MIMEText

@@ -332,8 +332,8 @@ def revoke_all_user_sessions(db: Session, user_id: int, exclude_session_id: int 
     if exclude_session_id:
         query = query.filter(models.UserSession.id != exclude_session_id)
     
-    query.update({"revoked": True})
-    db.commit()
+query.update({"revoked": True})
+db.commit()
 
 
 # Audit Log Functions
@@ -355,6 +355,15 @@ def create_audit_log(db: Session, user_id: int = None, action: str = None, resou
     db.add(audit_log)
     db.commit()
     db.refresh(audit_log)
+
+    # Also log to security monitor for real-time analysis
+    try:
+        from .security_monitor import log_security_event
+        log_security_event(action, user_id, ip_address, details)
+    except ImportError:
+        # Security monitor not available, continue without it
+        pass
+
     return audit_log
 
 def get_audit_logs(db: Session, user_id: int = None, action: str = None, status: str = None,

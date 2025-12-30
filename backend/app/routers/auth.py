@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, crud, auth
-from ..rate_limit import limiter, LOGIN_RATE_LIMIT, SIGNUP_RATE_LIMIT, TOTP_VERIFY_RATE_LIMIT
+from ..rate_limit import limiter, limit_login, limit_signup, limit_totp_verify
 from ..oidc_state import generate_secure_state, store_oidc_state, validate_oidc_state
 from datetime import timedelta, datetime
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 router = APIRouter()
 
 @router.post("/signup", response_model=schemas.Token)
-@limiter.limit(SIGNUP_RATE_LIMIT)
+@limit_signup
 def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     # Check if user already exists
     existing_user = crud.get_user_by_email(db, user.email)
@@ -28,8 +28,42 @@ def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get
         )
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Validate password against policy
+    from ..utils import PasswordPolicy
+    password_validation = PasswordPolicy.validate_password(user.password)
+    if not password_validation["valid"]:
+        crud.create_audit_log(
+            db,
+            action="signup_failed",
+            ip_address=request.client.host if request.client else None,
+            status="failed",
+            reason="Password policy violation",
+            details={"errors": password_validation["errors"]}
+        )
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Password does not meet requirements: {'; '.join(password_validation['errors'])}"
+        )
+    
+    # Check password against breach database
+    breach_check = PasswordPolicy.check_password_breach(user.password)
+    if breach_check["breached"] and not breach_check.get("error"):
+        # Log the breach but don't block signup - just warn
+        crud.create_audit_log(
+            db,
+            action="signup_password_breached",
+            ip_address=request.client.host if request.client else None,
+            status="warning",
+            details={"breach_count": breach_check["count"]}
+        )
+        # For now, allow signup but could be configured to block
+    
     # Create new user
     db_user = crud.create_user(db, user)
+    
+    # Add password to history
+    from ..utils import add_password_to_history
+    add_password_to_history(db, db_user.id, user.password)
     
     # Log successful signup
     crud.create_audit_log(
@@ -48,9 +82,8 @@ def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-
 @router.post("/login", response_model=schemas.Token)
-@limiter.limit(LOGIN_RATE_LIMIT)
+@limit_login
 def login(request: Request, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     # Authenticate user
     user = crud.authenticate_user(db, credentials.email, credentials.password)
@@ -738,15 +771,62 @@ def password_reset_confirm(request: Request, reset_confirm: schemas.PasswordRese
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
     
-    # Check password requirements (at least 8 chars)
-    if len(reset_confirm.new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    # Validate new password against policy
+    from ..utils import PasswordPolicy
+    password_validation = PasswordPolicy.validate_password(reset_confirm.new_password)
+    if not password_validation["valid"]:
+        crud.create_audit_log(
+            db,
+            user_id=user.id,
+            action="password_reset_failed",
+            ip_address=request.client.host if request.client else None,
+            status="failed",
+            reason="Password policy violation",
+            details={"errors": password_validation["errors"]}
+        )
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Password does not meet requirements: {'; '.join(password_validation['errors'])}"
+        )
+    
+    # Check password against breach database
+    breach_check = PasswordPolicy.check_password_breach(reset_confirm.new_password)
+    if breach_check["breached"] and not breach_check.get("error"):
+        # Log the breach but don't block reset - just warn
+        crud.create_audit_log(
+            db,
+            user_id=user.id,
+            action="password_reset_breached",
+            ip_address=request.client.host if request.client else None,
+            status="warning",
+            details={"breach_count": breach_check["count"]}
+        )
+    
+    # Check password history (prevent reuse of recent passwords)
+    from ..utils import check_password_history
+    if not check_password_history(db, user.id, reset_confirm.new_password):
+        crud.create_audit_log(
+            db,
+            user_id=user.id,
+            action="password_reset_failed",
+            ip_address=request.client.host if request.client else None,
+            status="failed",
+            reason="Password recently used"
+        )
+        raise HTTPException(
+            status_code=400, 
+            detail="Password was recently used. Please choose a different password."
+        )
     
     # Complete reset
     updated_user = crud.complete_password_reset(db, reset_confirm.token, reset_confirm.new_password)
     
     if not updated_user:
         raise HTTPException(status_code=400, detail="Failed to reset password")
+    
+    # Add new password to history
+    from ..utils import add_password_to_history
+    add_password_to_history(db, updated_user.id, reset_confirm.new_password)
     
     # Log the action
     crud.create_audit_log(

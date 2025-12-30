@@ -9,6 +9,7 @@ from .routers import users, applications, auth, admin, webauthn
 from .database import engine, SessionLocal
 from .rate_limit import limiter, get_rate_limit_exceeded_handler
 from . import models
+from .security_monitor import initialize_security_monitoring
 
 # Create tables without startup
 # try:
@@ -42,6 +43,9 @@ app.add_middleware(
 # Add rate limiter to app state and exception handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, get_rate_limit_exceeded_handler())
+
+# Initialize security monitoring
+initialize_security_monitoring(SessionLocal)
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["User Management"])
