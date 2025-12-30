@@ -5,6 +5,8 @@ import MainLayout from './layouts/MainLayout';
 import AuthenticatorView from './views/AuthenticatorView';
 import SettingsView from './views/SettingsView';
 import ProfileView from './views/ProfileView';
+import ActivityView from './views/ActivityView';
+import AdminDashboard from './views/AdminDashboard';
 import SecurityModal from './components/SecurityModal';
 import './App.css';
 
@@ -401,6 +403,20 @@ const App = () => {
                       appSettings={appSettings}
                     />
                   )}
+                  {currentView.main === 'activity' && (
+                    <ActivityView
+                      currentUser={currentUser}
+                      appSettings={appSettings}
+                      isMobile={true}
+                    />
+                  )}
+                  {currentView.main === 'admin-dashboard' && (
+                    <AdminDashboard
+                      currentUser={currentUser}
+                      appSettings={appSettings}
+                      isMobile={true}
+                    />
+                  )}
                 </div>
               </div>
             ) : (
@@ -452,6 +468,20 @@ const App = () => {
                         currentUser={currentUser}
                         onUserUpdate={setCurrentUser}
                         appSettings={appSettings}
+                      />
+                    )}
+                    {currentView.main === 'activity' && (
+                      <ActivityView
+                        currentUser={currentUser}
+                        appSettings={appSettings}
+                        isMobile={false}
+                      />
+                    )}
+                    {currentView.main === 'admin-dashboard' && (
+                      <AdminDashboard
+                        currentUser={currentUser}
+                        appSettings={appSettings}
+                        isMobile={false}
                       />
                     )}
                   </div>

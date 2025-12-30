@@ -199,6 +199,24 @@ const MainLayout = ({
               <i className="fas fa-mobile-alt"></i>
               <span>Authenticator</span>
             </div>
+            <div 
+              className={`category-item ${currentView.main === 'activity' ? 'active' : ''}`}
+              onClick={() => onViewChange('activity')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-history"></i>
+              <span>Activity</span>
+            </div>
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.main === 'admin-dashboard' ? 'active' : ''}`}
+                onClick={() => onViewChange('admin-dashboard')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-chart-bar"></i>
+                <span>Dashboard</span>
+              </div>
+            )}
           </div>
         )}
 
