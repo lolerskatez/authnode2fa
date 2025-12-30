@@ -28,8 +28,21 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
   const [totalCount, setTotalCount] = useState(0);
   const [filterAction, setFilterAction] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterUserId, setFilterUserId] = useState('');
+  const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Fetch users list for admin filter
+  useEffect(() => {
+    if (isAdmin) {
+      axios.get('/api/admin/users')
+        .then(res => setUsers(res.data || []))
+        .catch(err => console.error('Failed to fetch users:', err));
+    }
+  }, [isAdmin]);
 
   const fetchActivities = async () => {
     try {
@@ -38,8 +51,11 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
       const params = { limit, offset };
       if (filterAction) params.action = filterAction;
       if (filterStatus) params.status = filterStatus;
+      if (filterUserId) params.user_id = filterUserId;
 
-      const response = await axios.get('/api/users/activity', { params });
+      // Use admin endpoint if admin, otherwise user endpoint
+      const endpoint = isAdmin ? '/api/admin/activity' : '/api/users/activity';
+      const response = await axios.get(endpoint, { params });
       setActivities(response.data || []);
       setTotalCount(response.data?.length || 0);
     } catch (err) {
@@ -53,7 +69,7 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
 
   useEffect(() => {
     fetchActivities();
-  }, [limit, offset, filterAction, filterStatus]);
+  }, [limit, offset, filterAction, filterStatus, filterUserId]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -144,11 +160,11 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
 
   if (isMobile) {
     return (
-      <div style={{ padding: '16px', backgroundColor: colors.backgroundLight, minHeight: '100vh' }}>
+      <div style={{ padding: '16px', backgroundColor: appSettings?.theme === 'dark' ? '#0f172a' : '#f8fafc', minHeight: '100vh' }}>
         <h2 style={{ color: colors.primary, marginBottom: '16px' }}>Activity Log</h2>
 
         {/* Filters */}
-        <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexDirection: 'column' }}>
           <select
             value={filterAction}
             onChange={(e) => {
@@ -160,9 +176,7 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
               borderRadius: '4px',
               border: `1px solid ${colors.border}`,
               backgroundColor: colors.background,
-              color: colors.primary,
-              flex: 1,
-              minWidth: '120px'
+              color: colors.primary
             }}
           >
             <option value="">All Actions</option>
@@ -184,15 +198,35 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
               borderRadius: '4px',
               border: `1px solid ${colors.border}`,
               backgroundColor: colors.background,
-              color: colors.primary,
-              flex: 1,
-              minWidth: '100px'
+              color: colors.primary
             }}
           >
             <option value="">All Statuses</option>
             <option value="success">Success</option>
             <option value="failed">Failed</option>
           </select>
+
+          {isAdmin && (
+            <select
+              value={filterUserId}
+              onChange={(e) => {
+                setFilterUserId(e.target.value);
+                setOffset(0);
+              }}
+              style={{
+                padding: '8px',
+                borderRadius: '4px',
+                border: `1px solid ${colors.border}`,
+                backgroundColor: colors.background,
+                color: colors.primary
+              }}
+            >
+              <option value="">All Users</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>{user.email}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Activity List */}
@@ -421,6 +455,30 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
           <option value="success">Success</option>
           <option value="failed">Failed</option>
         </select>
+
+        {/* User Filter (Admin Only) */}
+        {isAdmin && (
+          <select
+            value={filterUserId}
+            onChange={(e) => {
+              setFilterUserId(e.target.value);
+              setOffset(0);
+            }}
+            style={{
+              padding: '10px 12px',
+              borderRadius: '4px',
+              border: `1px solid ${colors.border}`,
+              backgroundColor: colors.background,
+              color: colors.primary,
+              minWidth: '150px'
+            }}
+          >
+            <option value="">All Users</option>
+            {users.map(user => (
+              <option key={user.id} value={user.id}>{user.email}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Activity Table */}

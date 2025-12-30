@@ -168,6 +168,17 @@ const MainLayout = ({
                 <span>Security</span>
               </div>
             )}
+            <div 
+              className="category-item"
+              onClick={() => {
+                onViewChange('dashboard', 'activity');
+                setShowUserMenu(false);
+              }}
+              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
+            >
+              <i className="fas fa-chart-line"></i>
+              <span>Dashboard</span>
+            </div>
             {currentUser?.role === 'admin' && (
               <div 
                 className="category-item"
@@ -186,7 +197,7 @@ const MainLayout = ({
         )}
       </div>
 
-      {currentView.main !== 'settings' && (
+      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && (
           <div style={{ marginTop: '30px', paddingBottom: '20px', borderBottom: `1px solid ${colors.border}` }}>
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
               Navigation
@@ -199,9 +210,27 @@ const MainLayout = ({
               <i className="fas fa-mobile-alt"></i>
               <span>Authenticator</span>
             </div>
+          </div>
+        )}
+
+      {currentView.main === 'dashboard' && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${colors.border}` }}>
+              <div 
+                className="category-item"
+                onClick={() => onViewChange('applications')}
+                style={{ cursor: 'pointer', backgroundColor: 'transparent', color: colors.secondary }}
+              >
+                <i className="fas fa-arrow-left"></i>
+                <span>Back to Authenticator</span>
+              </div>
+            </div>
+            <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
+              Dashboard
+            </h4>
             <div 
-              className={`category-item ${currentView.main === 'activity' ? 'active' : ''}`}
-              onClick={() => onViewChange('activity')}
+              className={`category-item ${currentView.sub === 'activity' ? 'active' : ''}`}
+              onClick={() => onViewChange('dashboard', 'activity')}
               style={{ cursor: 'pointer' }}
             >
               <i className="fas fa-history"></i>
@@ -209,12 +238,12 @@ const MainLayout = ({
             </div>
             {currentUser?.role === 'admin' && (
               <div 
-                className={`category-item ${currentView.main === 'admin-dashboard' ? 'active' : ''}`}
-                onClick={() => onViewChange('admin-dashboard')}
+                className={`category-item ${currentView.sub === 'admin-dashboard' ? 'active' : ''}`}
+                onClick={() => onViewChange('dashboard', 'admin-dashboard')}
                 style={{ cursor: 'pointer' }}
               >
                 <i className="fas fa-chart-bar"></i>
-                <span>Dashboard</span>
+                <span>Admin Dashboard</span>
               </div>
             )}
           </div>

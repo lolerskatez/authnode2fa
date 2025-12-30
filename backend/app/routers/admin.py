@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from .. import models, schemas
+from .. import models, schemas, crud
 from ..database import get_db
 from ..auth import get_current_user
 from ..rate_limit import limiter, SENSITIVE_API_RATE_LIMIT
@@ -19,6 +19,16 @@ def is_admin(current_user: models.User = Depends(get_current_user)) -> models.Us
     if current_user.role != "admin":  # type: ignore
         raise HTTPException(status_code=403, detail="Only admins can access this")
     return current_user
+
+
+@router.get("/users", response_model=list[schemas.User])
+def get_users(
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get list of all users (admin only)"""
+    users = db.query(models.User).all()
+    return users
 
 
 @router.get("/smtp")
@@ -283,6 +293,36 @@ def get_user_audit_logs(
     return logs
 
 
+@router.get("/activity", response_model=list[schemas.AuditLogResponse])
+def get_all_activity(
+    limit: int = 50,
+    offset: int = 0,
+    action: str = None,
+    status: str = None,
+    user_id: int = None,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all users' activity log (admin only)"""
+    # Validate limit and offset
+    if limit > 500:
+        limit = 500
+    if offset < 0:
+        offset = 0
+    
+    # Get audit logs with filters
+    logs = crud.get_audit_logs(
+        db, 
+        user_id=user_id,
+        action=action,
+        status=status,
+        limit=limit, 
+        offset=offset
+    )
+    
+    return logs
+
+
 @router.get("/dashboard/stats", response_model=dict)
 def get_dashboard_stats(
     current_user: models.User = Depends(is_admin),
@@ -294,10 +334,10 @@ def get_dashboard_stats(
     # Count total users
     total_users = db.query(models.User).count()
     
-    # Count active users (logged in last 7 days)
+    # Count active users (created or used in last 7 days)
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     active_users = db.query(models.User).filter(
-        models.User.last_login >= seven_days_ago
+        models.User.created_at >= seven_days_ago
     ).count()
     
     # Count total 2FA accounts

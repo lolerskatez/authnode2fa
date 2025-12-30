@@ -27,17 +27,6 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [toast, setToast] = useState(null);
 
-  // Admin access check
-  if (currentUser?.role !== 'admin') {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <i className="fas fa-lock" style={{ fontSize: '48px', color: colors.danger, marginBottom: '16px' }}></i>
-        <h2 style={{ color: colors.danger }}>Access Denied</h2>
-        <p style={{ color: colors.secondary }}>Only administrators can view the dashboard.</p>
-      </div>
-    );
-  }
-
   const fetchStats = async () => {
     try {
       setLoading(true);
@@ -54,14 +43,27 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
     }
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      fetchStats();
+    }
+  }, []);
+
+  // Admin access check
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <i className="fas fa-lock" style={{ fontSize: '48px', color: colors.danger, marginBottom: '16px' }}></i>
+        <h2 style={{ color: colors.danger }}>Access Denied</h2>
+        <p style={{ color: colors.secondary }}>Only administrators can view the dashboard.</p>
+      </div>
+    );
+  }
 
   const StatCard = ({ icon, label, value, color = colors.accent, change = null }) => (
     <div

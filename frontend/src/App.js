@@ -403,14 +403,14 @@ const App = () => {
                       appSettings={appSettings}
                     />
                   )}
-                  {currentView.main === 'activity' && (
+                  {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
                     <ActivityView
                       currentUser={currentUser}
                       appSettings={appSettings}
                       isMobile={true}
                     />
                   )}
-                  {currentView.main === 'admin-dashboard' && (
+                  {currentView.main === 'dashboard' && currentView.sub === 'admin-dashboard' && (
                     <AdminDashboard
                       currentUser={currentUser}
                       appSettings={appSettings}
@@ -470,14 +470,14 @@ const App = () => {
                         appSettings={appSettings}
                       />
                     )}
-                    {currentView.main === 'activity' && (
+                    {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
                       <ActivityView
                         currentUser={currentUser}
                         appSettings={appSettings}
                         isMobile={false}
                       />
                     )}
-                    {currentView.main === 'admin-dashboard' && (
+                    {currentView.main === 'dashboard' && currentView.sub === 'admin-dashboard' && (
                       <AdminDashboard
                         currentUser={currentUser}
                         appSettings={appSettings}

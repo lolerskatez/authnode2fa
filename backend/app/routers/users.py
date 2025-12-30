@@ -328,6 +328,8 @@ def revoke_all_sessions(db: Session = Depends(get_db), current_user: models.User
 def get_user_activity(
     limit: int = 50,
     offset: int = 0,
+    action: str = None,
+    status: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -339,6 +341,13 @@ def get_user_activity(
         offset = 0
     
     # Get audit logs for current user
-    logs = crud.get_audit_logs(db, user_id=current_user.id, limit=limit, offset=offset)
+    logs = crud.get_audit_logs(
+        db, 
+        user_id=current_user.id, 
+        action=action,
+        status=status,
+        limit=limit, 
+        offset=offset
+    )
     
     return logs
