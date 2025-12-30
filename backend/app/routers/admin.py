@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_user
@@ -8,6 +9,7 @@ from ..smtp_encryption import encrypt_smtp_password, decrypt_smtp_password
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -279,3 +281,83 @@ def get_user_audit_logs(
     logs = crud.get_audit_logs(db, user_id=user_id, limit=limit, offset=offset)
     
     return logs
+
+
+@router.get("/dashboard/stats", response_model=dict)
+def get_dashboard_stats(
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get dashboard statistics (admin only)"""
+    from .. import crud
+    
+    # Count total users
+    total_users = db.query(models.User).count()
+    
+    # Count active users (logged in last 7 days)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    active_users = db.query(models.User).filter(
+        models.User.last_login >= seven_days_ago
+    ).count()
+    
+    # Count total 2FA accounts
+    total_accounts = db.query(models.Application).count()
+    
+    # Count users with 2FA enabled
+    users_with_2fa = db.query(models.User).filter(
+        models.User.totp_enabled == True
+    ).count()
+    
+    # Get recent activity (last 7 days)
+    recent_logins = db.query(models.AuditLog).filter(
+        models.AuditLog.action == "login",
+        models.AuditLog.created_at >= seven_days_ago,
+        models.AuditLog.status == "success"
+    ).count()
+    
+    recent_failed_logins = db.query(models.AuditLog).filter(
+        models.AuditLog.action == "login",
+        models.AuditLog.created_at >= seven_days_ago,
+        models.AuditLog.status == "failed"
+    ).count()
+    
+    # Top 5 active users (by login count in last 7 days)
+    top_users = db.query(
+        models.User.email,
+        models.AuditLog.user_id,
+        func.count(models.AuditLog.id).label('login_count')
+    ).join(
+        models.AuditLog,
+        models.User.id == models.AuditLog.user_id
+    ).filter(
+        models.AuditLog.action == "login",
+        models.AuditLog.created_at >= seven_days_ago
+    ).group_by(models.AuditLog.user_id).order_by(
+        func.count(models.AuditLog.id).desc()
+    ).limit(5).all()
+    
+    # Account distribution by category
+    category_distribution = db.query(
+        models.Application.category,
+        func.count(models.Application.id).label('count')
+    ).group_by(
+        models.Application.category
+    ).all()
+    
+    return {
+        "total_users": total_users,
+        "active_users_7d": active_users,
+        "total_accounts": total_accounts,
+        "users_with_2fa": users_with_2fa,
+        "recent_logins_7d": recent_logins,
+        "recent_failed_logins_7d": recent_failed_logins,
+        "top_active_users": [
+            {"email": email, "login_count": login_count} 
+            for email, _, login_count in top_users
+        ],
+        "account_distribution_by_category": [
+            {"category": category, "count": count} 
+            for category, count in category_distribution
+        ]
+    }
+

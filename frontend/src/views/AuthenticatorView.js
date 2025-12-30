@@ -316,24 +316,12 @@ const AuthenticatorView = ({
     const [removed] = newAccounts.splice(draggedIndex, 1);
     newAccounts.splice(dropIndex, 0, removed);
 
-    // Update display_order for all affected accounts
-    const updatePromises = newAccounts.map((account, index) => {
-      const newOrder = index + 1; // 1-based ordering
-      if (account.display_order !== newOrder) {
-        return axios.put(`/api/applications/${account.id}`, {
-          display_order: newOrder
-        });
-      }
-      return Promise.resolve();
-    });
-
     try {
-      await Promise.all(updatePromises);
-      // Update the accounts with new display_order values
-      onAccountsChange(newAccounts.map((acc, index) => ({
-        ...acc,
-        display_order: index + 1
-      })));
+      // Use the dedicated move endpoint for reordering
+      await axios.put(`/api/applications/${draggedAccount.id}/move?position=${dropIndex}`);
+      
+      // Update the local accounts list with new order
+      onAccountsChange(newAccounts);
     } catch (error) {
       console.error('Failed to update account order:', error);
       alert('Failed to update account order. Please try again.');

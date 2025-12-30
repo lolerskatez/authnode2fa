@@ -212,6 +212,32 @@ def update_application(request: Request, app_id: int, app_update: schemas.Applic
         raise HTTPException(status_code=404)
     return crud.update_application(db, app_id, app_update)
 
+@router.put("/{app_id}/move", response_model=schemas.Application)
+@limiter.limit(API_RATE_LIMIT)
+def move_application(request: Request, app_id: int, position: int = Query(..., ge=0, description="New position in the list (0-based)"), current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    """Move an application to a new position in the user's account list"""
+    app = crud.get_application(db, app_id)
+    if not app or app.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    moved_app = crud.move_application(db, current_user.id, app_id, position)
+    if not moved_app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="account_reordered",
+        resource_type="application",
+        resource_id=app_id,
+        ip_address=request.client.host if request.client else None,
+        status="success",
+        details={"new_position": position}
+    )
+    
+    return moved_app
+
 @router.delete("/{app_id}")
 @limiter.limit(API_RATE_LIMIT)
 def delete_application(request: Request, app_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):

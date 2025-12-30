@@ -323,3 +323,22 @@ def revoke_all_sessions(db: Session = Depends(get_db), current_user: models.User
     )
     
     return {"message": "All sessions have been revoked. Please log in again."}
+
+@router.get("/activity", response_model=list[schemas.AuditLogResponse])
+def get_user_activity(
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Get current user's activity log"""
+    # Validate limit and offset
+    if limit > 500:
+        limit = 500
+    if offset < 0:
+        offset = 0
+    
+    # Get audit logs for current user
+    logs = crud.get_audit_logs(db, user_id=current_user.id, limit=limit, offset=offset)
+    
+    return logs

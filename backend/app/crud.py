@@ -44,7 +44,7 @@ def authenticate_user(db: Session, email: str, password: str):
     return user
 
 def get_applications(db: Session, user_id: int):
-    return db.query(models.Application).filter(models.Application.user_id == user_id).all()
+    return db.query(models.Application).filter(models.Application.user_id == user_id).order_by(models.Application.display_order).all()
 
 def create_application(db: Session, app: schemas.ApplicationCreate, user_id: int):
     encrypted_secret = cipher.encrypt(app.secret.encode()).decode()
@@ -490,8 +490,14 @@ def search_applications(db: Session, user_id: int, query: str = None, category: 
     search_query = db.query(models.Application).filter(models.Application.user_id == user_id)
     
     if query:
-        # Case-insensitive search on name
-        search_query = search_query.filter(models.Application.name.ilike(f"%{query}%"))
+        # Case-insensitive search on name, username, and notes
+        search_term = f"%{query}%"
+        search_query = search_query.filter(
+            (models.Application.name.ilike(search_term)) |
+            (models.Application.username.ilike(search_term)) |
+            (models.Application.notes.ilike(search_term)) |
+            (models.Application.url.ilike(search_term))
+        )
     
     if category:
         search_query = search_query.filter(models.Application.category == category)
@@ -499,4 +505,47 @@ def search_applications(db: Session, user_id: int, query: str = None, category: 
     if favorite is not None:
         search_query = search_query.filter(models.Application.favorite == favorite)
     
-    return search_query.order_by(models.Application.name).all()
+    return search_query.order_by(models.Application.display_order).all()
+
+def move_application(db: Session, user_id: int, app_id: int, position: int):
+    """Move an application to a new position in the user's list"""
+    # Get the application
+    app = db.query(models.Application).filter(
+        models.Application.id == app_id,
+        models.Application.user_id == user_id
+    ).first()
+    
+    if not app:
+        return None
+    
+    # Get all applications for this user, ordered by display_order
+    all_apps = db.query(models.Application).filter(
+        models.Application.user_id == user_id
+    ).order_by(models.Application.display_order).all()
+    
+    # Find current position
+    current_position = next((i for i, a in enumerate(all_apps) if a.id == app_id), None)
+    
+    if current_position is None:
+        return app
+    
+    # Constrain position to valid range
+    position = max(0, min(position, len(all_apps) - 1))
+    
+    # If position hasn't changed, return
+    if current_position == position:
+        return app
+    
+    # Remove app from current position
+    all_apps.pop(current_position)
+    
+    # Insert at new position
+    all_apps.insert(position, app)
+    
+    # Update display_order for all apps
+    for idx, a in enumerate(all_apps):
+        a.display_order = idx
+    
+    db.commit()
+    db.refresh(app)
+    return app
