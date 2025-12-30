@@ -85,18 +85,101 @@ def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get
 @router.post("/login", response_model=schemas.Token)
 @limit_login
 def login(request: Request, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    # Get client IP address
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    
+    # Check access restrictions
+    global_settings = crud.get_global_settings(db)
+    from ..access_restrictions import check_access_restrictions
+    access_allowed, restriction_reason = check_access_restrictions(client_ip, global_settings)
+    
+    if not access_allowed:
+        # Log the access denial
+        crud.create_audit_log(
+            db,
+            action="access_denied",
+            ip_address=client_ip,
+            status="failed",
+            reason=restriction_reason,
+            details={"restriction_type": "ip_geo"}
+        )
+        raise HTTPException(
+            status_code=403,  # Forbidden
+            detail=f"Access denied: {restriction_reason}"
+        )
+    
+    # Get user by email first to check lockout status
+    user = crud.get_user_by_email(db, credentials.email)
+    
+    # Check if account is locked
+    if user and user.locked_until and user.locked_until > datetime.utcnow():
+        # Account is locked
+        crud.create_audit_log(
+            db,
+            user_id=user.id,
+            action="login_failed",
+            ip_address=client_ip,
+            status="failed",
+            reason="Account locked due to too many failed attempts",
+            details={"locked_until": user.locked_until.isoformat()}
+        )
+        raise HTTPException(
+            status_code=423,  # Locked
+            detail=f"Account is locked due to too many failed login attempts. Try again after {user.locked_until.strftime('%Y-%m-%d %H:%M:%S UTC')}."
+        )
+    
     # Authenticate user
     user = crud.authenticate_user(db, credentials.email, credentials.password)
     if not user:
-        # Log failed login attempt
-        crud.create_audit_log(
-            db,
-            action="login_failed",
-            ip_address=request.client.host if request.client else None,
-            status="failed",
-            reason="Invalid credentials"
-        )
+        # Authentication failed - handle lockout logic
+        failed_user = crud.get_user_by_email(db, credentials.email)  # Get user again for lockout tracking
+        if failed_user and not failed_user.is_sso_user:  # Only lock local users
+            # Increment failed login attempts
+            failed_user.failed_login_attempts = (failed_user.failed_login_attempts or 0) + 1
+            failed_user.last_failed_login = datetime.utcnow()
+            
+            # Check if we should lock the account
+            MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_LOGIN_ATTEMPTS", "5"))
+            LOCKOUT_DURATION_MINUTES = int(os.getenv("ACCOUNT_LOCKOUT_MINUTES", "15"))
+            
+            if failed_user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+                # Lock the account
+                failed_user.locked_until = datetime.utcnow() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+                
+                crud.create_audit_log(
+                    db,
+                    user_id=failed_user.id,
+                    action="account_locked",
+                    ip_address=client_ip,
+                    status="warning",
+                    reason="Too many failed login attempts",
+                    details={
+                        "failed_attempts": failed_user.failed_login_attempts,
+                        "locked_until": failed_user.locked_until.isoformat(),
+                        "lockout_duration_minutes": LOCKOUT_DURATION_MINUTES
+                    }
+                )
+            else:
+                crud.create_audit_log(
+                    db,
+                    user_id=failed_user.id,
+                    action="login_failed",
+                    ip_address=client_ip,
+                    status="failed",
+                    reason="Invalid password",
+                    details={"failed_attempts": failed_user.failed_login_attempts}
+                )
+            
+            db.commit()
+        
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Authentication successful - reset failed attempts
+    if user.failed_login_attempts and user.failed_login_attempts > 0:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        user.last_failed_login = None
+        db.commit()
     
     # Get global settings to check 2FA enforcement
     global_settings = crud.get_global_settings(db)
@@ -123,7 +206,7 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
             db,
             user_id=user.id,
             action="login_2fa_enrollment_required",
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip,
             status="success"
         )
         return {
@@ -142,7 +225,7 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
             db,
             user_id=user.id,
             action="login_2fa_pending",
-            ip_address=request.client.host if request.client else None,
+            ip_address=client_ip,
             status="success"
         )
         return {
@@ -167,7 +250,7 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
                 db,
                 user_id=user.id,
                 token_jti=token_jti,
-                ip_address=request.client.host if request.client else None,
+                ip_address=client_ip,
                 user_agent=request.headers.get('user-agent'),
                 expires_at=datetime.utcfromtimestamp(expires_at)
             )
@@ -180,12 +263,11 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
         db,
         user_id=user.id,
         action="login_success",
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip,
         status="success"
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
-
 
 @router.get("/me", response_model=schemas.User)
 def get_current_user(current_user: models.User = Depends(auth.get_current_user)):
@@ -708,26 +790,83 @@ def verify_login_2fa(request: Request, data: dict, db: Session = Depends(get_db)
     # Create user session for tracking
     try:
         from jose import jwt
+        from ..session_utils import parse_user_agent, create_session_fingerprint
+        from ..access_restrictions import access_restrictions
+        
         payload = jwt.decode(access_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         token_jti = payload.get('jti')
         expires_at = payload.get('exp')
+        
         if token_jti and expires_at:
-            crud.create_user_session(
-                db,
-                user_id=user.id,
-                token_jti=token_jti,
-                ip_address=request.client.host if request.client else None,
-                user_agent=request.headers.get('user-agent'),
-                expires_at=datetime.utcfromtimestamp(expires_at)
-            )
+            # Parse device information from user agent
+            device_info = parse_user_agent(request.headers.get('user-agent'))
+            
+            # Get geographic information
+            client_ip = request.client.host if request.client else "127.0.0.1"
+            country_code = None
+            city = None
+            
+            try:
+                geo_info = access_restrictions._get_country_code(client_ip)
+                if geo_info:
+                    country_code = geo_info
+                    # Note: City lookup would require a more advanced geo-IP service
+            except:
+                pass  # Geo lookup failure shouldn't block login
+            
+            # Create enhanced session
+            session_data = {
+                'user_id': user.id,
+                'token_jti': token_jti,
+                'ip_address': client_ip,
+                'country_code': country_code,
+                'city': city,
+                'user_agent': request.headers.get('user-agent'),
+                'device_name': f"{device_info.get('browser_name', 'Browser')} on {device_info.get('os_name', 'Unknown OS')}",
+                'device_type': device_info.get('device_type', 'desktop'),
+                'browser_name': device_info.get('browser_name'),
+                'browser_version': device_info.get('browser_version'),
+                'os_name': device_info.get('os_name'),
+                'os_version': device_info.get('os_version'),
+                'expires_at': datetime.utcfromtimestamp(expires_at),
+                'is_current_session': True,  # Mark this as the current session
+            }
+            
+            session = crud.create_enhanced_user_session(**session_data)
+            
+            # Check for suspicious activity
+            all_user_sessions = crud.get_user_sessions(db, user.id, exclude_revoked=False)
+            if detect_suspicious_session(session, all_user_sessions):
+                session.suspicious_activity = True
+                db.commit()
+                
+                # Log suspicious activity
+                crud.create_audit_log(
+                    db,
+                    user_id=user.id,
+                    action="suspicious_login_detected",
+                    ip_address=client_ip,
+                    status="warning",
+                    details={
+                        "device_fingerprint": create_session_fingerprint({
+                            'user_agent': session.user_agent,
+                            'ip_address': session.ip_address,
+                            'screen_resolution': getattr(session, 'screen_resolution', ''),
+                            'timezone': getattr(session, 'timezone', ''),
+                            'language': getattr(session, 'language', ''),
+                        }),
+                        "device_info": device_info
+                    }
+                )
+    
     except Exception as e:
         # Don't fail login if session creation fails
-        print(f"Warning: Failed to create user session: {str(e)}")
+        print(f"Warning: Failed to create enhanced session: {str(e)}")
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-
 # Password Reset Endpoints
+# ... (rest of the code remains the same)
 @router.post("/password-reset")
 @limiter.limit("3/minute")  # Rate limit password reset requests
 def password_reset_request(request: Request, reset_req: schemas.PasswordResetRequest, db: Session = Depends(get_db)):

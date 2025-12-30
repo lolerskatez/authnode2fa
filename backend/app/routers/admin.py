@@ -215,37 +215,41 @@ def update_oidc_config(
 
 
 # Audit Log Endpoints
-@router.get("/audit-logs", response_model=list[schemas.AuditLogResponse])
-def get_audit_logs(
+@router.post("/unlock-account/{user_id}")
+def unlock_user_account(
+    user_id: int,
     request: Request,
-    user_id: int = None,
-    action: str = None,
-    status: str = None,
-    limit: int = 100,
-    offset: int = 0,
     current_user: models.User = Depends(is_admin),
     db: Session = Depends(get_db)
 ):
-    """Get audit logs (admin only)"""
-    from .. import crud
+    """Unlock a locked user account (admin only)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    # Validate limit and offset
-    if limit > 1000:
-        limit = 1000
-    if offset < 0:
-        offset = 0
+    if not user.locked_until or user.locked_until <= datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Account is not currently locked")
     
-    # Get audit logs
-    logs = crud.get_audit_logs(
+    # Unlock the account
+    user.locked_until = None
+    user.failed_login_attempts = 0  # Reset failed attempts
+    user.last_failed_login = None
+    db.commit()
+    db.refresh(user)
+    
+    # Log the action
+    crud.create_audit_log(
         db,
         user_id=user_id,
-        action=action,
-        status=status,
-        limit=limit,
-        offset=offset
+        action="account_unlocked",
+        resource_type="user",
+        resource_id=user_id,
+        ip_address=request.client.host if request.client else None,
+        status="success",
+        details={"unlocked_by": current_user.id}
     )
     
-    return logs
+    return {"message": f"Account for user {user.email} has been unlocked"}
 
 
 @router.get("/audit-logs/user/{user_id}", response_model=list[schemas.AuditLogResponse])

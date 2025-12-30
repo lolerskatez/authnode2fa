@@ -293,6 +293,14 @@ def get_unused_backup_codes_count(db: Session, user_id: int):
 
 
 # Session Functions
+def create_enhanced_user_session(db: Session, **session_data):
+    """Create an enhanced user session with detailed device information"""
+    session = models.UserSession(**session_data)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
 def create_user_session(db: Session, user_id: int, token_jti: str, ip_address: str = None, user_agent: str = None, expires_at = None):
     """Create a new user session"""
     session = models.UserSession(

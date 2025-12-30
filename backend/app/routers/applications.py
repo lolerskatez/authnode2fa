@@ -155,7 +155,53 @@ def get_code(request: Request, app_id: int, current_user: models.User = Depends(
         # TOTP
         code = utils.generate_totp_code(decrypted_secret, app.otp_type, app.counter)
     
+    # Log code generation for audit trail
+    from ..models import CodeGenerationHistory
+    history_entry = CodeGenerationHistory(
+        application_id=app_id,
+        user_id=current_user.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get('user-agent')
+    )
+    db.add(history_entry)
+    db.commit()
+    
     return {"code": code}
+
+@router.get("/{app_id}/history", response_model=list)
+@limiter.limit(API_RATE_LIMIT)
+def get_code_history(
+    app_id: int,
+    limit: int = Query(50, description="Maximum number of history entries to return", ge=1, le=200),
+    offset: int = Query(0, description="Number of entries to skip", ge=0),
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get code generation history for a specific application"""
+    # Verify the application belongs to the current user
+    app = crud.get_application(db, app_id)
+    if not app or app.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Get history entries
+    from ..models import CodeGenerationHistory
+    history_entries = db.query(CodeGenerationHistory).filter(
+        CodeGenerationHistory.application_id == app_id
+    ).order_by(
+        CodeGenerationHistory.generated_at.desc()
+    ).limit(limit).offset(offset).all()
+    
+    # Convert to response format
+    history_response = []
+    for entry in history_entries:
+        history_response.append({
+            "id": entry.id,
+            "generated_at": entry.generated_at.isoformat(),
+            "ip_address": entry.ip_address,
+            "user_agent": entry.user_agent
+        })
+    
+    return history_response
 
 @router.put("/{app_id}", response_model=schemas.Application)
 @limiter.limit(API_RATE_LIMIT)
@@ -173,3 +219,157 @@ def delete_application(request: Request, app_id: int, current_user: models.User 
         raise HTTPException(status_code=404)
     crud.delete_application(db, app_id)
     return {"message": "Deleted"}
+
+@router.delete("/bulk")
+@limiter.limit(API_RATE_LIMIT)
+def bulk_delete_applications(
+    request: Request,
+    account_ids: list[int],
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bulk delete multiple applications"""
+    if not account_ids:
+        raise HTTPException(status_code=400, detail="No account IDs provided")
+    
+    if len(account_ids) > 50:  # Limit bulk operations to prevent abuse
+        raise HTTPException(status_code=400, detail="Cannot delete more than 50 accounts at once")
+    
+    # Verify all accounts belong to the current user
+    accounts_to_delete = db.query(models.Application).filter(
+        models.Application.id.in_(account_ids),
+        models.Application.user_id == current_user.id
+    ).all()
+    
+    if len(accounts_to_delete) != len(account_ids):
+        raise HTTPException(status_code=400, detail="Some accounts not found or not owned by you")
+    
+    # Delete the accounts
+    deleted_count = 0
+    for account in accounts_to_delete:
+        db.delete(account)
+        deleted_count += 1
+        
+        # Log individual deletions
+        crud.create_audit_log(
+            db,
+            user_id=current_user.id,
+            action="account_deleted",
+            resource_type="application",
+            resource_id=account.id,
+            ip_address=request.client.host if request.client else None,
+            status="success"
+        )
+    
+    db.commit()
+    
+    return {
+        "message": f"Successfully deleted {deleted_count} accounts",
+        "deleted_count": deleted_count
+    }
+
+@router.put("/bulk/category")
+@limiter.limit(API_RATE_LIMIT)
+def bulk_update_category(
+    request: Request,
+    account_ids: list[int],
+    category: str,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bulk update category for multiple applications"""
+    if not account_ids:
+        raise HTTPException(status_code=400, detail="No account IDs provided")
+    
+    if len(account_ids) > 100:  # Allow larger batches for category updates
+        raise HTTPException(status_code=400, detail="Cannot update more than 100 accounts at once")
+    
+    # Verify all accounts belong to the current user
+    accounts_to_update = db.query(models.Application).filter(
+        models.Application.id.in_(account_ids),
+        models.Application.user_id == current_user.id
+    ).all()
+    
+    if len(accounts_to_update) != len(account_ids):
+        raise HTTPException(status_code=400, detail="Some accounts not found or not owned by you")
+    
+    # Update categories
+    updated_count = 0
+    for account in accounts_to_update:
+        account.category = category
+        updated_count += 1
+    
+    db.commit()
+    
+    # Log the bulk operation
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="accounts_bulk_category_update",
+        ip_address=request.client.host if request.client else None,
+        status="success",
+        details={
+            "updated_count": updated_count,
+            "new_category": category,
+            "account_ids": account_ids
+        }
+    )
+    
+    return {
+        "message": f"Successfully updated category for {updated_count} accounts",
+        "updated_count": updated_count,
+        "new_category": category
+    }
+
+@router.put("/bulk/favorite")
+@limiter.limit(API_RATE_LIMIT)
+def bulk_update_favorite(
+    request: Request,
+    account_ids: list[int],
+    favorite: bool,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bulk update favorite status for multiple applications"""
+    if not account_ids:
+        raise HTTPException(status_code=400, detail="No account IDs provided")
+    
+    if len(account_ids) > 100:  # Allow larger batches for favorite updates
+        raise HTTPException(status_code=400, detail="Cannot update more than 100 accounts at once")
+    
+    # Verify all accounts belong to the current user
+    accounts_to_update = db.query(models.Application).filter(
+        models.Application.id.in_(account_ids),
+        models.Application.user_id == current_user.id
+    ).all()
+    
+    if len(accounts_to_update) != len(account_ids):
+        raise HTTPException(status_code=400, detail="Some accounts not found or not owned by you")
+    
+    # Update favorite status
+    updated_count = 0
+    for account in accounts_to_update:
+        account.favorite = favorite
+        updated_count += 1
+    
+    db.commit()
+    
+    # Log the bulk operation
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="accounts_bulk_favorite_update",
+        ip_address=request.client.host if request.client else None,
+        status="success",
+        details={
+            "updated_count": updated_count,
+            "favorite_status": favorite,
+            "account_ids": account_ids
+        }
+    )
+    
+    return {
+        "message": f"Successfully updated favorite status for {updated_count} accounts",
+        "updated_count": updated_count,
+        "favorite_status": favorite
+    }

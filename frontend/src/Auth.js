@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './Auth.css';
 import WebAuthnHelper from './utils/WebAuthnHelper';
+import PasswordStrengthIndicator from './components/PasswordStrengthIndicator';
 
 function Auth({ onLoginSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' or 'signup'
@@ -494,6 +495,7 @@ function Auth({ onLoginSuccess }) {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 />
+                {mode === 'signup' && <PasswordStrengthIndicator password={password} />}
               </div>
 
               {mode === 'login' && passwordResetEnabled && !isInitialSetup && (

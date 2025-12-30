@@ -19,9 +19,16 @@ class User(Base):
     settings = Column(JSON, default={"theme": "light", "autoLock": 5, "codeFormat": "spaced"})  # User preferences
     totp_secret = Column(String, nullable=True)  # TOTP secret for 2FA (encrypted)
     totp_enabled = Column(Boolean, default=False)  # Whether TOTP 2FA is enabled
+
+    # Account lockout fields
+    failed_login_attempts = Column(Integer, default=0)  # Counter for failed login attempts
+    locked_until = Column(DateTime, nullable=True)  # When account unlocks (None if not locked)
+    last_failed_login = Column(DateTime, nullable=True)  # Timestamp of last failed login attempt
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     applications = relationship("Application", back_populates="owner")
+
 
 class Application(Base):
     __tablename__ = "applications"
@@ -87,6 +94,15 @@ class GlobalSettings(Base):
     webauthn_enabled = Column(Boolean, default=True)  # Whether WebAuthn/Security Keys are enabled
     webauthn_enforcement = Column(String, default="optional")  # optional, admin_only, or required_all
     password_reset_enabled = Column(Boolean, default=True)  # Whether password reset is allowed (requires SMTP)
+    
+    # Access restrictions
+    ip_restrictions_enabled = Column(Boolean, default=False)  # Whether IP restrictions are enabled
+    allowed_ip_ranges = Column(JSON, default=[])  # List of allowed IP ranges in CIDR notation
+    blocked_ip_ranges = Column(JSON, default=[])  # List of blocked IP ranges in CIDR notation
+    geo_restrictions_enabled = Column(Boolean, default=False)  # Whether geographic restrictions are enabled
+    allowed_countries = Column(JSON, default=[])  # List of allowed country codes (ISO 3166-1 alpha-2)
+    blocked_countries = Column(JSON, default=[])  # List of blocked country codes
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -167,21 +183,43 @@ class BackupCode(Base):
 class UserSession(Base):
     """
     Tracks active user sessions for device management and security.
-    Sessions include device info, IP address, and browser info.
+    Enhanced with comprehensive device fingerprinting and session metadata.
     """
     __tablename__ = "user_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     token_jti = Column(String, unique=True, index=True)  # JWT ID for token revocation
-    device_name = Column(String, nullable=True)  # Device name (e.g., "Chrome on Windows")
-    device_fingerprint = Column(String, nullable=True)  # Device fingerprint hash
+
+    # Device identification
+    device_name = Column(String, nullable=True)  # User-friendly device name
+    device_type = Column(String, nullable=True)  # desktop, mobile, tablet
+    browser_name = Column(String, nullable=True)  # Chrome, Firefox, Safari, etc.
+    browser_version = Column(String, nullable=True)
+    os_name = Column(String, nullable=True)  # Windows, macOS, Linux, iOS, Android
+    os_version = Column(String, nullable=True)
+
+    # Location and network
     ip_address = Column(String, nullable=True)
+    country_code = Column(String, nullable=True)  # ISO country code
+    city = Column(String, nullable=True)
+
+    # Device fingerprinting
     user_agent = Column(String, nullable=True)
+    screen_resolution = Column(String, nullable=True)  # width x height
+    timezone = Column(String, nullable=True)  # timezone offset
+    language = Column(String, nullable=True)  # browser language
+
+    # Session metadata
     last_activity = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     expires_at = Column(DateTime, index=True)  # Session expiration time
     revoked = Column(Boolean, default=False)
+    revoked_reason = Column(String, nullable=True)  # Why session was revoked
+
+    # Security flags
+    is_current_session = Column(Boolean, default=False)  # Mark current session
+    suspicious_activity = Column(Boolean, default=False)  # Flag suspicious sessions
 
     user = relationship("User")
 
@@ -248,3 +286,23 @@ class WebAuthnChallenge(Base):
     challenge_type = Column(String)  # 'registration' or 'authentication'
     expires_at = Column(DateTime, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CodeGenerationHistory(Base):
+    """
+    Tracks when TOTP/HOTP codes are generated for each application.
+    Helps users see when they last used each account and provides audit trail.
+    """
+    __tablename__ = "code_generation_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)  # For easier querying
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    generated_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationship to application
+    application = relationship("Application")
+
+    user = relationship("User")
