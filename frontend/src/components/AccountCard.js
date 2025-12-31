@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ClipboardManager from '../utils/ClipboardManager';
 
 const AccountCard = ({
@@ -12,6 +12,7 @@ const AccountCard = ({
   onShowMetadata,
   appSettings
 }) => {
+  const [justCopied, setJustCopied] = useState(false);
   // Format code based on user preference
   const formatCode = (codeStr, format) => {
     if (!codeStr) return codeStr;
@@ -29,9 +30,14 @@ const AccountCard = ({
     e.stopPropagation();
     if (!code || code === '--- ---') return;
 
-    await ClipboardManager.copyToClipboard(displayCode.replace(/\s/g, ''), {
+    const success = await ClipboardManager.copyToClipboard(displayCode.replace(/\s/g, ''), {
       showToast: true
     });
+
+    if (success) {
+      setJustCopied(true);
+      setTimeout(() => setJustCopied(false), 2000); // Show feedback for 2 seconds
+    }
   };
 
   const handleShowMetadata = (e) => {
@@ -120,16 +126,17 @@ const AccountCard = ({
                 right: '-25px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: '#666',
+                background: justCopied ? '#4CAF50' : 'none',
+                border: justCopied ? '1px solid #4CAF50' : 'none',
+                color: justCopied ? 'white' : '#666',
                 fontSize: '14px',
                 padding: '4px',
-                borderRadius: '3px'
+                borderRadius: '3px',
+                transition: 'all 0.2s ease'
               }}
-              title="Copy code to clipboard (auto-clears in 30 seconds)"
+              title={justCopied ? 'Code copied!' : 'Copy code to clipboard (auto-clears in 30 seconds)'}
             >
-              <i className="fas fa-copy"></i>
+              <i className={justCopied ? 'fas fa-check' : 'fas fa-copy'}></i>
             </button>
           )}
         </div>

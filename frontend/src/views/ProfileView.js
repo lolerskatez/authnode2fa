@@ -42,6 +42,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
   const [showWebauthnSetup, setShowWebauthnSetup] = useState(false);
   const [webauthnDeviceName, setWebauthnDeviceName] = useState('');
   const [webauthnSupported, setWebauthnSupported] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [platformAuthenticatorAvailable, setPlatformAuthenticatorAvailable] = useState(false);
   const [error, setError] = useState('');
 
@@ -224,16 +225,25 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
 
   // WebAuthn Functions
   const checkWebauthnSupport = useCallback(async () => {
-    const supported = WebAuthnHelper.isSupported();
-    setWebauthnSupported(supported);
+    try {
+      const supported = WebAuthnHelper.isSupported();
+      setWebauthnSupported(supported);
 
-    if (supported) {
-      try {
-        const platformAvailable = await WebAuthnHelper.isPlatformAuthenticatorAvailable();
-        setPlatformAuthenticatorAvailable(platformAvailable);
-      } catch (error) {
-        console.log('Platform authenticator check failed:', error);
+      if (supported) {
+        try {
+          const platformAvailable = await WebAuthnHelper.isPlatformAuthenticatorAvailable();
+          setPlatformAuthenticatorAvailable(platformAvailable === true);
+        } catch (error) {
+          console.log('Platform authenticator check failed:', error);
+          setPlatformAuthenticatorAvailable(false);
+        }
+      } else {
+        setPlatformAuthenticatorAvailable(false);
       }
+    } catch (error) {
+      console.error('WebAuthn support check failed:', error);
+      setWebauthnSupported(false);
+      setPlatformAuthenticatorAvailable(false);
     }
   }, []);
 
@@ -266,6 +276,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
       setLoadingWebauthn(true);
 
       // Register the security key
+      // eslint-disable-next-line no-unused-vars
       const response = await axios.post('/api/webauthn/register', {
         device_name: webauthnDeviceName.trim()
       });
@@ -297,10 +308,40 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
     }
   };
 
-  // Load WebAuthn support and status on component mount
+  // Load WebAuthn support and status on component mount - separate effect to avoid render phase errors
   useEffect(() => {
-    checkWebauthnSupport();
-    loadWebauthnStatus();
+    let isMounted = true;
+    let timeoutId = null;
+
+    const initWebAuthn = async () => {
+      // Delay execution to ensure component is fully mounted
+      await new Promise(resolve => {
+        timeoutId = setTimeout(resolve, 0);
+      });
+
+      if (!isMounted) return;
+
+      try {
+        await checkWebauthnSupport();
+      } catch (error) {
+        console.error('Failed to check WebAuthn support:', error);
+      }
+
+      if (!isMounted) return;
+
+      try {
+        await loadWebauthnStatus();
+      } catch (error) {
+        console.error('Failed to load WebAuthn status:', error);
+      }
+    };
+
+    initWebAuthn();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [checkWebauthnSupport, loadWebauthnStatus]);
 
   // Store current session ID

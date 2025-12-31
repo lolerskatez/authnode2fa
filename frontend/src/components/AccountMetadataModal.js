@@ -11,7 +11,8 @@ const AccountMetadataModal = ({ account, onClose, onAccountUpdate, appSettings }
     icon: account.icon || 'fab fa-key',
     color: account.color || '#6B46C1',
     category: account.category || 'Personal',
-    favorite: account.favorite || false
+    favorite: account.favorite || false,
+    otp_type: account.otp_type || 'TOTP'
   });
   const [loading, setLoading] = useState(false);
 
@@ -169,6 +170,37 @@ const AccountMetadataModal = ({ account, onClose, onAccountUpdate, appSettings }
                 fontSize: '14px',
                 fontWeight: '500'
               }}>
+                OTP Type
+              </label>
+              <select
+                value={editedAccount.otp_type}
+                onChange={(e) => handleInputChange('otp_type', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '4px',
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.primary,
+                  fontSize: '14px'
+                }}
+              >
+                <option value="TOTP">TOTP (Time-based)</option>
+                <option value="HOTP">HOTP (Counter-based)</option>
+              </select>
+              <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                TOTP: Codes change every 30 seconds. HOTP: Codes increment with each use.
+              </small>
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '4px',
+                color: colors.primary,
+                fontSize: '14px',
+                fontWeight: '500'
+              }}>
                 Website URL
               </label>
               <input
@@ -265,6 +297,15 @@ const AccountMetadataModal = ({ account, onClose, onAccountUpdate, appSettings }
               <div>
                 <span style={{ color: colors.secondary, fontWeight: '500' }}>Category:</span>
                 <div style={{ color: colors.primary, marginTop: '2px' }}>{account.category}</div>
+              </div>
+              <div>
+                <span style={{ color: colors.secondary, fontWeight: '500' }}>OTP Type:</span>
+                <div style={{ color: colors.primary, marginTop: '2px' }}>
+                  {account.otp_type || 'TOTP'} 
+                  <span style={{ color: colors.secondary, fontSize: '12px', marginLeft: '6px' }}>
+                    ({account.otp_type === 'HOTP' ? 'Counter-based' : 'Time-based'})
+                  </span>
+                </div>
               </div>
               <div>
                 <span style={{ color: colors.secondary, fontWeight: '500' }}>Username:</span>

@@ -101,11 +101,19 @@ export class WebAuthnHelper {
    * @returns {boolean} - True if supported
    */
   static isSupported() {
-    return typeof window !== 'undefined' &&
-           window.navigator &&
-           window.navigator.credentials &&
-           window.navigator.credentials.create &&
-           window.navigator.credentials.get;
+    try {
+      // Safely check for WebAuthn support without triggering any getters
+      if (typeof window === 'undefined') return false;
+      if (!window.navigator) return false;
+      
+      // Check for PublicKeyCredential first (safer than accessing navigator.credentials)
+      if (typeof window.PublicKeyCredential === 'undefined') return false;
+      
+      return true;
+    } catch (error) {
+      console.log('WebAuthn support check error:', error);
+      return false;
+    }
   }
 
   /**
@@ -116,8 +124,17 @@ export class WebAuthnHelper {
     if (!this.isSupported()) return false;
 
     try {
-      const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      return available;
+      // Check if PublicKeyCredential exists and has the required method
+      if (typeof window.PublicKeyCredential === 'undefined') {
+        return false;
+      }
+
+      // Safely call the method with proper context
+      if (typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+        const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        return available === true;
+      }
+      return false;
     } catch (error) {
       console.log('Platform authenticator check failed:', error);
       return false;

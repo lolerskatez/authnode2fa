@@ -10,7 +10,7 @@ const PasswordStrengthIndicator = ({ password, showRequirements = true }) => {
       uppercase: /[A-Z]/.test(pwd),
       lowercase: /[a-z]/.test(pwd),
       numbers: /\d/.test(pwd),
-      special: /[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(pwd),
+      special: /[!@#$%^&*()_+\-=[\]{};:"\\|,.<>/?]/.test(pwd),
       noCommon: !/(password|123456|qwerty|abc123|admin|letmein)/i.test(pwd),
       noSequential: !/(abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(pwd)
     };

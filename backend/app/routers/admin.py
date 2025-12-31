@@ -264,6 +264,35 @@ def unlock_user_account(
     return {"message": f"Account for user {user.email} has been unlocked"}
 
 
+@router.get("/locked-accounts")
+def get_locked_accounts(
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get list of all locked accounts (admin only)"""
+    locked_users = db.query(
+        models.User.id,
+        models.User.email,
+        models.User.locked_until,
+        models.User.failed_login_attempts,
+        models.User.last_failed_login
+    ).filter(
+        models.User.locked_until != None,
+        models.User.locked_until > datetime.utcnow()
+    ).all()
+    
+    return [
+        {
+            "id": user.id,
+            "email": user.email,
+            "locked_until": user.locked_until.isoformat(),
+            "failed_login_attempts": user.failed_login_attempts,
+            "last_failed_login": user.last_failed_login.isoformat() if user.last_failed_login else None
+        }
+        for user in locked_users
+    ]
+
+
 @router.get("/audit-logs/user/{user_id}", response_model=list[schemas.AuditLogResponse])
 def get_user_audit_logs(
     request: Request,
@@ -350,15 +379,13 @@ def get_dashboard_stats(
     
     # Get recent activity (last 7 days)
     recent_logins = db.query(models.AuditLog).filter(
-        models.AuditLog.action == "login",
-        models.AuditLog.created_at >= seven_days_ago,
-        models.AuditLog.status == "success"
+        models.AuditLog.action == "login_success",
+        models.AuditLog.created_at >= seven_days_ago
     ).count()
     
     recent_failed_logins = db.query(models.AuditLog).filter(
-        models.AuditLog.action == "login",
-        models.AuditLog.created_at >= seven_days_ago,
-        models.AuditLog.status == "failed"
+        models.AuditLog.action == "login_failed",
+        models.AuditLog.created_at >= seven_days_ago
     ).count()
     
     # Top 5 active users (by login count in last 7 days)
@@ -370,7 +397,7 @@ def get_dashboard_stats(
         models.AuditLog,
         models.User.id == models.AuditLog.user_id
     ).filter(
-        models.AuditLog.action == "login",
+        models.AuditLog.action == "login_success",
         models.AuditLog.created_at >= seven_days_ago
     ).group_by(models.AuditLog.user_id).order_by(
         func.count(models.AuditLog.id).desc()
@@ -384,13 +411,80 @@ def get_dashboard_stats(
         models.Application.category
     ).all()
     
-    return {
+    # Security alerts - locked accounts
+    locked_accounts = db.query(models.User).filter(
+        models.User.locked_until != None,
+        models.User.locked_until > datetime.utcnow()
+    ).count()
+    
+    # Recent activity (last 10 events)
+    try:
+        recent_events = db.query(
+            models.AuditLog.action,
+            models.AuditLog.created_at,
+            models.User.email,
+            models.AuditLog.status
+        ).join(
+            models.User,
+            models.AuditLog.user_id == models.User.id
+        ).order_by(
+            models.AuditLog.created_at.desc()
+        ).limit(10).all()
+    except Exception as e:
+        print(f"[ERROR] Error fetching recent events: {str(e)}")
+        recent_events = []
+    
+    # Login trend (last 7 days by day)
+    try:
+        login_trend = db.query(
+            func.date(models.AuditLog.created_at).label('date'),
+            func.count(models.AuditLog.id).label('count')
+        ).filter(
+            models.AuditLog.action == "login_success",
+            models.AuditLog.created_at >= seven_days_ago
+        ).group_by(
+            func.date(models.AuditLog.created_at)
+        ).order_by(
+            func.date(models.AuditLog.created_at)
+        ).all()
+    except Exception as e:
+        print(f"[ERROR] Error fetching login trend: {str(e)}")
+        login_trend = []
+    
+    # Calculate 2FA coverage percentage
+    two_fa_coverage = (users_with_2fa / total_users * 100) if total_users > 0 else 0
+    
+    # Get locked accounts details
+    locked_accounts_details = db.query(
+        models.User.id,
+        models.User.email,
+        models.User.locked_until,
+        models.User.failed_login_attempts,
+        models.User.last_failed_login
+    ).filter(
+        models.User.locked_until != None,
+        models.User.locked_until > datetime.utcnow()
+    ).all()
+    
+    response_data = {
         "total_users": total_users,
         "active_users_7d": active_users,
         "total_accounts": total_accounts,
         "users_with_2fa": users_with_2fa,
+        "two_fa_coverage_percent": round(two_fa_coverage, 1),
         "recent_logins_7d": recent_logins,
         "recent_failed_logins_7d": recent_failed_logins,
+        "locked_accounts": locked_accounts,
+        "locked_accounts_details": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "locked_until": user.locked_until.isoformat(),
+                "failed_login_attempts": user.failed_login_attempts,
+                "last_failed_login": user.last_failed_login.isoformat() if user.last_failed_login else None
+            }
+            for user in locked_accounts_details
+        ],
         "top_active_users": [
             {"email": email, "login_count": login_count} 
             for email, _, login_count in top_users
@@ -398,6 +492,24 @@ def get_dashboard_stats(
         "account_distribution_by_category": [
             {"category": category, "count": count} 
             for category, count in category_distribution
+        ],
+        "recent_events": [
+            {
+                "action": action,
+                "email": email,
+                "status": status,
+                "created_at": created_at.isoformat()
+            }
+            for action, created_at, email, status in recent_events
+        ],
+        "login_trend": [
+            {"date": str(date), "count": count}
+            for date, count in login_trend
         ]
     }
+    
+    # Log response for debugging
+    print(f"[DEBUG] Dashboard stats response: {response_data}")
+    
+    return response_data
 

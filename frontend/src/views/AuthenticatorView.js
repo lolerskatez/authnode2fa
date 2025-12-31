@@ -106,6 +106,7 @@ const AuthenticatorView = ({
         clearTimeout(newTimer);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategory, fetchFilteredAccounts]);
 
   // Filter accounts based on selected category and search query (fallback for local filtering if needed)

@@ -195,6 +195,7 @@ const AddAccountModal = ({
             name: accountName,
             secret: manualSecret.toUpperCase().replace(/\s/g, ''),
             backup_key: 'BACKUP123',
+            otp_type: e.target.otpType?.value || 'TOTP',
             category: accountCategory,
             favorite: accountFavorite,
             color: accountColor
@@ -307,6 +308,22 @@ const AddAccountModal = ({
                   <option value="Personal">Personal</option>
                   <option value="Security">Security</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="otpType">OTP Type</label>
+                <select 
+                  id="otpType" 
+                  className="form-control" 
+                  name="otpType"
+                  defaultValue="TOTP"
+                >
+                  <option value="TOTP">TOTP (Time-based)</option>
+                  <option value="HOTP">HOTP (Counter-based)</option>
+                </select>
+                <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  TOTP: Codes change every 30 seconds. HOTP: Codes increment with each use.
+                </small>
               </div>
 
               <div className="form-group">

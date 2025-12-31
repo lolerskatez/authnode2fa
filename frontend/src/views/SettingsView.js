@@ -69,9 +69,11 @@ const SettingsView = ({
   // 2FA States
   const [twoFAStatus, setTwoFAStatus] = useState({ totp_enabled: false, is_admin: false });
   const [twoFALoading, setTwoFALoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [showTwoFASetup, setShowTwoFASetup] = useState(false);
   const [twoFASetupData, setTwoFASetupData] = useState(null);
   const [twoFAVerifyCode, setTwoFAVerifyCode] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [twoFASetupStep, setTwoFASetupStep] = useState('qr');
   const [twoFABackupCodes, setTwoFABackupCodes] = useState([]);
   const [showBackupCodes, setShowBackupCodes] = useState(false);
@@ -80,6 +82,8 @@ const SettingsView = ({
   const [showDisableTwoFA, setShowDisableTwoFA] = useState(false);
   const [twoFAEnforcementSaving, setTwoFAEnforcementSaving] = useState(false);
   
+  const [timeSyncStatus, setTimeSyncStatus] = useState(null);
+  const [timeSyncLoading, setTimeSyncLoading] = useState(false);
   const [oidcSettings, setOidcSettings] = useState(() => ({
     enabled: false,
     provider_name: 'Custom OIDC Provider',
@@ -109,6 +113,7 @@ const SettingsView = ({
     limit: 100,
     offset: 0
   });
+  // eslint-disable-next-line no-unused-vars
   const [totalAuditLogs, setTotalAuditLogs] = useState(0);
   const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
 
@@ -534,6 +539,7 @@ const SettingsView = ({
   };
 
   // 2FA Handlers
+  // eslint-disable-next-line no-unused-vars
   const handleSetup2FA = async () => {
     setTwoFALoading(true);
     try {
@@ -549,6 +555,7 @@ const SettingsView = ({
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleComplete2FAEnrollment = async () => {
     if (!twoFAVerifyCode || twoFAVerifyCode.length !== 6) {
       showToast('Please enter a valid 6-digit code');
@@ -699,6 +706,38 @@ const SettingsView = ({
       showToast('Error updating password reset: ' + (err.response?.data?.detail || err.message));
     } finally {
       setTwoFAEnforcementSaving(false);
+    }
+  };
+
+  const checkTimeSync = async () => {
+    setTimeSyncLoading(true);
+    try {
+      // Get server time
+      const response = await axios.get('/api/health');
+      const serverTime = new Date(response.data.server_time);
+      const clientTime = new Date();
+      
+      // Calculate difference in seconds
+      const timeDiff = Math.abs(serverTime - clientTime) / 1000;
+      
+      setTimeSyncStatus({
+        serverTime: serverTime.toISOString(),
+        clientTime: clientTime.toISOString(),
+        difference: timeDiff,
+        isSynced: timeDiff < 30 // Within 30 seconds is acceptable
+      });
+      
+      if (timeDiff < 30) {
+        showToast('Device time is synchronized with server', 'success');
+      } else {
+        showToast(`Time difference: ${Math.round(timeDiff)} seconds. Please sync your device time.`, 'warning');
+      }
+    } catch (error) {
+      console.error('Failed to check time sync:', error);
+      setTimeSyncStatus({ error: 'Failed to check time synchronization' });
+      showToast('Failed to check time synchronization', 'error');
+    } finally {
+      setTimeSyncLoading(false);
     }
   };
 
@@ -964,6 +1003,94 @@ const SettingsView = ({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Time Sync Check */}
+              <div style={{
+                padding: '16px',
+                backgroundColor: colors.background,
+                borderRadius: '8px',
+                border: `1px solid ${colors.border}`,
+                marginBottom: '20px'
+              }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  color: colors.primary,
+                  fontWeight: '500',
+                  marginBottom: '10px'
+                }}>
+                  <i className="fas fa-clock" style={{ marginRight: '8px', color: colors.accent }}></i>
+                  Time Synchronization Check
+                </label>
+                <p style={{ color: colors.secondary, fontSize: '12px', marginBottom: '12px', margin: '0 0 12px 0' }}>
+                  Verify your device time is synchronized with the server for accurate TOTP codes
+                </p>
+                <button
+                  onClick={checkTimeSync}
+                  disabled={timeSyncLoading}
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: colors.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: timeSyncLoading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    opacity: timeSyncLoading ? 0.6 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {timeSyncLoading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-sync-alt" style={{ marginRight: '8px' }}></i>
+                      Check Time Sync
+                    </>
+                  )}
+                </button>
+                {timeSyncStatus && !timeSyncStatus.error && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    backgroundColor: timeSyncStatus.isSynced ? colors.success + '20' : colors.warning + '20',
+                    border: `1px solid ${timeSyncStatus.isSynced ? colors.success : colors.warning}`,
+                    fontSize: '13px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <i className={`fas ${timeSyncStatus.isSynced ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}
+                         style={{ color: timeSyncStatus.isSynced ? colors.success : colors.warning }}></i>
+                      <strong style={{ color: colors.primary }}>
+                        {timeSyncStatus.isSynced ? 'Time Synchronized' : 'Time Out of Sync'}
+                      </strong>
+                    </div>
+                    <div style={{ color: colors.secondary, fontSize: '12px' }}>
+                      Server: {new Date(timeSyncStatus.serverTime).toLocaleString()}<br/>
+                      Device: {new Date(timeSyncStatus.clientTime).toLocaleString()}<br/>
+                      Difference: {Math.round(timeSyncStatus.difference)} seconds
+                    </div>
+                  </div>
+                )}
+                {timeSyncStatus && timeSyncStatus.error && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    backgroundColor: colors.danger + '20',
+                    border: `1px solid ${colors.danger}`,
+                    fontSize: '13px',
+                    color: colors.danger
+                  }}>
+                    <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
+                    {timeSyncStatus.error}
+                  </div>
+                )}
               </div>
             </div>
           </div>
