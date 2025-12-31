@@ -6,6 +6,8 @@ from ..database import get_db
 from ..auth import get_current_user
 from ..rate_limit import limiter, SENSITIVE_API_RATE_LIMIT
 from ..smtp_encryption import encrypt_smtp_password, decrypt_smtp_password
+from ..backup import backup_manager
+from ..api_key_manager import APIKeyManager
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -513,3 +515,384 @@ def get_dashboard_stats(
     
     return response_data
 
+
+# Backup Management Endpoints
+
+@router.post("/backups/create")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def create_backup_manual(
+    request: Request,
+    description: str = None,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a manual backup (admin only)"""
+    result = backup_manager.create_backup(backup_type="manual", description=description)
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create backup")
+    
+    # Log the backup action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="backup_created",
+        status="success",
+        details={"backup_id": result["id"], "size_mb": result["size_mb"]}
+    )
+    
+    return result
+
+
+@router.get("/backups")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def list_backups(
+    request: Request,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """List all available backups (admin only)"""
+    backups = backup_manager.get_backups()
+    return {
+        "backups": backups,
+        "total": len(backups),
+        "max_retention": backup_manager.max_backups
+    }
+
+
+@router.post("/backups/{backup_id}/restore")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def restore_backup(
+    request: Request,
+    backup_id: str,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Restore database from backup (admin only)"""
+    # This is dangerous - require explicit confirmation
+    result = backup_manager.restore_backup(backup_id)
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to restore backup")
+    
+    # Log the restore action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="backup_restored",
+        status="success",
+        details={"backup_id": backup_id}
+    )
+    
+    return {"success": True, "message": f"Database restored from backup {backup_id}"}
+
+
+@router.delete("/backups/{backup_id}")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def delete_backup(
+    request: Request,
+    backup_id: str,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a backup (admin only)"""
+    result = backup_manager.delete_backup(backup_id)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Backup not found")
+    
+    # Log the delete action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="backup_deleted",
+        status="success",
+        details={"backup_id": backup_id}
+    )
+    
+    return {"success": True, "message": f"Backup {backup_id} deleted"}
+
+# API Key Management Endpoints
+
+@router.post("/api-keys")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def create_api_key(
+    request: Request,
+    key_data: schemas.APIKeyCreate,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new API key (admin only)"""
+    result = APIKeyManager.create_api_key(
+        db,
+        user_id=current_user.id,
+        name=key_data.name,
+        expires_in_days=key_data.expires_in_days,
+        scopes=key_data.scopes
+    )
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="api_key_created",
+        status="success",
+        details={"key_name": key_data.name}
+    )
+    
+    return result
+
+
+@router.get("/api-keys")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def list_api_keys(
+    request: Request,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """List all API keys for admin (admin only)"""
+    keys = APIKeyManager.get_api_keys(db, current_user.id)
+    return {
+        "keys": [
+            {
+                "id": key.id,
+                "name": key.name,
+                "scopes": key.scopes,
+                "created_at": key.created_at.isoformat(),
+                "expires_at": key.expires_at.isoformat() if key.expires_at else None,
+                "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+                "revoked": key.revoked
+            }
+            for key in keys
+        ],
+        "total": len(keys)
+    }
+
+
+@router.post("/api-keys/{key_id}/revoke")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def revoke_api_key(
+    request: Request,
+    key_id: int,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Revoke an API key (admin only)"""
+    success = APIKeyManager.revoke_api_key(db, key_id, current_user.id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="API key not found")
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="api_key_revoked",
+        status="success",
+        details={"key_id": key_id}
+    )
+    
+    return {"success": True, "message": "API key revoked"}
+
+
+@router.delete("/api-keys/{key_id}")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def delete_api_key(
+    request: Request,
+    key_id: int,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete an API key (admin only)"""
+    success = APIKeyManager.delete_api_key(db, key_id, current_user.id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="API key not found")
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="api_key_deleted",
+        status="success",
+        details={"key_id": key_id}
+    )
+    
+    return {"success": True, "message": "API key deleted"}
+
+
+# Password Policy Endpoints
+
+@router.get("/password-policy")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def get_password_policy_endpoint(
+    request: Request,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get current password policy (admin only)"""
+    policy = crud.get_password_policy(db)
+    return {
+        "id": policy.id,
+        "min_length": policy.min_length,
+        "max_length": policy.max_length,
+        "require_uppercase": policy.require_uppercase,
+        "require_lowercase": policy.require_lowercase,
+        "require_numbers": policy.require_numbers,
+        "require_special_chars": policy.require_special_chars,
+        "special_chars": policy.special_chars,
+        "password_expiry_days": policy.password_expiry_days,
+        "password_history_count": policy.password_history_count,
+        "max_login_attempts": policy.max_login_attempts,
+        "lockout_duration_minutes": policy.lockout_duration_minutes,
+        "check_breach_database": policy.check_breach_database,
+        "created_at": policy.created_at.isoformat(),
+        "updated_at": policy.updated_at.isoformat()
+    }
+
+
+@router.put("/password-policy")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def update_password_policy_endpoint(
+    request: Request,
+    policy_data: schemas.PasswordPolicyUpdate,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Update password policy (admin only)"""
+    policy_dict = policy_data.dict(exclude_unset=True)
+    policy = crud.update_password_policy(db, policy_dict)
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="password_policy_updated",
+        status="success",
+        details=policy_dict
+    )
+    
+    return {
+        "success": True,
+        "message": "Password policy updated",
+        "policy": {
+            "min_length": policy.min_length,
+            "max_length": policy.max_length,
+            "require_uppercase": policy.require_uppercase,
+            "require_lowercase": policy.require_lowercase,
+            "require_numbers": policy.require_numbers,
+            "require_special_chars": policy.require_special_chars,
+            "password_expiry_days": policy.password_expiry_days,
+            "password_history_count": policy.password_history_count,
+            "max_login_attempts": policy.max_login_attempts,
+            "lockout_duration_minutes": policy.lockout_duration_minutes,
+            "check_breach_database": policy.check_breach_database
+        }
+    }
+
+
+# Bulk User Import Endpoints
+
+@router.post("/users/import")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def import_users_bulk(
+    request: Request,
+    import_data: schemas.BulkUserImportRequest,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Import multiple users at once (admin only)"""
+    
+    # Validate data
+    if not import_data.users or len(import_data.users) == 0:
+        raise HTTPException(status_code=400, detail="No users provided")
+    
+    if len(import_data.users) > 1000:
+        raise HTTPException(status_code=400, detail="Maximum 1000 users per import")
+    
+    # Perform bulk import
+    result = crud.bulk_import_users(
+        db,
+        import_data.users,
+        default_role=import_data.role
+    )
+    
+    # Log the action
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="bulk_user_import",
+        status="success",
+        details={
+            "total": result["total"],
+            "created": result["created"],
+            "skipped": result["skipped"],
+            "error_count": len(result["errors"])
+        }
+    )
+    
+    return result
+
+
+# Audit Export Endpoints
+
+@router.get("/audit-logs/export")
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def export_audit_logs_csv(
+    request: Request,
+    limit: int = 10000,
+    offset: int = 0,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Export audit logs as CSV (admin only)"""
+    import csv
+    from io import StringIO
+    from fastapi.responses import StreamingResponse
+    
+    # Get audit logs
+    logs = db.query(models.AuditLog).order_by(
+        models.AuditLog.created_at.desc()
+    ).limit(limit).offset(offset).all()
+    
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        "ID", "User ID", "User Email", "Action", "Resource Type", "Resource ID",
+        "IP Address", "Status", "Reason", "Created At", "Details"
+    ])
+    
+    # Write rows
+    for log in logs:
+        user = db.query(models.User).filter(models.User.id == log.user_id).first() if log.user_id else None
+        writer.writerow([
+            log.id,
+            log.user_id,
+            user.email if user else "",
+            log.action,
+            log.resource_type or "",
+            log.resource_id or "",
+            log.ip_address or "",
+            log.status,
+            log.reason or "",
+            log.created_at.isoformat(),
+            str(log.details or "")
+        ])
+    
+    # Log the export
+    crud.create_audit_log(
+        db,
+        user_id=current_user.id,
+        action="audit_logs_exported",
+        status="success",
+        details={"record_count": len(logs)}
+    )
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=audit_logs.csv"}
+    )

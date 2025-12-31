@@ -549,3 +549,153 @@ def move_application(db: Session, user_id: int, app_id: int, position: int):
     db.commit()
     db.refresh(app)
     return app
+
+
+# Notification functions
+def create_in_app_notification(db: Session, user_id: int, notification_type: str,
+                               title: str, message: str, details: dict = None):
+    """Create an in-app notification"""
+    notification = models.InAppNotification(
+        user_id=user_id,
+        notification_type=notification_type,
+        title=title,
+        message=message,
+        details=details or {},
+        read=False
+    )
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+    return notification
+
+
+def get_unread_notifications(db: Session, user_id: int, limit: int = 50):
+    """Get unread notifications for user"""
+    return db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == user_id,
+        models.InAppNotification.read == False
+    ).order_by(models.InAppNotification.created_at.desc()).limit(limit).all()
+
+
+def get_all_notifications(db: Session, user_id: int, limit: int = 100, offset: int = 0):
+    """Get all notifications for user (paginated)"""
+    return db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == user_id
+    ).order_by(models.InAppNotification.created_at.desc()).limit(limit).offset(offset).all()
+
+
+def mark_notification_as_read(db: Session, notification_id: int):
+    """Mark notification as read"""
+    notification = db.query(models.InAppNotification).filter(
+        models.InAppNotification.id == notification_id
+    ).first()
+    if notification:
+        notification.read = True
+        db.commit()
+        db.refresh(notification)
+    return notification
+
+
+def mark_all_notifications_as_read(db: Session, user_id: int):
+    """Mark all notifications as read for user"""
+    db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == user_id,
+        models.InAppNotification.read == False
+    ).update({"read": True})
+    db.commit()
+    return True
+
+
+def delete_notification(db: Session, notification_id: int):
+    """Delete a notification"""
+    notification = db.query(models.InAppNotification).filter(
+        models.InAppNotification.id == notification_id
+    ).first()
+    if notification:
+        db.delete(notification)
+        db.commit()
+    return notification
+
+
+# Password Policy functions
+def get_password_policy(db: Session):
+    """Get or create password policy"""
+    policy = db.query(models.PasswordPolicy).first()
+    if not policy:
+        policy = models.PasswordPolicy()
+        db.add(policy)
+        db.commit()
+        db.refresh(policy)
+    return policy
+
+
+def update_password_policy(db: Session, policy_update: dict):
+    """Update password policy"""
+    policy = get_password_policy(db)
+    for key, value in policy_update.items():
+        if value is not None and hasattr(policy, key):
+            setattr(policy, key, value)
+    db.commit()
+    db.refresh(policy)
+    return policy
+
+
+# Bulk user import functions
+def bulk_import_users(db: Session, users_data: list, default_role: str = "user") -> dict:
+    """Import multiple users from data"""
+    results = {
+        "total": len(users_data),
+        "created": 0,
+        "skipped": 0,
+        "errors": []
+    }
+    
+    for idx, user_data in enumerate(users_data):
+        try:
+            # Validate required fields
+            if "email" not in user_data or "username" not in user_data:
+                results["errors"].append({
+                    "row": idx + 1,
+                    "error": "Missing required fields: email and username"
+                })
+                results["skipped"] += 1
+                continue
+            
+            # Check if user exists
+            existing = get_user_by_email(db, user_data["email"])
+            if existing:
+                results["errors"].append({
+                    "row": idx + 1,
+                    "error": f"User {user_data['email']} already exists"
+                })
+                results["skipped"] += 1
+                continue
+            
+            # Create user
+            new_user = models.User(
+                email=user_data["email"],
+                username=user_data["username"],
+                name=user_data.get("name", user_data["username"]),
+                role=user_data.get("role", default_role),
+                is_sso_user=user_data.get("is_sso_user", False),
+                password_hash=auth.hash_password(user_data["password"]) if "password" in user_data and user_data["password"] else None
+            )
+            
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            
+            # Add password to history if provided
+            if "password" in user_data and user_data["password"]:
+                from .utils import add_password_to_history
+                add_password_to_history(db, new_user.id, user_data["password"])
+            
+            results["created"] += 1
+        except Exception as e:
+            results["errors"].append({
+                "row": idx + 1,
+                "error": str(e)
+            })
+            results["skipped"] += 1
+    
+    return results

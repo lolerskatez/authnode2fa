@@ -359,6 +359,62 @@ const MainLayout = ({
                 <span>User Management</span>
               </div>
             )}
+            <div 
+              className={`category-item ${currentView.sub === 'notifications' ? 'active' : ''}`}
+              onClick={() => onViewChange('settings', 'notifications')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-bell"></i>
+              <span>Notifications</span>
+            </div>
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'backups' ? 'active' : ''}`}
+                onClick={() => onViewChange('settings', 'backups')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-save"></i>
+                <span>Backups</span>
+              </div>
+            )}
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'api-keys' ? 'active' : ''}`}
+                onClick={() => onViewChange('settings', 'api-keys')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-code"></i>
+                <span>API Keys</span>
+              </div>
+            )}
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'password-policy' ? 'active' : ''}`}
+                onClick={() => onViewChange('settings', 'password-policy')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-lock"></i>
+                <span>Password Policy</span>
+              </div>
+            )}
+            <div 
+              className={`category-item ${currentView.sub === 'device-sync' ? 'active' : ''}`}
+              onClick={() => onViewChange('settings', 'device-sync')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-sync"></i>
+              <span>Device Sync</span>
+            </div>
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'audit-logs' ? 'active' : ''}`}
+                onClick={() => onViewChange('settings', 'audit-logs')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-history"></i>
+                <span>Audit Logs</span>
+              </div>
+            )}
           </div>
         )}
 

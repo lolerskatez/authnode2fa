@@ -420,3 +420,143 @@ class WebAuthnStatus(BaseModel):
     enabled: bool
     credentials_count: int
     credentials: List[WebAuthnCredential]
+
+
+class InAppNotification(BaseModel):
+    """In-app notification schema"""
+    id: int
+    user_id: int
+    notification_type: str
+    title: str
+    message: str
+    details: Optional[Dict[str, Any]] = None
+    read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class InAppNotificationCreate(BaseModel):
+    """Create in-app notification"""
+    notification_type: str
+    title: str
+    message: str
+    details: Optional[Dict[str, Any]] = None
+
+
+class NotificationPreferences(BaseModel):
+    """User notification preferences"""
+    security_alerts_enabled: bool = True
+    login_alerts_enabled: bool = True
+    account_change_alerts_enabled: bool = True
+    email_notifications: bool = True
+    in_app_notifications: bool = True
+
+
+class APIKeyCreate(BaseModel):
+    """Create API key request"""
+    name: str
+    expires_in_days: Optional[int] = None
+    scopes: Optional[List[str]] = ["read:applications", "read:activity"]
+
+
+class APIKeyResponse(BaseModel):
+    """API key response (with actual key only at creation)"""
+    id: int
+    name: str
+    scopes: List[str]
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    last_used_at: Optional[datetime] = None
+    revoked: bool
+    api_key: Optional[str] = None  # Only included at creation time
+
+    class Config:
+        from_attributes = True
+
+
+class PasswordPolicyUpdate(BaseModel):
+    """Update password policy"""
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    require_uppercase: Optional[bool] = None
+    require_lowercase: Optional[bool] = None
+    require_numbers: Optional[bool] = None
+    require_special_chars: Optional[bool] = None
+    special_chars: Optional[str] = None
+    password_expiry_days: Optional[int] = None
+    password_history_count: Optional[int] = None
+    max_login_attempts: Optional[int] = None
+    lockout_duration_minutes: Optional[int] = None
+    check_breach_database: Optional[bool] = None
+
+
+class PasswordPolicy(BaseModel):
+    """Password policy schema"""
+    id: int
+    min_length: int
+    max_length: int
+    require_uppercase: bool
+    require_lowercase: bool
+    require_numbers: bool
+    require_special_chars: bool
+    special_chars: str
+    password_expiry_days: int
+    password_history_count: int
+    max_login_attempts: int
+    lockout_duration_minutes: int
+    check_breach_database: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BulkUserImportRequest(BaseModel):
+    """Bulk user import request"""
+    users: List[Dict[str, Any]]
+    role: str = "user"  # Default role for imported users
+    send_welcome_email: bool = False
+
+
+class BulkUserImportResponse(BaseModel):
+    """Bulk user import response"""
+    total: int
+    created: int
+    skipped: int
+    errors: List[Dict[str, str]]
+
+
+class SyncDeviceRegister(BaseModel):
+    """Register sync device request"""
+    device_name: str
+    device_info: Dict[str, Any] = {}
+
+
+class SyncDevice(BaseModel):
+    """Sync device schema"""
+    id: int
+    name: str
+    device_info: Dict[str, Any]
+    last_sync_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SyncPushRequest(BaseModel):
+    """Push sync data"""
+    data: Dict[str, Any]
+
+
+class SyncPullRequest(BaseModel):
+    """Pull sync data"""
+    last_sync: Optional[datetime] = None
+
+
+class ConflictResolution(BaseModel):
+    """Resolve sync conflict"""
+    resolution: str  # keep_local, keep_remote, merge

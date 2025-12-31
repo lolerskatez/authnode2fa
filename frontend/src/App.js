@@ -30,6 +30,7 @@ const App = () => {
   const [progresses, setProgresses] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [globalSettings, setGlobalSettings] = useState({ totp_enabled: false });
   const [currentView, setCurrentView] = useState(() => {
     // Restore view from localStorage on mount
@@ -89,6 +90,16 @@ const App = () => {
         .catch(err => {
           console.log('Global settings not available:', err.message);
         });
+      
+      // Load unread notifications count
+      axios.get('/api/notifications/list')
+        .then(res => {
+          const unreadCount = (res.data || []).filter(n => !n.read).length;
+          setUnreadNotifications(unreadCount);
+        })
+        .catch(err => {
+          console.log('Notifications not available:', err.message);
+        });
     } else {
       // Reset to defaults when not authenticated
       setAppSettings({
@@ -97,6 +108,7 @@ const App = () => {
         codeFormat: 'spaced'
       });
       setGlobalSettings({ totp_enabled: false });
+      setUnreadNotifications(0);
     }
   }, [isAuthenticated, currentUser]);
 
@@ -343,11 +355,40 @@ const App = () => {
               <i className="fas fa-shield-alt"></i>
               <span>AuthNode 2FA</span>
             </div>
-            <div className="user-profile">
-              <div className="user-avatar">{currentUser ? currentUser.name.substring(0, 2).toUpperCase() : 'U'}</div>
-              <div>
-                <div style={{ fontWeight: 600 }}>{currentUser ? currentUser.name : 'User'}</div>
-                <div style={{ fontSize: '14px', color: '#718096' }}>Web Authenticator</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              {/* Notification Bell */}
+              <div 
+                style={{ position: 'relative', cursor: 'pointer' }}
+                onClick={() => handleViewChange('settings', 'notifications')}
+                title="Notifications"
+              >
+                <i className="fas fa-bell" style={{ fontSize: '18px', color: '#718096' }}></i>
+                {unreadNotifications > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    backgroundColor: '#e53e3e',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}>
+                    {unreadNotifications}
+                  </span>
+                )}
+              </div>
+              <div className="user-profile">
+                <div className="user-avatar">{currentUser ? currentUser.name.substring(0, 2).toUpperCase() : 'U'}</div>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{currentUser ? currentUser.name : 'User'}</div>
+                  <div style={{ fontSize: '14px', color: '#718096' }}>Web Authenticator</div>
+                </div>
               </div>
             </div>
           </header>

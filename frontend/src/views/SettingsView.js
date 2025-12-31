@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import UserManagement from '../UserManagement';
+import NotificationsTab from './tabs/NotificationsTab';
+import BackupsTab from './tabs/BackupsTab';
+import APIKeysTab from './tabs/APIKeysTab';
+import PasswordPolicyTab from './tabs/PasswordPolicyTab';
+import DeviceSyncTab from './tabs/DeviceSyncTab';
 import '../App.css';
 
 // Get dynamic redirect URIs based on current domain - MUST be outside component
@@ -117,6 +122,43 @@ const SettingsView = ({
   const [totalAuditLogs, setTotalAuditLogs] = useState(0);
   const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
 
+  // Notifications States
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  // Backups States
+  const [backups, setBackups] = useState([]);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [autoBackupsEnabled, setAutoBackupsEnabled] = useState(false);
+
+  // API Keys States
+  const [apiKeys, setApiKeys] = useState([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [newApiKey, setNewApiKey] = useState('');
+
+  // Password Policy States
+  const [passwordPolicy, setPasswordPolicy] = useState({
+    min_length: 8,
+    require_uppercase: true,
+    require_lowercase: true,
+    require_numbers: true,
+    require_special_chars: true,
+    expiration_days: 0,
+    history_count: 0,
+    lockout_attempts: 5,
+    lockout_duration_minutes: 15
+  });
+  const [passwordPolicyLoading, setPasswordPolicyLoading] = useState(false);
+
+  // Device Sync States
+  // eslint-disable-next-line no-unused-vars
+  const [syncDevices, setSyncDevices] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [syncDevicesLoading, setSyncDevicesLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [showDeviceRegisterModal, setShowDeviceRegisterModal] = useState(false);
+
   // Audit Logs Function - defined before useEffect that uses it
   const fetchAuditLogs = useCallback(async () => {
     if (currentUser?.role !== 'admin') return;
@@ -226,6 +268,7 @@ const SettingsView = ({
         .then(res => {
           if (res.data) {
             const dynamicURIs = getRedirectURIs();
+            // eslint-disable-next-line no-undef
             setOidcSettings({
               enabled: res.data.enabled || false,
               provider_name: res.data.provider_name || 'Custom OIDC Provider',
@@ -527,6 +570,27 @@ const SettingsView = ({
       case 'success': return colors.success;
       case 'failed': return colors.danger;
       default: return colors.secondary;
+    }
+  };
+
+  const handleExportAuditLogs = async () => {
+    try {
+      const response = await axios.get('/api/admin/audit-logs/export', {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `audit-logs-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentChild.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showToast('Audit logs exported successfully');
+    } catch (error) {
+      console.error('Failed to export audit logs:', error);
+      showToast('Error exporting audit logs: ' + (error.response?.data?.detail || error.message));
     }
   };
   const getBrowserInfo = () => {
@@ -2855,6 +2919,23 @@ const SettingsView = ({
                       <i className="fas fa-search" style={{ marginRight: '6px' }}></i>
                       Apply Filters
                     </button>
+                    <button
+                      onClick={handleExportAuditLogs}
+                      style={{
+                        marginLeft: '8px',
+                        padding: '8px 16px',
+                        backgroundColor: colors.success,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <i className="fas fa-download" style={{ marginRight: '6px' }}></i>
+                      Export CSV
+                    </button>
                   </div>
                 </div>
               </div>
@@ -3195,6 +3276,31 @@ const SettingsView = ({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <NotificationsTab appSettings={appSettings} currentUser={currentUser} />
+        )}
+
+        {/* Backups Tab */}
+        {activeTab === 'backups' && currentUser && currentUser.role === 'admin' && (
+          <BackupsTab appSettings={appSettings} />
+        )}
+
+        {/* API Keys Tab */}
+        {activeTab === 'api-keys' && currentUser && currentUser.role === 'admin' && (
+          <APIKeysTab appSettings={appSettings} />
+        )}
+
+        {/* Password Policy Tab */}
+        {activeTab === 'password-policy' && currentUser && currentUser.role === 'admin' && (
+          <PasswordPolicyTab appSettings={appSettings} />
+        )}
+
+        {/* Device Sync Tab */}
+        {activeTab === 'device-sync' && (
+          <DeviceSyncTab appSettings={appSettings} currentUser={currentUser} />
         )}
       </div>
     </div>

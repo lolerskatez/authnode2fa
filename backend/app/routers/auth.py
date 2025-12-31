@@ -5,6 +5,7 @@ from ..database import get_db
 from .. import models, schemas, crud, auth
 from ..rate_limit import limiter, limit_login, limit_signup, limit_totp_verify, TOTP_VERIFY_RATE_LIMIT
 from ..oidc_state import generate_secure_state, store_oidc_state, validate_oidc_state
+from ..notifications import email_service
 from datetime import timedelta, datetime
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 import os
@@ -158,6 +159,16 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
                         "locked_until": failed_user.locked_until.isoformat(),
                         "lockout_duration_minutes": LOCKOUT_DURATION_MINUTES
                     }
+                )
+                # Send email alert about account lock
+                email_service.send_brute_force_alert(failed_user, failed_user.failed_login_attempts)
+                # Create in-app notification
+                crud.create_in_app_notification(
+                    db,
+                    user_id=failed_user.id,
+                    notification_type="security_alert",
+                    title="Account Locked",
+                    message=f"Your account has been locked due to {failed_user.failed_login_attempts} failed login attempts. It will unlock in 15 minutes."
                 )
             else:
                 crud.create_audit_log(

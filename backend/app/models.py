@@ -306,3 +306,128 @@ class CodeGenerationHistory(Base):
     application = relationship("Application")
 
     user = relationship("User")
+
+
+class InAppNotification(Base):
+    """
+    Stores in-app notifications for users.
+    Notifications are displayed in the UI and can be marked as read.
+    """
+    __tablename__ = "in_app_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    notification_type = Column(String, index=True)  # security_alert, account_change, system_message
+    title = Column(String)
+    message = Column(Text)
+    details = Column(JSON, nullable=True)  # Additional metadata
+    read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    user = relationship("User")
+
+
+class APIKey(Base):
+    """
+    Stores API keys for third-party integrations and applications.
+    Keys are hashed and can be scoped to specific permissions.
+    """
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    name = Column(String, index=True)  # User-friendly name
+    key_hash = Column(String, unique=True, index=True)  # SHA256 hash of the key
+    scopes = Column(JSON, default=[])  # List of permitted scopes
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, nullable=True, index=True)  # Optional expiration
+    last_used_at = Column(DateTime, nullable=True)  # Track usage
+    
+    # Lifecycle
+    revoked = Column(Boolean, default=False, index=True)
+    revoked_at = Column(DateTime, nullable=True)
+    
+    user = relationship("User")
+
+
+class PasswordPolicy(Base):
+    """
+    Stores password policy settings for the organization.
+    """
+    __tablename__ = "password_policy"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Length requirements
+    min_length = Column(Integer, default=12)
+    max_length = Column(Integer, default=128)
+    
+    # Character requirements
+    require_uppercase = Column(Boolean, default=True)
+    require_lowercase = Column(Boolean, default=True)
+    require_numbers = Column(Boolean, default=True)
+    require_special_chars = Column(Boolean, default=True)
+    special_chars = Column(String, default="!@#$%^&*()_+-=[]{}|;:,.<>?")
+    
+    # Expiration and history
+    password_expiry_days = Column(Integer, default=90)  # 0 = never expires
+    password_history_count = Column(Integer, default=5)  # Prevent reuse
+    
+    # Lockout policy
+    max_login_attempts = Column(Integer, default=5)
+    lockout_duration_minutes = Column(Integer, default=15)
+    
+    # Breach checking
+    check_breach_database = Column(Boolean, default=True)  # Use HaveIBeenPwned API
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SyncDevice(Base):
+    """
+    Stores registered devices for multi-device synchronization.
+    Each device has a unique token and tracks last sync time.
+    """
+    __tablename__ = "sync_devices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    device_name = Column(String)  # User-friendly name
+    device_token_hash = Column(String, unique=True, index=True)  # SHA256 hash of token
+    device_info = Column(JSON)  # Device metadata (OS, browser, etc)
+    
+    # Sync tracking
+    last_sync_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True, index=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    user = relationship("User")
+
+
+class SyncPackage(Base):
+    """
+    Stores synchronization packages for conflict detection and resolution.
+    """
+    __tablename__ = "sync_packages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    source_device_id = Column(Integer, ForeignKey("sync_devices.id"))
+    
+    # Sync metadata
+    sync_type = Column(String)  # push or pull
+    data = Column(JSON)  # Encrypted sync data
+    status = Column(String, default="pending")  # pending, synced, conflicted
+    
+    # Conflict resolution
+    conflict_count = Column(Integer, default=0)
+    conflict_resolution = Column(String, nullable=True)  # keep_local, keep_remote, merge
+    resolved_at = Column(DateTime, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    user = relationship("User")
+    source_device = relationship("SyncDevice")
