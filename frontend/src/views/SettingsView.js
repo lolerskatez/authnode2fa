@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import UserManagement from '../UserManagement';
 import NotificationsTab from './tabs/NotificationsTab';
@@ -108,35 +108,6 @@ const SettingsView = ({
   const [oidcLoading, setOidcLoading] = useState(false);
   const [oidcAdvanced, setOidcAdvanced] = useState(false);
   const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
-
-  // Notifications States
-  const [notifications, setNotifications] = useState([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-
-  // Backups States
-  const [backups, setBackups] = useState([]);
-  const [backupsLoading, setBackupsLoading] = useState(false);
-  const [autoBackupsEnabled, setAutoBackupsEnabled] = useState(false);
-
-  // API Keys States
-  const [apiKeys, setApiKeys] = useState([]);
-  const [apiKeysLoading, setApiKeysLoading] = useState(false);
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [newApiKey, setNewApiKey] = useState('');
-
-  // Password Policy States
-  const [passwordPolicy, setPasswordPolicy] = useState({
-    min_length: 8,
-    require_uppercase: true,
-    require_lowercase: true,
-    require_numbers: true,
-    require_special_chars: true,
-    expiration_days: 0,
-    history_count: 0,
-    lockout_attempts: 5,
-    lockout_duration_minutes: 15
-  });
-  const [passwordPolicyLoading, setPasswordPolicyLoading] = useState(false);
 
   // Device Sync States
   // eslint-disable-next-line no-unused-vars

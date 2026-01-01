@@ -1227,8 +1227,8 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
         </div>
 
         {/* Audit Log Detail Modal */}
-          {selectedAuditLog && (
-            <div
+        {selectedAuditLog && (
+          <div
             style={{
               position: 'fixed',
               top: 0,
@@ -1378,7 +1378,10 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
         {selectedCard && (
           <DetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
         )}
+        </div>
       )}
+    </div>
   );
+};
 
 export default AdminDashboard;
