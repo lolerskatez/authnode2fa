@@ -32,7 +32,6 @@ const App = () => {
   const [progresses, setProgresses] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showSecurityModal, setShowSecurityModal] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [globalSettings, setGlobalSettings] = useState({ totp_enabled: false });
   const [currentView, setCurrentView] = useState(() => {
     // Restore view from localStorage on mount
@@ -44,48 +43,6 @@ const App = () => {
     autoLock: 5,
     codeFormat: 'spaced'
   });
-
-  // Notification polling interval ref
-  const notificationIntervalRef = useRef(null);
-
-  // Function to refresh notification count
-  const refreshNotificationCount = useCallback(async () => {
-    if (!isAuthenticated || !currentUser) {
-      setUnreadNotifications(0);
-      return;
-    }
-
-    try {
-      const response = await axios.get('/api/notifications/count');
-      setUnreadNotifications(response.data.unread || 0);
-    } catch (error) {
-      console.error('Failed to refresh notification count:', error);
-      setUnreadNotifications(0);
-    }
-  }, [isAuthenticated, currentUser]);
-
-  // Setup notification polling when authenticated
-  useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      // Initial fetch
-      refreshNotificationCount();
-
-      // Set up polling every 30 seconds
-      notificationIntervalRef.current = setInterval(refreshNotificationCount, 30000);
-
-      return () => {
-        if (notificationIntervalRef.current) {
-          clearInterval(notificationIntervalRef.current);
-        }
-      };
-    } else {
-      // Clear notifications when not authenticated
-      setUnreadNotifications(0);
-      if (notificationIntervalRef.current) {
-        clearInterval(notificationIntervalRef.current);
-      }
-    }
-  }, [isAuthenticated, currentUser, refreshNotificationCount]);
 
   // Validate token on mount (page refresh)
   useEffect(() => {

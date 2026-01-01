@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import '../App.css';
-import NotificationBell from '../components/NotificationBell';
 
 const MainLayout = ({ 
   currentUser, 
@@ -33,8 +33,29 @@ const MainLayout = ({
   const colors = getThemeColors();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const accountCount = accounts.length;
   const userMenuRef = useRef(null);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await axios.get('/api/notifications/count');
+        setUnreadCount(response.data.unread || 0);
+      } catch (error) {
+        console.error('Failed to fetch notification count:', error);
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -143,9 +164,29 @@ const MainLayout = ({
       
       <div ref={userMenuRef} style={{ position: 'relative' }}>
         <div className="user-info" style={{ cursor: 'pointer' }} onClick={() => setShowUserMenu(!showUserMenu)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="user-avatar-large">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+            <div className="user-avatar-large" style={{ position: 'relative' }}>
               <i className="fas fa-user"></i>
+              {unreadCount > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  border: '2px solid ' + colors.background
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </div>
+              )}
             </div>
             <div style={{ flex: 1 }}>
               <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0' }}>{currentUser ? currentUser.name : 'User'}</h4>
@@ -153,10 +194,6 @@ const MainLayout = ({
                 {accountCount} accounts
               </p>
             </div>
-            <NotificationBell 
-              appSettings={appSettings} 
-              onClick={() => onViewChange('notifications')}
-            />
           </div>
         </div>
 
@@ -173,6 +210,30 @@ const MainLayout = ({
             zIndex: 1000,
             overflow: 'hidden'
           }}>
+            <div 
+              className="category-item"
+              onClick={() => {
+                onViewChange('notifications');
+                setShowUserMenu(false);
+              }}
+              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, position: 'relative' }}
+            >
+              <i className="fas fa-bell"></i>
+              <span>Notifications</span>
+              {unreadCount > 0 && (
+                <span style={{
+                  marginLeft: 'auto',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
             <div 
               className="category-item"
               onClick={() => {
@@ -197,17 +258,6 @@ const MainLayout = ({
                 <span>Security</span>
               </div>
             )}
-            <div 
-              className="category-item"
-              onClick={() => {
-                onViewChange('notifications');
-                setShowUserMenu(false);
-              }}
-              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
-            >
-              <i className="fas fa-bell"></i>
-              <span>Notifications</span>
-            </div>
             <div 
               className="category-item"
               onClick={() => {
