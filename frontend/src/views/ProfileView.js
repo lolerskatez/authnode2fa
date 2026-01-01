@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import WebAuthnHelper from '../utils/WebAuthnHelper';
 
-const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
+const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSecurityClick, twoFAEnabled }) => {
   // Theme-aware color helpers
   const getThemeColors = () => {
     const isDark = appSettings?.theme === 'dark';
@@ -907,6 +907,45 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings }) => {
               </div>
             )}
           </div>
+
+          {/* Security Section */}
+          {twoFAEnabled && (
+            <div style={{ 
+              padding: '16px', 
+              border: `1px solid ${colors.border}`, 
+              borderRadius: '8px',
+              backgroundColor: colors.background
+            }}>
+              <label style={{ fontWeight: '500', color: colors.primary, fontSize: '14px', marginBottom: '12px', display: 'block' }}>
+                <i className="fas fa-shield-alt" style={{ marginRight: '8px' }}></i>
+                Security
+              </label>
+              <button
+                onClick={onSecurityClick}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  backgroundColor: colors.accent,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                <i className="fas fa-lock"></i>
+                Manage Security Settings
+              </button>
+            </div>
+          )}
 
           {/* Account Info */}
           <div style={{ 

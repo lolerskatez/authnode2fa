@@ -245,49 +245,23 @@ const MainLayout = ({
               <i className="fas fa-user-circle"></i>
               <span>Profile</span>
             </div>
-            {twoFAEnabled && (
-              <div 
-                className="category-item"
-                onClick={() => {
-                  if (onSecurityClick) onSecurityClick();
-                  setShowUserMenu(false);
-                }}
-                style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
-              >
-                <i className="fas fa-shield-alt"></i>
-                <span>Security</span>
-              </div>
-            )}
             <div 
               className="category-item"
               onClick={() => {
-                onViewChange('dashboard', 'activity');
+                onViewChange('system-dashboard', 'activity');
                 setShowUserMenu(false);
               }}
               style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
             >
-              <i className="fas fa-chart-line"></i>
-              <span>Dashboard</span>
+              <i className="fas fa-sliders-h"></i>
+              <span>System Dashboard</span>
             </div>
-            {currentUser?.role === 'admin' && (
-              <div 
-                className="category-item"
-                onClick={() => {
-                  onViewChange('settings', 'general');
-                  setShowUserMenu(false);
-                }}
-                style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
-              >
-                <i className="fas fa-cog"></i>
-                <span>Settings</span>
-              </div>
-            )}
             {/* Logout button removed - only one at bottom of sidebar */}
           </div>
         )}
       </div>
 
-      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && currentView.main !== 'notifications' && (
+      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && currentView.main !== 'notifications' && currentView.main !== 'system-dashboard' && (
           <div style={{ marginTop: '30px', paddingBottom: '20px', borderBottom: `1px solid ${colors.border}` }}>
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
               Navigation
@@ -373,6 +347,50 @@ const MainLayout = ({
           </div>
         )}
 
+      {currentView.main === 'system-dashboard' && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${colors.border}` }}>
+              <div 
+                className="category-item"
+                onClick={() => onViewChange('applications')}
+                style={{ cursor: 'pointer', backgroundColor: 'transparent', color: colors.secondary }}
+              >
+                <i className="fas fa-arrow-left"></i>
+                <span>Back to Authenticator</span>
+              </div>
+            </div>
+            <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
+              System Dashboard
+            </h4>
+            <div 
+              className={`category-item ${currentView.sub === 'activity' ? 'active' : ''}`}
+              onClick={() => onViewChange('system-dashboard', 'activity')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-history"></i>
+              <span>Activity</span>
+            </div>
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'admin-dashboard' ? 'active' : ''}`}
+                onClick={() => onViewChange('system-dashboard', 'admin-dashboard')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-chart-bar"></i>
+                <span>Admin Dashboard</span>
+              </div>
+            )}
+            <div 
+              className={`category-item ${currentView.sub === 'general' ? 'active' : ''}`}
+              onClick={() => onViewChange('system-dashboard', 'general')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-sliders-h"></i>
+              <span>Settings</span>
+            </div>
+          </div>
+        )}
+
       {/* Dynamic content based on current view */}
       {currentView.main === 'applications' && (
           <div style={{ marginTop: '20px' }}>
@@ -427,11 +445,13 @@ const MainLayout = ({
             <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${colors.border}` }}>
               <div 
                 className="category-item"
-                onClick={() => onViewChange('applications')}
+                onClick={() => onViewChange(currentView.previousView?.main || 'applications', currentView.previousView?.sub)}
                 style={{ cursor: 'pointer', backgroundColor: 'transparent', color: colors.secondary }}
               >
                 <i className="fas fa-arrow-left"></i>
-                <span>Back to Authenticator</span>
+                <span>
+                  {currentView.previousView?.main === 'system-dashboard' ? 'Back to System Dashboard' : 'Back to Authenticator'}
+                </span>
               </div>
             </div>
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>

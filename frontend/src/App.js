@@ -5,6 +5,7 @@ import MainLayout from './layouts/MainLayout';
 import AuthenticatorView from './views/AuthenticatorView';
 import SettingsView from './views/SettingsView';
 import NotificationsView from './views/NotificationsView';
+import SystemDashboardView from './views/SystemDashboardView';
 import ProfileView from './views/ProfileView';
 import ActivityView from './views/ActivityView';
 import AdminDashboard from './views/AdminDashboard';
@@ -320,7 +321,11 @@ const App = () => {
   };
 
   const handleViewChange = (main, sub = 'general') => {
-    setCurrentView({ main, sub });
+    setCurrentView(prevView => ({ 
+      main, 
+      sub,
+      previousView: prevView.main !== main ? { main: prevView.main, sub: prevView.sub } : prevView.previousView
+    }));
   };
 
   const handleLoginSuccess = useCallback((token) => {
@@ -412,11 +417,24 @@ const App = () => {
                       appSettings={appSettings}
                     />
                   )}
+                  {currentView.main === 'system-dashboard' && (
+                    <SystemDashboardView
+                      currentUser={currentUser}
+                      currentView={currentView}
+                      appSettings={appSettings}
+                      onSettingsChange={setAppSettings}
+                      accounts={accounts}
+                      onSecurityClick={() => setShowSecurityModal(true)}
+                      twoFAEnabled={globalSettings.totp_enabled}
+                    />
+                  )}
                   {currentView.main === 'profile' && (
                     <ProfileView
                       currentUser={currentUser}
                       onUserUpdate={setCurrentUser}
                       appSettings={appSettings}
+                      onSecurityClick={() => setShowSecurityModal(true)}
+                      twoFAEnabled={globalSettings.totp_enabled}
                     />
                   )}
                   {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
@@ -486,11 +504,24 @@ const App = () => {
                         appSettings={appSettings}
                       />
                     )}
+                    {currentView.main === 'system-dashboard' && (
+                      <SystemDashboardView
+                        currentUser={currentUser}
+                        currentView={currentView}
+                        appSettings={appSettings}
+                        onSettingsChange={setAppSettings}
+                        accounts={accounts}
+                        onSecurityClick={() => setShowSecurityModal(true)}
+                        twoFAEnabled={globalSettings.totp_enabled}
+                      />
+                    )}
                     {currentView.main === 'profile' && (
                       <ProfileView
                         currentUser={currentUser}
                         onUserUpdate={setCurrentUser}
                         appSettings={appSettings}
+                        onSecurityClick={() => setShowSecurityModal(true)}
+                        twoFAEnabled={globalSettings.totp_enabled}
                       />
                     )}
                     {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
