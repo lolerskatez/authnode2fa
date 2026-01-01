@@ -20,9 +20,9 @@ const NotificationsTab = ({ appSettings, currentUser }) => {
       secondary: isDark ? '#cbd5e0' : '#718096',
       accent: isDark ? '#63b3ed' : '#4361ee',
       accentLight: isDark ? '#2c5282' : '#e6f0ff',
-      border: isDark ? '#4a5568' : '#e2e8f0',
-      background: isDark ? '#2d3748' : '#ffffff',
-      backgroundSecondary: isDark ? '#1a202c' : '#f7fafc',
+      border: isDark ? '#374151' : '#e2e8f0',
+      background: isDark ? '#1f2937' : '#ffffff',
+      backgroundSecondary: isDark ? '#111827' : '#f7fafc',
       success: '#68d391',
       danger: isDark ? '#fc8181' : '#f56565'
     };
