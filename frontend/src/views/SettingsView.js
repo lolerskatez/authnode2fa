@@ -6,6 +6,7 @@ import BackupsTab from './tabs/BackupsTab';
 import APIKeysTab from './tabs/APIKeysTab';
 import PasswordPolicyTab from './tabs/PasswordPolicyTab';
 import DeviceSyncTab from './tabs/DeviceSyncTab';
+import NotificationPreferences from '../components/NotificationPreferences';
 import '../App.css';
 
 // Get dynamic redirect URIs based on current domain - MUST be outside component
@@ -108,14 +109,6 @@ const SettingsView = ({
   const [oidcLoading, setOidcLoading] = useState(false);
   const [oidcAdvanced, setOidcAdvanced] = useState(false);
   const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
-
-  // Device Sync States
-  // eslint-disable-next-line no-unused-vars
-  const [syncDevices, setSyncDevices] = useState([]);
-  // eslint-disable-next-line no-unused-vars
-  const [syncDevicesLoading, setSyncDevicesLoading] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [showDeviceRegisterModal, setShowDeviceRegisterModal] = useState(false);
 
   // Load sessions
   useEffect(() => {
@@ -2924,6 +2917,11 @@ const SettingsView = ({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Notification Preferences Tab */}
+        {activeTab === 'notification-preferences' && (
+          <NotificationPreferences appSettings={appSettings} currentUser={currentUser} />
         )}
 
         {/* Notifications Tab */}

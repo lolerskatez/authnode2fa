@@ -13,6 +13,25 @@ from ..rate_limit import limiter, API_RATE_LIMIT
 router = APIRouter()
 
 
+@router.get("/count", response_model=dict)
+@limiter.limit(API_RATE_LIMIT)
+def get_notification_count(
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get notification counts for current user"""
+    unread_count = crud.get_unread_notification_count(db, current_user.id)
+    total_count = db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == current_user.id
+    ).count()
+    
+    return {
+        "unread": unread_count,
+        "total": total_count
+    }
+
+
 @router.get("/unread", response_model=list[schemas.InAppNotification])
 @limiter.limit(API_RATE_LIMIT)
 def get_unread_notifications(
@@ -37,8 +56,22 @@ def get_notifications(
     notifications = crud.get_all_notifications(db, current_user.id, limit, offset)
     unread_count = len(crud.get_unread_notifications(db, current_user.id))
     
+    # Convert model objects to dicts for JSON serialization
+    notification_list = []
+    for notif in notifications:
+        notification_list.append({
+            "id": notif.id,
+            "user_id": notif.user_id,
+            "notification_type": notif.notification_type,
+            "title": notif.title,
+            "message": notif.message,
+            "read": notif.read,
+            "created_at": notif.created_at.isoformat() if notif.created_at else None,
+            "details": notif.details
+        })
+    
     return {
-        "notifications": notifications,
+        "notifications": notification_list,
         "unread_count": unread_count,
         "limit": limit,
         "offset": offset
@@ -97,25 +130,6 @@ def delete_notification(
     
     crud.delete_notification(db, notification_id)
     return {"success": True, "message": "Notification deleted"}
-
-
-@router.get("/count", response_model=dict)
-@limiter.limit(API_RATE_LIMIT)
-def get_notification_count(
-    request: Request,
-    current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get notification counts for current user"""
-    unread_count = crud.get_unread_notification_count(db, current_user.id)
-    total_count = db.query(models.InAppNotification).filter(
-        models.InAppNotification.user_id == current_user.id
-    ).count()
-    
-    return {
-        "unread": unread_count,
-        "total": total_count
-    }
 
 
 @router.get("/preferences", response_model=schemas.UserNotificationPreferences)

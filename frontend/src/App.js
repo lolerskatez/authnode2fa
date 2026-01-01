@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import Auth from './Auth';
 import MainLayout from './layouts/MainLayout';
 import AuthenticatorView from './views/AuthenticatorView';
 import SettingsView from './views/SettingsView';
+import NotificationsView from './views/NotificationsView';
 import ProfileView from './views/ProfileView';
 import ActivityView from './views/ActivityView';
 import AdminDashboard from './views/AdminDashboard';
 import SecurityModal from './components/SecurityModal';
+import NotificationBell from './components/NotificationBell';
 import './App.css';
 
 // Configure axios defaults
@@ -42,6 +44,48 @@ const App = () => {
     autoLock: 5,
     codeFormat: 'spaced'
   });
+
+  // Notification polling interval ref
+  const notificationIntervalRef = useRef(null);
+
+  // Function to refresh notification count
+  const refreshNotificationCount = useCallback(async () => {
+    if (!isAuthenticated || !currentUser) {
+      setUnreadNotifications(0);
+      return;
+    }
+
+    try {
+      const response = await axios.get('/api/notifications/count');
+      setUnreadNotifications(response.data.unread || 0);
+    } catch (error) {
+      console.error('Failed to refresh notification count:', error);
+      setUnreadNotifications(0);
+    }
+  }, [isAuthenticated, currentUser]);
+
+  // Setup notification polling when authenticated
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      // Initial fetch
+      refreshNotificationCount();
+
+      // Set up polling every 30 seconds
+      notificationIntervalRef.current = setInterval(refreshNotificationCount, 30000);
+
+      return () => {
+        if (notificationIntervalRef.current) {
+          clearInterval(notificationIntervalRef.current);
+        }
+      };
+    } else {
+      // Clear notifications when not authenticated
+      setUnreadNotifications(0);
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+      }
+    }
+  }, [isAuthenticated, currentUser, refreshNotificationCount]);
 
   // Validate token on mount (page refresh)
   useEffect(() => {
@@ -90,16 +134,6 @@ const App = () => {
         .catch(err => {
           console.log('Global settings not available:', err.message);
         });
-      
-      // Load unread notifications count
-      axios.get('/api/notifications/')
-        .then(res => {
-          const unreadCount = res.data.unread_count || 0;
-          setUnreadNotifications(unreadCount);
-        })
-        .catch(err => {
-          console.log('Notifications not available:', err.message);
-        });
     } else {
       // Reset to defaults when not authenticated
       setAppSettings({
@@ -108,7 +142,6 @@ const App = () => {
         codeFormat: 'spaced'
       });
       setGlobalSettings({ totp_enabled: false });
-      setUnreadNotifications(0);
     }
   }, [isAuthenticated, currentUser]);
 
@@ -357,32 +390,10 @@ const App = () => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               {/* Notification Bell */}
-              <div 
-                style={{ position: 'relative', cursor: 'pointer' }}
+              <NotificationBell 
+                appSettings={appSettings} 
                 onClick={() => handleViewChange('settings', 'notifications')}
-                title="Notifications"
-              >
-                <i className="fas fa-bell" style={{ fontSize: '18px', color: '#718096' }}></i>
-                {unreadNotifications > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    backgroundColor: '#e53e3e',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                  }}>
-                    {unreadNotifications}
-                  </span>
-                )}
-              </div>
+              />
               <div className="user-profile">
                 <div className="user-avatar">{currentUser ? currentUser.name.substring(0, 2).toUpperCase() : 'U'}</div>
                 <div>
@@ -435,6 +446,13 @@ const App = () => {
                       onTabChange={(tab) => handleViewChange('settings', tab)}
                       appSettings={appSettings}
                       onSettingsChange={setAppSettings}
+                    />
+                  )}
+                  {currentView.main === 'notifications' && (
+                    <NotificationsView
+                      currentUser={currentUser}
+                      currentView={currentView}
+                      appSettings={appSettings}
                     />
                   )}
                   {currentView.main === 'profile' && (
@@ -502,6 +520,13 @@ const App = () => {
                         onTabChange={(tab) => handleViewChange('settings', tab)}
                         appSettings={appSettings}
                         onSettingsChange={setAppSettings}
+                      />
+                    )}
+                    {currentView.main === 'notifications' && (
+                      <NotificationsView
+                        currentUser={currentUser}
+                        currentView={currentView}
+                        appSettings={appSettings}
                       />
                     )}
                     {currentView.main === 'profile' && (

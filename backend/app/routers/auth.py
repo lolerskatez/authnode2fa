@@ -11,6 +11,39 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 import os
 from urllib.parse import urlencode
 
+# Utility functions for device/browser detection
+def getBrowserInfo(user_agent: str = "") -> str:
+    """Extract browser information from user agent string"""
+    if not user_agent:
+        return "Unknown Browser"
+    if 'Chrome' in user_agent:
+        return 'Chrome'
+    if 'Safari' in user_agent:
+        return 'Safari'
+    if 'Firefox' in user_agent:
+        return 'Firefox'
+    if 'Edge' in user_agent:
+        return 'Edge'
+    return 'Unknown Browser'
+
+def getDeviceFromUserAgent(user_agent: str = "") -> str:
+    """Extract device information from user agent string"""
+    if not user_agent:
+        return 'Unknown Device'
+    if 'Windows' in user_agent:
+        return 'Windows'
+    if 'Mac' in user_agent:
+        return 'Mac'
+    if 'Linux' in user_agent:
+        return 'Linux'
+    if 'iPhone' in user_agent:
+        return 'iPhone'
+    if 'iPad' in user_agent:
+        return 'iPad'
+    if 'Android' in user_agent:
+        return 'Android'
+    return 'Unknown Device'
+
 router = APIRouter()
 
 @router.post("/signup", response_model=schemas.Token)
@@ -276,6 +309,23 @@ def login(request: Request, credentials: schemas.UserLogin, db: Session = Depend
         action="login_success",
         ip_address=client_ip,
         status="success"
+    )
+    
+    # Create in-app notification for new login
+    from ..notifications import InAppNotificationService
+    user_agent = request.headers.get('user-agent', '')
+    device_info = f"{getBrowserInfo(user_agent)} on {getDeviceFromUserAgent(user_agent)}"
+    InAppNotificationService.create_notification(
+        db,
+        user_id=user.id,
+        notification_type="login_alert",
+        title="New Login Detected",
+        message=f"You logged in from {device_info} at {datetime.utcnow().strftime('%H:%M UTC')}. If this wasn't you, please change your password immediately.",
+        details={
+            "ip_address": client_ip,
+            "device_info": device_info,
+            "timestamp": datetime.utcnow().isoformat()
+        }
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -707,6 +757,21 @@ def enable_2fa(request: Request, data: dict, db: Session = Depends(get_db), curr
     from ..utils import send_security_alert_email
     send_security_alert_email(db, current_user.email, '2fa_enabled')
     
+    # Create in-app notification
+    from ..notifications import InAppNotificationService
+    InAppNotificationService.create_notification(
+        db,
+        user_id=current_user.id,
+        notification_type="security_alert",
+        title="2FA Enabled",
+        message="Two-factor authentication has been successfully enabled on your account. Your account is now more secure.",
+        details={
+            "ip_address": request.client.host if request.client else None,
+            "timestamp": datetime.utcnow().isoformat(),
+            "action": "2fa_enabled"
+        }
+    )
+    
     return {
         "success": True,
         "message": "2FA enabled successfully",
@@ -996,6 +1061,21 @@ def password_reset_confirm(request: Request, reset_confirm: schemas.PasswordRese
         {'ip_address': request.client.host if request.client else None}
     )
     
+    # Create in-app notification
+    from ..notifications import InAppNotificationService
+    InAppNotificationService.create_notification(
+        db,
+        user_id=updated_user.id,
+        notification_type="security_alert",
+        title="Password Changed",
+        message="Your password has been successfully changed. If you didn't make this change, please contact support immediately.",
+        details={
+            "ip_address": request.client.host if request.client else None,
+            "timestamp": datetime.utcnow().isoformat(),
+            "action": "password_reset"
+        }
+    )
+    
     # Generate new token for automatic login after reset
     access_token = auth.create_access_token(
         data={"sub": str(updated_user.id)},
@@ -1065,6 +1145,22 @@ def revoke_session(
         resource_id=session_id,
         ip_address=request.client.host if request.client else None,
         status="success"
+    )
+    
+    # Create in-app notification
+    from ..notifications import InAppNotificationService
+    InAppNotificationService.create_notification(
+        db,
+        user_id=current_user.id,
+        notification_type="security_alert",
+        title="Session Revoked",
+        message="One of your active sessions has been terminated.",
+        details={
+            "session_id": session_id,
+            "ip_address": request.client.host if request.client else None,
+            "timestamp": datetime.utcnow().isoformat(),
+            "action": "session_revoked"
+        }
     )
     
     return {"message": "Session revoked successfully"}

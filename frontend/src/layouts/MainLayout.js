@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../App.css';
+import NotificationBell from '../components/NotificationBell';
 
 const MainLayout = ({ 
   currentUser, 
@@ -89,6 +90,28 @@ const MainLayout = ({
                   <i className="fas fa-cog"></i>
                   Settings
                 </div>
+                <div 
+                  className="dropdown-item"
+                  onClick={() => {
+                    onViewChange('notifications');
+                    setShowDropdown(false);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <i className="fas fa-bell"></i>
+                  Notifications
+                </div>
+                <div 
+                  className="dropdown-item"
+                  onClick={() => {
+                    onViewChange('settings', 'notification-preferences');
+                    setShowDropdown(false);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <i className="fas fa-cog"></i>
+                  Notification Settings
+                </div>
                 {currentUser && currentUser.role === 'admin' && (
                   <div 
                     className="dropdown-item" 
@@ -120,14 +143,20 @@ const MainLayout = ({
       
       <div ref={userMenuRef} style={{ position: 'relative' }}>
         <div className="user-info" style={{ cursor: 'pointer' }} onClick={() => setShowUserMenu(!showUserMenu)}>
-          <div className="user-avatar-large">
-            <i className="fas fa-user"></i>
-          </div>
-          <div>
-            <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0' }}>{currentUser ? currentUser.name : 'User'}</h4>
-            <p style={{ color: colors.secondary, fontSize: '12px', margin: 0 }}>
-              {accountCount} accounts
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="user-avatar-large">
+              <i className="fas fa-user"></i>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0' }}>{currentUser ? currentUser.name : 'User'}</h4>
+              <p style={{ color: colors.secondary, fontSize: '12px', margin: 0 }}>
+                {accountCount} accounts
+              </p>
+            </div>
+            <NotificationBell 
+              appSettings={appSettings} 
+              onClick={() => onViewChange('notifications')}
+            />
           </div>
         </div>
 
@@ -171,6 +200,28 @@ const MainLayout = ({
             <div 
               className="category-item"
               onClick={() => {
+                onViewChange('notifications');
+                setShowUserMenu(false);
+              }}
+              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
+            >
+              <i className="fas fa-bell"></i>
+              <span>Notifications</span>
+            </div>
+            <div 
+              className="category-item"
+              onClick={() => {
+                onViewChange('notifications', 'preferences');
+                setShowUserMenu(false);
+              }}
+              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
+            >
+              <i className="fas fa-sliders-h"></i>
+              <span>Notification Settings</span>
+            </div>
+            <div 
+              className="category-item"
+              onClick={() => {
                 onViewChange('dashboard', 'activity');
                 setShowUserMenu(false);
               }}
@@ -197,7 +248,7 @@ const MainLayout = ({
         )}
       </div>
 
-      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && (
+      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && currentView.main !== 'notifications' && (
           <div style={{ marginTop: '30px', paddingBottom: '20px', borderBottom: `1px solid ${colors.border}` }}>
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
               Navigation
@@ -246,6 +297,40 @@ const MainLayout = ({
                 <span>Admin Dashboard</span>
               </div>
             )}
+          </div>
+        )}
+
+      {currentView.main === 'notifications' && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${colors.border}` }}>
+              <div 
+                className="category-item"
+                onClick={() => onViewChange('applications')}
+                style={{ cursor: 'pointer', backgroundColor: 'transparent', color: colors.secondary }}
+              >
+                <i className="fas fa-arrow-left"></i>
+                <span>Back to Authenticator</span>
+              </div>
+            </div>
+            <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
+              Notifications
+            </h4>
+            <div 
+              className={`category-item ${currentView.sub === 'inbox' ? 'active' : ''}`}
+              onClick={() => onViewChange('notifications', 'inbox')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-inbox"></i>
+              <span>Inbox</span>
+            </div>
+            <div 
+              className={`category-item ${currentView.sub === 'preferences' ? 'active' : ''}`}
+              onClick={() => onViewChange('notifications', 'preferences')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-sliders-h"></i>
+              <span>Preferences</span>
+            </div>
           </div>
         )}
 
@@ -366,6 +451,14 @@ const MainLayout = ({
             >
               <i className="fas fa-bell"></i>
               <span>Notifications</span>
+            </div>
+            <div 
+              className={`category-item ${currentView.sub === 'notification-preferences' ? 'active' : ''}`}
+              onClick={() => onViewChange('settings', 'notification-preferences')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-cog"></i>
+              <span>Notification Settings</span>
             </div>
             {currentUser?.role === 'admin' && (
               <div 

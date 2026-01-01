@@ -8,7 +8,13 @@ const NotificationsTab = ({ appSettings, currentUser }) => {
 
   // Theme-aware colors
   const getThemeColors = () => {
-    const isDark = appSettings?.theme === 'dark';
+    let isDark = appSettings?.theme === 'dark';
+    
+    // Handle 'auto' theme by checking system preference
+    if (appSettings?.theme === 'auto') {
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    
     return {
       primary: isDark ? '#e2e8f0' : '#2d3748',
       secondary: isDark ? '#cbd5e0' : '#718096',
