@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import UserManagement from '../UserManagement';
-import NotificationsTab from './tabs/NotificationsTab';
 import BackupsTab from './tabs/BackupsTab';
 import APIKeysTab from './tabs/APIKeysTab';
 import PasswordPolicyTab from './tabs/PasswordPolicyTab';
 import DeviceSyncTab from './tabs/DeviceSyncTab';
-import NotificationPreferences from '../components/NotificationPreferences';
+import NotificationSettings from './tabs/NotificationSettings';
 import '../App.css';
 
 // Get dynamic redirect URIs based on current domain - MUST be outside component
@@ -2919,14 +2918,9 @@ const SettingsView = ({
           </div>
         )}
 
-        {/* Notification Preferences Tab */}
+        {/* Notification Settings Tab */}
         {activeTab === 'notification-preferences' && (
-          <NotificationPreferences appSettings={appSettings} currentUser={currentUser} />
-        )}
-
-        {/* Notifications Tab */}
-        {activeTab === 'notifications' && (
-          <NotificationsTab appSettings={appSettings} currentUser={currentUser} />
+          <NotificationSettings appSettings={appSettings} currentUser={currentUser} />
         )}
 
         {/* Backups Tab */}

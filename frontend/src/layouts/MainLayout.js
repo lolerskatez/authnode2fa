@@ -211,17 +211,6 @@ const MainLayout = ({
             <div 
               className="category-item"
               onClick={() => {
-                onViewChange('notifications', 'preferences');
-                setShowUserMenu(false);
-              }}
-              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
-            >
-              <i className="fas fa-sliders-h"></i>
-              <span>Notification Settings</span>
-            </div>
-            <div 
-              className="category-item"
-              onClick={() => {
                 onViewChange('dashboard', 'activity');
                 setShowUserMenu(false);
               }}
@@ -445,19 +434,11 @@ const MainLayout = ({
               </div>
             )}
             <div 
-              className={`category-item ${currentView.sub === 'notifications' ? 'active' : ''}`}
-              onClick={() => onViewChange('settings', 'notifications')}
-              style={{ cursor: 'pointer' }}
-            >
-              <i className="fas fa-bell"></i>
-              <span>Notifications</span>
-            </div>
-            <div 
               className={`category-item ${currentView.sub === 'notification-preferences' ? 'active' : ''}`}
               onClick={() => onViewChange('settings', 'notification-preferences')}
               style={{ cursor: 'pointer' }}
             >
-              <i className="fas fa-cog"></i>
+              <i className="fas fa-sliders-h"></i>
               <span>Notification Settings</span>
             </div>
             {currentUser?.role === 'admin' && (
