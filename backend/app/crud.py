@@ -699,3 +699,362 @@ def bulk_import_users(db: Session, users_data: list, default_role: str = "user")
             results["skipped"] += 1
     
     return results
+
+
+# Notification CRUD functions
+
+def create_in_app_notification(db: Session, user_id: int, notification_type: str, title: str, message: str, details: dict = None) -> models.InAppNotification:
+    """Create a new in-app notification for a user"""
+    notification = models.InAppNotification(
+        user_id=user_id,
+        notification_type=notification_type,
+        title=title,
+        message=message,
+        details=details or {},
+        read=False
+    )
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+    return notification
+
+
+def get_user_notifications(db: Session, user_id: int, limit: int = 50, offset: int = 0, unread_only: bool = False) -> List[models.InAppNotification]:
+    """Get notifications for a user"""
+    query = db.query(models.InAppNotification).filter(models.InAppNotification.user_id == user_id)
+    if unread_only:
+        query = query.filter(models.InAppNotification.read == False)
+    return query.order_by(models.InAppNotification.created_at.desc()).limit(limit).offset(offset).all()
+
+
+def get_unread_notification_count(db: Session, user_id: int) -> int:
+    """Get count of unread notifications for a user"""
+    return db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == user_id,
+        models.InAppNotification.read == False
+    ).count()
+
+
+def mark_notification_as_read(db: Session, notification_id: int, user_id: int) -> bool:
+    """Mark a specific notification as read"""
+    notification = db.query(models.InAppNotification).filter(
+        models.InAppNotification.id == notification_id,
+        models.InAppNotification.user_id == user_id
+    ).first()
+    
+    if notification and not notification.read:
+        notification.read = True
+        notification.read_at = datetime.utcnow()
+        db.commit()
+        return True
+    return False
+
+
+def mark_all_notifications_as_read(db: Session, user_id: int) -> int:
+    """Mark all unread notifications as read for a user"""
+    now = datetime.utcnow()
+    count = db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == user_id,
+        models.InAppNotification.read == False
+    ).update({"read": True, "read_at": now})
+    
+    db.commit()
+    return count
+
+
+def delete_old_notifications(db: Session, days_old: int = 30) -> int:
+    """Delete notifications older than specified days"""
+    cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+    count = db.query(models.InAppNotification).filter(
+        models.InAppNotification.created_at < cutoff_date,
+        models.InAppNotification.read == True
+    ).delete()
+    
+    db.commit()
+    return count
+
+
+def get_user_notification_preferences(db: Session, user_id: int) -> models.UserNotificationPreferences:
+    """Get notification preferences for a user, creating defaults if none exist"""
+    preferences = db.query(models.UserNotificationPreferences).filter(
+        models.UserNotificationPreferences.user_id == user_id
+    ).first()
+    
+    if not preferences:
+        # Create default preferences
+        preferences = models.UserNotificationPreferences(user_id=user_id)
+        db.add(preferences)
+        db.commit()
+        db.refresh(preferences)
+    
+    return preferences
+
+
+def update_user_notification_preferences(db: Session, user_id: int, preferences_data: dict) -> models.UserNotificationPreferences:
+    """Update notification preferences for a user"""
+    preferences = get_user_notification_preferences(db, user_id)
+    
+    # Update allowed fields
+    allowed_fields = [
+        'email_security_alerts', 'email_2fa_alerts', 'email_account_alerts',
+        'in_app_security_alerts', 'in_app_2fa_alerts', 'in_app_account_alerts',
+        'push_security_alerts', 'push_2fa_alerts', 'push_account_alerts'
+    ]
+    
+    for field in allowed_fields:
+        if field in preferences_data:
+            setattr(preferences, field, preferences_data[field])
+    
+    db.commit()
+    db.refresh(preferences)
+    return preferences
+
+
+def cleanup_old_notifications(db: Session, days: int = 90) -> dict:
+    """Clean up old notifications and return stats"""
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Delete old read notifications
+    deleted_count = db.query(models.InAppNotification).filter(
+        models.InAppNotification.created_at < cutoff_date,
+        models.InAppNotification.read == True
+    ).delete()
+    
+    db.commit()
+    
+    return {
+        "deleted_notifications": deleted_count,
+        "cleanup_date": cutoff_date.isoformat()
+    }
+
+
+# Account Sharing CRUD functions
+
+def create_account_share(db: Session, application_id: int, owner_id: int, shared_with_id: int, 
+                        permission_level: str = "view", expires_at: datetime = None) -> models.AccountShare:
+    """Create a new account share"""
+    share = models.AccountShare(
+        application_id=application_id,
+        owner_id=owner_id,
+        shared_with_id=shared_with_id,
+        permission_level=permission_level,
+        expires_at=expires_at,
+        is_active=True
+    )
+    db.add(share)
+    db.commit()
+    db.refresh(share)
+    return share
+
+
+def get_account_shares_by_owner(db: Session, owner_id: int) -> List[models.AccountShare]:
+    """Get all shares created by a user"""
+    return db.query(models.AccountShare).filter(
+        models.AccountShare.owner_id == owner_id,
+        models.AccountShare.is_active == True
+    ).options(
+        db.joinedload(models.AccountShare.application),
+        db.joinedload(models.AccountShare.shared_with)
+    ).all()
+
+
+def get_account_shares_by_user(db: Session, user_id: int) -> List[models.AccountShare]:
+    """Get all shares where user has access"""
+    return db.query(models.AccountShare).filter(
+        models.AccountShare.shared_with_id == user_id,
+        models.AccountShare.is_active == True
+    ).options(
+        db.joinedload(models.AccountShare.application),
+        db.joinedload(models.AccountShare.owner)
+    ).all()
+
+
+def get_shared_applications_for_user(db: Session, user_id: int) -> List[models.AccountShare]:
+    """Get applications shared with a user"""
+    return get_account_shares_by_user(db, user_id)
+
+
+def revoke_account_share(db: Session, share_id: int, owner_id: int) -> bool:
+    """Revoke an account share (only by owner)"""
+    share = db.query(models.AccountShare).filter(
+        models.AccountShare.id == share_id,
+        models.AccountShare.owner_id == owner_id
+    ).first()
+    
+    if share:
+        share.is_active = False
+        db.commit()
+        return True
+    return False
+
+
+def update_share_permissions(db: Session, share_id: int, owner_id: int, 
+                           permission_level: str, expires_at: datetime = None) -> models.AccountShare:
+    """Update share permissions (only by owner)"""
+    share = db.query(models.AccountShare).filter(
+        models.AccountShare.id == share_id,
+        models.AccountShare.owner_id == owner_id
+    ).first()
+    
+    if share:
+        share.permission_level = permission_level
+        share.expires_at = expires_at
+        db.commit()
+        db.refresh(share)
+        return share
+    return None
+
+
+def create_share_invitation(db: Session, application_id: int, owner_id: int, invited_email: str,
+                          permission_level: str = "view", expires_at: datetime = None) -> models.ShareInvitation:
+    """Create a share invitation for a user who doesn't exist yet"""
+    import secrets
+    
+    invitation = models.ShareInvitation(
+        application_id=application_id,
+        owner_id=owner_id,
+        invited_email=invited_email,
+        permission_level=permission_level,
+        expires_at=expires_at,
+        invitation_token=secrets.token_urlsafe(32),
+        status="pending"
+    )
+    db.add(invitation)
+    db.commit()
+    db.refresh(invitation)
+    return invitation
+
+
+def get_share_invitation_by_token(db: Session, token: str) -> models.ShareInvitation:
+    """Get share invitation by token"""
+    return db.query(models.ShareInvitation).filter(
+        models.ShareInvitation.invitation_token == token,
+        models.ShareInvitation.status == "pending"
+    ).options(
+        db.joinedload(models.ShareInvitation.application),
+        db.joinedload(models.ShareInvitation.owner)
+    ).first()
+
+
+def accept_share_invitation(db: Session, token: str, user_id: int) -> models.AccountShare:
+    """Accept a share invitation and create the actual share"""
+    invitation = get_share_invitation_by_token(db, token)
+    
+    if not invitation:
+        return None
+    
+    # Check if user already has access
+    existing_share = db.query(models.AccountShare).filter(
+        models.AccountShare.application_id == invitation.application_id,
+        models.AccountShare.shared_with_id == user_id,
+        models.AccountShare.is_active == True
+    ).first()
+    
+    if existing_share:
+        # Update invitation status
+        invitation.status = "accepted"
+        invitation.responded_at = datetime.utcnow()
+        db.commit()
+        return existing_share
+    
+    # Create the share
+    share = create_account_share(
+        db=db,
+        application_id=invitation.application_id,
+        owner_id=invitation.owner_id,
+        shared_with_id=user_id,
+        permission_level=invitation.permission_level,
+        expires_at=invitation.expires_at
+    )
+    
+    # Update invitation status
+    invitation.status = "accepted"
+    invitation.responded_at = datetime.utcnow()
+    db.commit()
+    
+    return share
+
+
+def decline_share_invitation(db: Session, token: str) -> bool:
+    """Decline a share invitation"""
+    invitation = get_share_invitation_by_token(db, token)
+    
+    if invitation:
+        invitation.status = "declined"
+        invitation.responded_at = datetime.utcnow()
+        db.commit()
+        return True
+    return False
+
+
+def get_pending_share_invitations_by_owner(db: Session, owner_id: int) -> List[models.ShareInvitation]:
+    """Get pending invitations sent by a user"""
+    return db.query(models.ShareInvitation).filter(
+        models.ShareInvitation.owner_id == owner_id,
+        models.ShareInvitation.status == "pending"
+    ).options(
+        db.joinedload(models.ShareInvitation.application)
+    ).all()
+
+
+def can_user_access_application(db: Session, user_id: int, application_id: int) -> Tuple[bool, str]:
+    """Check if user can access an application (own or shared)"""
+    # Check if user owns the application
+    app = db.query(models.Application).filter(
+        models.Application.id == application_id
+    ).first()
+    
+    if not app:
+        return False, "Application not found"
+    
+    if app.user_id == user_id:
+        return True, "owner"
+    
+    # Check if application is shared with user
+    share = db.query(models.AccountShare).filter(
+        models.AccountShare.application_id == application_id,
+        models.AccountShare.shared_with_id == user_id,
+        models.AccountShare.is_active == True
+    ).first()
+    
+    if share:
+        # Check if share has expired
+        if share.expires_at and share.expires_at < datetime.utcnow():
+            share.is_active = False
+            db.commit()
+            return False, "Share expired"
+        
+        return True, share.permission_level
+    
+    return False, "No access"
+
+
+def get_account_sharing_stats(db: Session, user_id: int) -> dict:
+    """Get account sharing statistics for a user"""
+    # Shares created by user
+    total_shared_by_me = db.query(models.AccountShare).filter(
+        models.AccountShare.owner_id == user_id,
+        models.AccountShare.is_active == True
+    ).count()
+    
+    # Shares user has access to
+    total_shared_with_me = db.query(models.AccountShare).filter(
+        models.AccountShare.shared_with_id == user_id,
+        models.AccountShare.is_active == True
+    ).count()
+    
+    # Pending invitations
+    pending_invitations = db.query(models.ShareInvitation).filter(
+        models.ShareInvitation.owner_id == user_id,
+        models.ShareInvitation.status == "pending"
+    ).count()
+    
+    # Active shares
+    active_shares = total_shared_by_me + total_shared_with_me
+    
+    return {
+        "total_shared_by_me": total_shared_by_me,
+        "total_shared_with_me": total_shared_with_me,
+        "pending_invitations": pending_invitations,
+        "active_shares": active_shares
+    }

@@ -560,3 +560,175 @@ class SyncPullRequest(BaseModel):
 class ConflictResolution(BaseModel):
     """Resolve sync conflict"""
     resolution: str  # keep_local, keep_remote, merge
+
+
+# Notification Schemas
+
+class InAppNotification(BaseModel):
+    """In-app notification model"""
+    id: int
+    user_id: int
+    notification_type: str
+    title: str
+    message: str
+    details: Optional[Dict[str, Any]] = None
+    read: bool = False
+    created_at: datetime
+    read_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UserNotificationPreferences(BaseModel):
+    """User notification preferences"""
+    id: int
+    user_id: int
+
+    # Email preferences
+    email_security_alerts: bool = True
+    email_2fa_alerts: bool = True
+    email_account_alerts: bool = True
+
+    # In-app preferences
+    in_app_security_alerts: bool = True
+    in_app_2fa_alerts: bool = True
+    in_app_account_alerts: bool = True
+
+    # Push notification preferences (future use)
+    push_security_alerts: bool = True
+    push_2fa_alerts: bool = True
+    push_account_alerts: bool = True
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationCount(BaseModel):
+    """Notification count response"""
+    unread: int
+    total: int
+
+
+class CreateNotificationRequest(BaseModel):
+    """Request to create a notification (admin/internal use)"""
+    user_id: int
+    notification_type: str
+    title: str
+    message: str
+    details: Optional[Dict[str, Any]] = None
+
+
+class UpdateNotificationPreferences(BaseModel):
+    """Update notification preferences"""
+    # Email preferences
+    email_security_alerts: Optional[bool] = None
+    email_2fa_alerts: Optional[bool] = None
+    email_account_alerts: Optional[bool] = None
+
+    # In-app preferences
+    in_app_security_alerts: Optional[bool] = None
+    in_app_2fa_alerts: Optional[bool] = None
+    in_app_account_alerts: Optional[bool] = None
+
+    # Push notification preferences (future use)
+    push_security_alerts: Optional[bool] = None
+    push_2fa_alerts: Optional[bool] = None
+    push_account_alerts: Optional[bool] = None
+
+
+# Account Sharing Schemas
+
+class AccountShareBase(BaseModel):
+    """Base schema for account sharing"""
+    permission_level: str = "view"  # view, use, manage
+    expires_at: Optional[datetime] = None
+
+
+class AccountShareCreate(AccountShareBase):
+    """Create account share request"""
+    shared_with_email: str
+    application_id: int
+
+
+class AccountShare(AccountShareBase):
+    """Account share response"""
+    id: int
+    application_id: int
+    owner_id: int
+    shared_with_id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    # Related data
+    application_name: Optional[str] = None
+    shared_with_name: Optional[str] = None
+    shared_with_email: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ShareInvitationBase(BaseModel):
+    """Base schema for share invitations"""
+    invited_email: str
+    permission_level: str = "view"
+    expires_at: Optional[datetime] = None
+
+
+class ShareInvitationCreate(ShareInvitationBase):
+    """Create share invitation request"""
+    application_id: int
+
+
+class ShareInvitation(ShareInvitationBase):
+    """Share invitation response"""
+    id: int
+    application_id: int
+    owner_id: int
+    invitation_token: str
+    status: str
+    created_at: datetime
+    responded_at: Optional[datetime] = None
+
+    # Related data
+    application_name: Optional[str] = None
+    owner_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AcceptShareInvitation(BaseModel):
+    """Accept share invitation request"""
+    invitation_token: str
+
+
+class SharedApplication(BaseModel):
+    """Application shared with current user"""
+    id: int
+    name: str
+    icon: str
+    color: str
+    category: str
+    favorite: bool
+    permission_level: str
+    shared_by_name: str
+    shared_by_email: str
+    shared_at: datetime
+    expires_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AccountSharingStats(BaseModel):
+    """Account sharing statistics"""
+    total_shared_by_me: int
+    total_shared_with_me: int
+    pending_invitations: int
+    active_shares: int

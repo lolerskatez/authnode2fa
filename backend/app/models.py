@@ -431,3 +431,96 @@ class SyncPackage(Base):
     
     user = relationship("User")
     source_device = relationship("SyncDevice")
+
+
+class InAppNotification(Base):
+    """
+    In-app notifications for users
+    """
+    __tablename__ = "in_app_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    notification_type = Column(String, nullable=False)  # security_alert, 2fa_alert, account_alert, etc.
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    details = Column(JSON)  # Additional metadata
+    read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    read_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+
+
+class UserNotificationPreferences(Base):
+    """
+    User preferences for different types of notifications
+    """
+    __tablename__ = "user_notification_preferences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, unique=True)
+
+    # Email preferences
+    email_security_alerts = Column(Boolean, default=True)
+    email_2fa_alerts = Column(Boolean, default=True)
+    email_account_alerts = Column(Boolean, default=True)
+
+    # In-app preferences
+    in_app_security_alerts = Column(Boolean, default=True)
+    in_app_2fa_alerts = Column(Boolean, default=True)
+    in_app_account_alerts = Column(Boolean, default=True)
+
+    # Push notification preferences (future use)
+    push_security_alerts = Column(Boolean, default=True)
+    push_2fa_alerts = Column(Boolean, default=True)
+    push_account_alerts = Column(Boolean, default=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class AccountShare(Base):
+    """
+    Manages sharing of 2FA applications between users
+    """
+    __tablename__ = "account_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
+    shared_with_id = Column(Integer, ForeignKey("users.id"), index=True)
+    permission_level = Column(String, default="view")  # view, use, manage
+    expires_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    application = relationship("Application")
+    owner = relationship("User", foreign_keys=[owner_id])
+    shared_with = relationship("User", foreign_keys=[shared_with_id])
+
+
+class ShareInvitation(Base):
+    """
+    Pending invitations for account sharing
+    """
+    __tablename__ = "share_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
+    invited_email = Column(String, index=True)
+    permission_level = Column(String, default="view")
+    expires_at = Column(DateTime, nullable=True)
+    invitation_token = Column(String, unique=True, index=True)
+    status = Column(String, default="pending", index=True)  # pending, accepted, declined, expired
+    created_at = Column(DateTime, default=datetime.utcnow)
+    responded_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    application = relationship("Application")
+    owner = relationship("User", foreign_keys=[owner_id])

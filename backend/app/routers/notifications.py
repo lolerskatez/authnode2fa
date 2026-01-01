@@ -97,3 +97,45 @@ def delete_notification(
     
     crud.delete_notification(db, notification_id)
     return {"success": True, "message": "Notification deleted"}
+
+
+@router.get("/count", response_model=dict)
+@limiter.limit(API_RATE_LIMIT)
+def get_notification_count(
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get notification counts for current user"""
+    unread_count = crud.get_unread_notification_count(db, current_user.id)
+    total_count = db.query(models.InAppNotification).filter(
+        models.InAppNotification.user_id == current_user.id
+    ).count()
+    
+    return {
+        "unread": unread_count,
+        "total": total_count
+    }
+
+
+@router.get("/preferences", response_model=schemas.UserNotificationPreferences)
+@limiter.limit(API_RATE_LIMIT)
+def get_notification_preferences(
+    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get notification preferences for current user"""
+    return crud.get_user_notification_preferences(db, current_user.id)
+
+
+@router.put("/preferences", response_model=schemas.UserNotificationPreferences)
+@limiter.limit(API_RATE_LIMIT)
+def update_notification_preferences(
+    request: Request,
+    preferences: dict,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update notification preferences for current user"""
+    return crud.update_user_notification_preferences(db, current_user.id, preferences)
