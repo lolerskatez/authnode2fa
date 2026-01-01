@@ -968,18 +968,17 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
               </div>
             )
           ) : null}
-        </>
 
-        {/* Audit Logs Section */}
-        <div
-          style={{
-            backgroundColor: colors.background,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px',
-            padding: '24px',
-            marginTop: '24px'
-          }}
-        >
+          {/* Audit Logs Section */}
+          <div
+            style={{
+              backgroundColor: colors.background,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+              padding: '24px',
+              marginTop: '24px'
+            }}
+          >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
               <i className="fas fa-history" style={{ marginRight: '8px', color: colors.accent }}></i>
@@ -1227,159 +1226,155 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
           </div>
         </div>
 
-      )}
-      {selectedCard && <DetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
-
-      {/* Audit Log Detail Modal */}
-      {selectedAuditLog && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
-          onClick={() => setSelectedAuditLog(null)}
-        >
+        {/* Audit Log Detail Modal */}
+        {selectedAuditLog && (
           <div
             style={{
-              backgroundColor: colors.background,
-              borderRadius: '12px',
-              padding: '32px',
-              maxWidth: '600px',
-              width: '100%',
-              boxShadow: '0 20px 25px rgba(0, 0, 0, 0.3)',
-              maxHeight: '90vh',
-              overflowY: 'auto'
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px'
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setSelectedAuditLog(null)}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ margin: 0, color: colors.primary, fontSize: '24px', fontWeight: '600' }}>
-                <i className={getActionIcon(selectedAuditLog.action)} style={{ marginRight: '12px', color: colors.accent }}></i>
-                Audit Log Details
-              </h2>
-              <button
-                onClick={() => setSelectedAuditLog(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  color: colors.secondary,
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    Timestamp
-                  </label>
-                  <div style={{ color: colors.primary, fontSize: '14px', fontFamily: 'monospace' }}>
-                    {new Date(selectedAuditLog.created_at).toLocaleString()}
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    User
-                  </label>
-                  <div style={{ color: colors.primary, fontSize: '14px' }}>
-                    {selectedAuditLog.username || (selectedAuditLog.user_id ? `User ${selectedAuditLog.user_id}` : 'System')}
-                  </div>
-                </div>
+            <div
+              style={{
+                backgroundColor: colors.background,
+                borderRadius: '12px',
+                padding: '32px',
+                maxWidth: '600px',
+                width: '100%',
+                boxShadow: '0 20px 25px rgba(0, 0, 0, 0.3)',
+                maxHeight: '90vh',
+                overflowY: 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ margin: 0, color: colors.primary, fontSize: '24px', fontWeight: '600' }}>
+                  <i className={getActionIcon(selectedAuditLog.action)} style={{ marginRight: '12px', color: colors.accent }}></i>
+                  Audit Log Details
+                </h2>
+                <button
+                  onClick={() => setSelectedAuditLog(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    color: colors.secondary,
+                    cursor: 'pointer',
+                    padding: '4px'
+                  }}
+                >
+                  ✕
+                </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    Action
-                  </label>
-                  <div style={{ color: colors.primary, fontSize: '14px' }}>
-                    {selectedAuditLog.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Timestamp
+                    </label>
+                    <div style={{ color: colors.primary, fontSize: '14px', fontFamily: 'monospace' }}>
+                      {new Date(selectedAuditLog.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      User
+                    </label>
+                    <div style={{ color: colors.primary, fontSize: '14px' }}>
+                      {selectedAuditLog.username || (selectedAuditLog.user_id ? `User ${selectedAuditLog.user_id}` : 'System')}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    Status
-                  </label>
-                  <span style={{
-                    color: getStatusColor(selectedAuditLog.status),
-                    fontWeight: '500',
-                    textTransform: 'capitalize',
-                    fontSize: '14px'
-                  }}>
-                    {selectedAuditLog.status}
-                  </span>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Action
+                    </label>
+                    <div style={{ color: colors.primary, fontSize: '14px' }}>
+                      {selectedAuditLog.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Status
+                    </label>
+                    <span style={{
+                      color: getStatusColor(selectedAuditLog.status),
+                      fontWeight: '500',
+                      textTransform: 'capitalize',
+                      fontSize: '14px'
+                    }}>
+                      {selectedAuditLog.status}
+                    </span>
+                  </div>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      IP Address
+                    </label>
+                    <div style={{ color: colors.primary, fontSize: '14px', fontFamily: 'monospace' }}>
+                      {selectedAuditLog.ip_address || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Resource
+                    </label>
+                    <div style={{ color: colors.primary, fontSize: '14px' }}>
+                      {selectedAuditLog.resource_type ? `${selectedAuditLog.resource_type} ${selectedAuditLog.resource_id || ''}`.trim() : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedAuditLog.reason && (
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Reason
+                    </label>
+                    <div style={{ color: colors.primary, fontSize: '14px', lineHeight: '1.5' }}>
+                      {selectedAuditLog.reason}
+                    </div>
+                  </div>
+                )}
+
+                {selectedAuditLog.details && (
+                  <div>
+                    <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Additional Details
+                    </label>
+                    <pre style={{
+                      backgroundColor: colors.backgroundLight,
+                      padding: '12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${colors.border}`,
+                      fontSize: '12px',
+                      color: colors.primary,
+                      overflow: 'auto',
+                      maxHeight: '200px'
+                    }}>
+                      {JSON.stringify(selectedAuditLog.details, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    IP Address
-                  </label>
-                  <div style={{ color: colors.primary, fontSize: '14px', fontFamily: 'monospace' }}>
-                    {selectedAuditLog.ip_address || 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    Resource
-                  </label>
-                  <div style={{ color: colors.primary, fontSize: '14px' }}>
-                    {selectedAuditLog.resource_type ? `${selectedAuditLog.resource_type} ${selectedAuditLog.resource_id || ''}`.trim() : 'N/A'}
-                  </div>
-                </div>
-              </div>
-
-              {selectedAuditLog.reason && (
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    Reason
-                  </label>
-                  <div style={{ color: colors.primary, fontSize: '14px', lineHeight: '1.5' }}>
-                    {selectedAuditLog.reason}
-                  </div>
-                </div>
-              )}
-
-              {selectedAuditLog.details && (
-                <div>
-                  <label style={{ display: 'block', color: colors.secondary, fontSize: '12px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>
-                    Additional Details
-                  </label>
-                  <pre style={{
-                    backgroundColor: colors.backgroundLight,
-                    padding: '12px',
-                    borderRadius: '6px',
-                    border: `1px solid ${colors.border}`,
-                    fontSize: '12px',
-                    color: colors.primary,
-                    overflow: 'auto',
-                    maxHeight: '200px'
-                  }}>
-                    {JSON.stringify(selectedAuditLog.details, null, 2)}
-                  </pre>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
+        )}
+
+      {selectedCard && <DetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
 
 export default AdminDashboard;
