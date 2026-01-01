@@ -107,6 +107,7 @@ const SettingsView = ({
   }));
   const [oidcLoading, setOidcLoading] = useState(false);
   const [oidcAdvanced, setOidcAdvanced] = useState(false);
+  const [discoveringEndpoints, setDiscoveringEndpoints] = useState(false);
 
   // Notifications States
   const [notifications, setNotifications] = useState([]);

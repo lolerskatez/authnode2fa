@@ -684,7 +684,7 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
           <i className="fas fa-exclamation-circle"></i> {error}
         </div>
       ) : (
-        <>
+        <div>
           {/* Stats Grid */}
           <div
             style={{
@@ -1227,8 +1227,8 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
         </div>
 
         {/* Audit Log Detail Modal */}
-        {selectedAuditLog && (
-          <div
+          {selectedAuditLog && (
+            <div
             style={{
               position: 'fixed',
               top: 0,
@@ -1375,6 +1375,10 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
           </div>
         )}
 
-      {selectedCard && <DetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
+        {selectedCard && (
+          <DetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+        )}
+      )}
+  );
 
 export default AdminDashboard;
