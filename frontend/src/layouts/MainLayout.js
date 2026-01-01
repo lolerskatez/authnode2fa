@@ -114,7 +114,7 @@ const MainLayout = ({
                 <div 
                   className="dropdown-item"
                   onClick={() => {
-                    onViewChange('notifications');
+                    onViewChange('notifications', 'inbox');
                     setShowDropdown(false);
                   }}
                   style={{ cursor: 'pointer' }}
@@ -213,7 +213,7 @@ const MainLayout = ({
             <div 
               className="category-item"
               onClick={() => {
-                onViewChange('notifications');
+                onViewChange('notifications', 'inbox');
                 setShowUserMenu(false);
               }}
               style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, position: 'relative' }}

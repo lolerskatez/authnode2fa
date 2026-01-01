@@ -11,7 +11,14 @@ const NotificationsView = ({
   const subView = currentView.sub || 'inbox';
 
   return (
-    <div className="app-content">
+    <div className="app-content" style={{ 
+      paddingLeft: '20px', 
+      paddingTop: '20px',
+      paddingRight: '20px',
+      paddingBottom: '20px',
+      overflowY: 'auto',
+      height: '100%'
+    }}>
       {subView === 'inbox' && (
         <NotificationsTab appSettings={appSettings} currentUser={currentUser} />
       )}
