@@ -64,7 +64,7 @@ Features Implemented:
 - ✅ Loading states
 
 API Endpoints Used:
-- `GET /api/notifications/list`
+- `GET /api/notifications/`
 - `POST /api/notifications/{id}/read`
 - `POST /api/notifications/read-all`
 - `DELETE /api/notifications/{id}`

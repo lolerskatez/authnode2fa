@@ -405,16 +405,7 @@ const MainLayout = ({
               <i className="fas fa-sync"></i>
               <span>Device Sync</span>
             </div>
-            {currentUser?.role === 'admin' && (
-              <div 
-                className={`category-item ${currentView.sub === 'audit-logs' ? 'active' : ''}`}
-                onClick={() => onViewChange('settings', 'audit-logs')}
-                style={{ cursor: 'pointer' }}
-              >
-                <i className="fas fa-history"></i>
-                <span>Audit Logs</span>
-              </div>
-            )}
+
           </div>
         )}
 

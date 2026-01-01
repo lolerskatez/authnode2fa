@@ -25,10 +25,45 @@ class BackupManager:
         self.backup_dir = Path(os.getenv("BACKUP_DIR", "/app/backups"))
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         
-        self.db_host = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/dbname").split("://")[1].split("/")[0].split("@")[1]
-        self.db_user = os.getenv("POSTGRES_USER", "postgres")
-        self.db_password = os.getenv("POSTGRES_PASSWORD", "")
-        self.db_name = os.getenv("POSTGRES_DB", "authnode2fa")
+        # Parse database connection details from DATABASE_URL
+        db_url = os.getenv("DATABASE_URL", "sqlite:///./authy.db")
+        
+        if db_url.startswith("sqlite://"):
+            # SQLite database
+            self.db_host = "localhost"
+            self.db_user = ""
+            self.db_password = ""
+            self.db_name = db_url.replace("sqlite:///", "").replace("sqlite://", "")
+        elif db_url.startswith("postgresql://"):
+            # PostgreSQL database
+            try:
+                # postgresql://user:password@host:port/dbname
+                parts = db_url.replace("postgresql://", "").split("@")
+                if len(parts) == 2:
+                    credentials = parts[0].split(":")
+                    host_part = parts[1].split("/")[0]
+                    self.db_user = credentials[0] if len(credentials) > 0 else ""
+                    self.db_password = credentials[1] if len(credentials) > 1 else ""
+                    self.db_host = host_part.split(":")[0] if ":" in host_part else host_part
+                    self.db_name = parts[1].split("/")[1] if "/" in parts[1] else "authnode2fa"
+                else:
+                    # Fallback for malformed URL
+                    self.db_host = "localhost"
+                    self.db_user = ""
+                    self.db_password = ""
+                    self.db_name = "authnode2fa"
+            except:
+                # Fallback for any parsing error
+                self.db_host = "localhost"
+                self.db_user = ""
+                self.db_password = ""
+                self.db_name = "authnode2fa"
+        else:
+            # Unknown format, use defaults
+            self.db_host = "localhost"
+            self.db_user = ""
+            self.db_password = ""
+            self.db_name = "authnode2fa"
         
         self.max_backups = int(os.getenv("MAX_BACKUPS_TO_KEEP", "30"))
         self.backup_schedule_hours = int(os.getenv("BACKUP_SCHEDULE_HOURS", "24"))

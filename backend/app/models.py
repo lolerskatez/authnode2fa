@@ -308,25 +308,6 @@ class CodeGenerationHistory(Base):
     user = relationship("User")
 
 
-class InAppNotification(Base):
-    """
-    Stores in-app notifications for users.
-    Notifications are displayed in the UI and can be marked as read.
-    """
-    __tablename__ = "in_app_notifications"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    notification_type = Column(String, index=True)  # security_alert, account_change, system_message
-    title = Column(String)
-    message = Column(Text)
-    details = Column(JSON, nullable=True)  # Additional metadata
-    read = Column(Boolean, default=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    
-    user = relationship("User")
-
-
 class APIKey(Base):
     """
     Stores API keys for third-party integrations and applications.

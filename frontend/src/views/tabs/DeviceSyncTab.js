@@ -34,7 +34,7 @@ const DeviceSyncTab = ({ appSettings, currentUser }) => {
     try {
       setDevicesLoading(true);
       const response = await axios.get('/api/sync/devices');
-      setDevices(response.data || []);
+      setDevices(response.data.devices || []);
     } catch (error) {
       console.error('Failed to fetch devices:', error);
     } finally {

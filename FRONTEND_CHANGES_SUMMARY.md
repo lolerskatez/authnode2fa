@@ -123,7 +123,7 @@ Settings
 ## API Endpoints Connected
 
 ### Notifications Endpoints
-- `GET /api/notifications/list` - Fetch all notifications
+- `GET /api/notifications/` - Fetch all notifications
 - `POST /api/notifications/{id}/read` - Mark as read
 - `POST /api/notifications/read-all` - Mark all as read
 - `DELETE /api/notifications/{id}` - Delete notification
@@ -187,7 +187,7 @@ cd frontend
 npm start
 
 # Test endpoints
-curl http://localhost:3000/api/notifications/list
+curl http://localhost:3000/api/notifications/
 curl http://localhost:3000/api/admin/backups/list
 curl http://localhost:3000/api/admin/api-keys/list
 curl http://localhost:3000/api/admin/password-policy

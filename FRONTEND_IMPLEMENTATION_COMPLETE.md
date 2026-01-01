@@ -307,7 +307,7 @@ Successfully implemented all 5 missing UI components for the backend features th
 
 **Notifications Tab**
 ```
-GET  /api/notifications/list          → Fetch all notifications
+GET  /api/notifications/          → Fetch all notifications
 POST /api/notifications/{id}/read     → Mark as read
 POST /api/notifications/read-all      → Mark all as read
 DEL  /api/notifications/{id}          → Delete notification

@@ -33,8 +33,8 @@ const APIKeysTab = ({ appSettings }) => {
   const fetchApiKeys = async () => {
     try {
       setApiKeysLoading(true);
-      const response = await axios.get('/api/admin/api-keys/list');
-      setApiKeys(response.data || []);
+      const response = await axios.get('/api/admin/api-keys');
+      setApiKeys(response.data.keys || []);
     } catch (error) {
       console.error('Failed to fetch API keys:', error);
     } finally {

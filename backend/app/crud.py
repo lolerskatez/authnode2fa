@@ -3,6 +3,8 @@ from . import models, schemas, auth
 from cryptography.fernet import Fernet
 import os
 from dotenv import load_dotenv
+from typing import List, Tuple
+from datetime import datetime
 
 load_dotenv()
 
@@ -377,7 +379,9 @@ def get_audit_logs(db: Session, user_id: int = None, action: str = None, status:
     """Get audit logs with optional filters"""
     from datetime import datetime
     
-    query = db.query(models.AuditLog)
+    query = db.query(models.AuditLog, models.User.name.label('username')).outerjoin(
+        models.User, models.AuditLog.user_id == models.User.id
+    )
     
     if user_id:
         query = query.filter(models.AuditLog.user_id == user_id)
@@ -390,7 +394,26 @@ def get_audit_logs(db: Session, user_id: int = None, action: str = None, status:
     if end_date:
         query = query.filter(models.AuditLog.created_at <= end_date)
     
-    return query.order_by(models.AuditLog.created_at.desc()).limit(limit).offset(offset).all()
+    results = query.order_by(models.AuditLog.created_at.desc()).limit(limit).offset(offset).all()
+    
+    # Convert to response format
+    audit_logs = []
+    for audit_log, username in results:
+        audit_logs.append({
+            'id': audit_log.id,
+            'user_id': audit_log.user_id,
+            'username': username,
+            'action': audit_log.action,
+            'resource_type': audit_log.resource_type,
+            'resource_id': audit_log.resource_id,
+            'ip_address': audit_log.ip_address,
+            'status': audit_log.status,
+            'reason': audit_log.reason,
+            'details': audit_log.details,
+            'created_at': audit_log.created_at
+        })
+    
+    return audit_logs
 
 
 # Export/Import Functions

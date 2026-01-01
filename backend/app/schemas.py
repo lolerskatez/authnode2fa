@@ -270,6 +270,7 @@ class SessionListResponse(BaseModel):
 class AuditLogResponse(BaseModel):
     id: int
     user_id: Optional[int] = None
+    username: Optional[str] = None
     action: str
     resource_type: Optional[str] = None
     resource_id: Optional[int] = None

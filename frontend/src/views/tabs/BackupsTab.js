@@ -36,8 +36,8 @@ const BackupsTab = ({ appSettings }) => {
   const fetchBackups = async () => {
     try {
       setBackupsLoading(true);
-      const response = await axios.get('/api/admin/backups/list');
-      setBackups(response.data || []);
+      const response = await axios.get('/api/admin/backups');
+      setBackups(response.data.backups || []);
       // Check if auto backups are enabled
       const settingsResponse = await axios.get('/api/admin/settings');
       setAutoBackupsEnabled(settingsResponse.data?.auto_backups_enabled || false);

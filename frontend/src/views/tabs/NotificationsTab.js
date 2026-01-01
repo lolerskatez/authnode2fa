@@ -32,8 +32,8 @@ const NotificationsTab = ({ appSettings, currentUser }) => {
   const fetchNotifications = async () => {
     try {
       setNotificationsLoading(true);
-      const response = await axios.get('/api/notifications/list');
-      setNotifications(response.data || []);
+      const response = await axios.get('/api/notifications/');
+      setNotifications(response.data.notifications || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {

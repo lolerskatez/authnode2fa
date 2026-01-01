@@ -92,9 +92,9 @@ const App = () => {
         });
       
       // Load unread notifications count
-      axios.get('/api/notifications/list')
+      axios.get('/api/notifications/')
         .then(res => {
-          const unreadCount = (res.data || []).filter(n => !n.read).length;
+          const unreadCount = res.data.unread_count || 0;
           setUnreadNotifications(unreadCount);
         })
         .catch(err => {

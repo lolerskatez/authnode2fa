@@ -295,6 +295,58 @@ def get_locked_accounts(
     ]
 
 
+@router.get("/audit-logs", response_model=list[schemas.AuditLogResponse])
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def get_audit_logs(
+    request: Request,
+    limit: int = 100,
+    offset: int = 0,
+    user_id: int = None,
+    action: str = None,
+    status: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    current_user: models.User = Depends(is_admin),
+    db: Session = Depends(get_db)
+):
+    """Get audit logs with optional filtering (admin only)"""
+    from .. import crud
+    
+    # Validate limit and offset
+    if limit > 1000:
+        limit = 1000
+    if offset < 0:
+        offset = 0
+    
+    # Parse dates if provided
+    start_datetime = None
+    end_datetime = None
+    if start_date:
+        try:
+            start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        except:
+            raise HTTPException(status_code=400, detail="Invalid start_date format")
+    if end_date:
+        try:
+            end_datetime = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except:
+            raise HTTPException(status_code=400, detail="Invalid end_date format")
+    
+    # Get audit logs with filters
+    audit_logs = crud.get_audit_logs(
+        db=db,
+        user_id=user_id,
+        action=action,
+        status=status,
+        start_date=start_datetime,
+        end_date=end_datetime,
+        limit=limit,
+        offset=offset
+    )
+    
+    return audit_logs
+
+
 @router.get("/audit-logs/user/{user_id}", response_model=list[schemas.AuditLogResponse])
 def get_user_audit_logs(
     request: Request,
