@@ -377,12 +377,32 @@ const MainLayout = ({
                 style={{ cursor: 'pointer' }}
               >
                 <i className="fas fa-chart-bar"></i>
-                <span>Admin Dashboard</span>
+                <span>Dashboard</span>
+              </div>
+            )}
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'locked-accounts' ? 'active' : ''}`}
+                onClick={() => onViewChange('system-dashboard', 'locked-accounts')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-lock"></i>
+                <span>Locked Accounts</span>
+              </div>
+            )}
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'audit-logs' ? 'active' : ''}`}
+                onClick={() => onViewChange('system-dashboard', 'audit-logs')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-history"></i>
+                <span>Audit Logs</span>
               </div>
             )}
             <div 
-              className={`category-item ${currentView.sub === 'general' ? 'active' : ''}`}
-              onClick={() => onViewChange('system-dashboard', 'general')}
+              className={`category-item ${currentView.main === 'settings' ? 'active' : ''}`}
+              onClick={() => onViewChange('settings', 'general')}
               style={{ cursor: 'pointer' }}
             >
               <i className="fas fa-sliders-h"></i>

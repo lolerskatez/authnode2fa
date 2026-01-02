@@ -2,6 +2,8 @@ import React from 'react';
 import ActivityView from './ActivityView';
 import AdminDashboard from './AdminDashboard';
 import SettingsView from './SettingsView';
+import LockedAccountsTab from './tabs/LockedAccountsTab';
+import AuditLogsTab from './tabs/AuditLogsTab';
 
 const SystemDashboardView = ({ 
   currentUser, 
@@ -46,6 +48,20 @@ const SystemDashboardView = ({
           onTabChange={() => {}}
           appSettings={appSettings}
           onSettingsChange={onSettingsChange}
+        />
+      )}
+
+      {subView === 'locked-accounts' && (
+        <LockedAccountsTab 
+          appSettings={appSettings}
+          currentUser={currentUser}
+        />
+      )}
+
+      {subView === 'audit-logs' && (
+        <AuditLogsTab 
+          appSettings={appSettings}
+          currentUser={currentUser}
         />
       )}
     </div>
