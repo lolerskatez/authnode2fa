@@ -122,8 +122,8 @@ const AuditLogsTab = ({ appSettings, currentUser }) => {
   };
 
   return (
-    <div>
-      <div style={{ maxWidth: '1200px' }}>
+    <div style={{ height: '100%', width: '100%', padding: '24px', boxSizing: 'border-box' }}>
+      <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ margin: 0, color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
             <i className="fas fa-history" style={{ marginRight: '8px', color: colors.accent }}></i>

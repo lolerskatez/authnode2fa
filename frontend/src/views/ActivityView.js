@@ -659,9 +659,8 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
 
   // Desktop View
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: colors.backgroundLight, overflow: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '24px 24px 0 24px' }}>
-        <h2 style={{ margin: 0, color: colors.primary }}>Activity History</h2>
+    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', backgroundColor: colors.backgroundLight }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '24px', padding: '24px 24px 0 24px' }}>
         <button
           onClick={handleRefresh}
           disabled={loading}

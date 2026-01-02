@@ -222,10 +222,32 @@ const MainLayout = ({
             <div 
               className="category-item"
               onClick={() => {
+                onViewChange('profile');
+                setShowUserMenu(false);
+              }}
+              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
+            >
+              <i className="fas fa-user-circle"></i>
+              <span>Profile</span>
+            </div>
+            <div 
+              className="category-item"
+              onClick={() => {
+                onViewChange('system-dashboard', 'activity');
+                setShowUserMenu(false);
+              }}
+              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
+            >
+              <i className="fas fa-chart-line"></i>
+              <span>Dashboard</span>
+            </div>
+            <div 
+              className="category-item"
+              onClick={() => {
                 onViewChange('notifications', 'inbox');
                 setShowUserMenu(false);
               }}
-              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}`, position: 'relative' }}
+              style={{ cursor: 'pointer', position: 'relative' }}
             >
               <i className="fas fa-bell"></i>
               <span>Notifications</span>
@@ -242,28 +264,6 @@ const MainLayout = ({
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
-            </div>
-            <div 
-              className="category-item"
-              onClick={() => {
-                onViewChange('profile');
-                setShowUserMenu(false);
-              }}
-              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
-            >
-              <i className="fas fa-user-circle"></i>
-              <span>Profile</span>
-            </div>
-            <div 
-              className="category-item"
-              onClick={() => {
-                onViewChange('settings', 'general');
-                setShowUserMenu(false);
-              }}
-              style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
-            >
-              <i className="fas fa-cog"></i>
-              <span>Settings</span>
             </div>
             {/* Logout button removed - only one at bottom of sidebar */}
           </div>
@@ -371,14 +371,6 @@ const MainLayout = ({
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
               System Dashboard
             </h4>
-            <div 
-              className={`category-item ${currentView.sub === 'activity' ? 'active' : ''}`}
-              onClick={() => onViewChange('system-dashboard', 'activity')}
-              style={{ cursor: 'pointer' }}
-            >
-              <i className="fas fa-history"></i>
-              <span>Activity</span>
-            </div>
             {currentUser?.role === 'admin' && (
               <div 
                 className={`category-item ${currentView.sub === 'admin-dashboard' ? 'active' : ''}`}
@@ -389,13 +381,31 @@ const MainLayout = ({
                 <span>Dashboard</span>
               </div>
             )}
+            <div 
+              className={`category-item ${currentView.sub === 'activity' ? 'active' : ''}`}
+              onClick={() => onViewChange('system-dashboard', 'activity')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-history"></i>
+              <span>Activity</span>
+            </div>
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'user-management' ? 'active' : ''}`}
+                onClick={() => onViewChange('system-dashboard', 'user-management')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-users-cog"></i>
+                <span>User Management</span>
+              </div>
+            )}
             {currentUser?.role === 'admin' && (
               <div 
                 className={`category-item ${currentView.sub === 'locked-accounts' ? 'active' : ''}`}
                 onClick={() => onViewChange('system-dashboard', 'locked-accounts')}
                 style={{ cursor: 'pointer' }}
               >
-                <i className="fas fa-lock"></i>
+                <i className="fas fa-user-lock"></i>
                 <span>Locked Accounts</span>
               </div>
             )}
@@ -405,7 +415,7 @@ const MainLayout = ({
                 onClick={() => onViewChange('system-dashboard', 'audit-logs')}
                 style={{ cursor: 'pointer' }}
               >
-                <i className="fas fa-history"></i>
+                <i className="fas fa-clipboard-list"></i>
                 <span>Audit Logs</span>
               </div>
             )}
@@ -414,7 +424,7 @@ const MainLayout = ({
               onClick={() => onViewChange('settings', 'general')}
               style={{ cursor: 'pointer' }}
             >
-              <i className="fas fa-sliders-h"></i>
+              <i className="fas fa-cog"></i>
               <span>Settings</span>
             </div>
           </div>
@@ -491,7 +501,7 @@ const MainLayout = ({
               onClick={() => onViewChange('settings', 'general')}
               style={{ cursor: 'pointer' }}
             >
-              <i className="fas fa-sliders-h"></i>
+              <i className="fas fa-cog"></i>
               <span>General</span>
             </div>
             <div 
@@ -502,6 +512,16 @@ const MainLayout = ({
               <i className="fas fa-shield-alt"></i>
               <span>Security</span>
             </div>
+            {currentUser?.role === 'admin' && (
+              <div 
+                className={`category-item ${currentView.sub === 'password-policy' ? 'active' : ''}`}
+                onClick={() => onViewChange('settings', 'password-policy')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="fas fa-key"></i>
+                <span>Password Policy</span>
+              </div>
+            )}
             {currentUser?.role === 'admin' && (
               <div 
                 className={`category-item ${currentView.sub === 'smtp' ? 'active' : ''}`}
@@ -518,18 +538,8 @@ const MainLayout = ({
                 onClick={() => onViewChange('settings', 'oidc')}
                 style={{ cursor: 'pointer' }}
               >
-                <i className="fas fa-key"></i>
+                <i className="fas fa-sign-in-alt"></i>
                 <span>OIDC SSO</span>
-              </div>
-            )}
-            {currentUser?.role === 'admin' && (
-              <div 
-                className={`category-item ${currentView.sub === 'user-management' ? 'active' : ''}`}
-                onClick={() => onViewChange('settings', 'user-management')}
-                style={{ cursor: 'pointer' }}
-              >
-                <i className="fas fa-users-cog"></i>
-                <span>User Management</span>
               </div>
             )}
             <div 
@@ -537,8 +547,8 @@ const MainLayout = ({
               onClick={() => onViewChange('settings', 'notification-preferences')}
               style={{ cursor: 'pointer' }}
             >
-              <i className="fas fa-sliders-h"></i>
-              <span>Notification Settings</span>
+              <i className="fas fa-bell"></i>
+              <span>Notifications</span>
             </div>
             {currentUser?.role === 'admin' && (
               <div 
@@ -546,7 +556,7 @@ const MainLayout = ({
                 onClick={() => onViewChange('settings', 'backups')}
                 style={{ cursor: 'pointer' }}
               >
-                <i className="fas fa-save"></i>
+                <i className="fas fa-database"></i>
                 <span>Backups</span>
               </div>
             )}
@@ -558,16 +568,6 @@ const MainLayout = ({
               >
                 <i className="fas fa-code"></i>
                 <span>API Keys</span>
-              </div>
-            )}
-            {currentUser?.role === 'admin' && (
-              <div 
-                className={`category-item ${currentView.sub === 'password-policy' ? 'active' : ''}`}
-                onClick={() => onViewChange('settings', 'password-policy')}
-                style={{ cursor: 'pointer' }}
-              >
-                <i className="fas fa-lock"></i>
-                <span>Password Policy</span>
               </div>
             )}
             <div 

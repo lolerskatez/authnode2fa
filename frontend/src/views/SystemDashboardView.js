@@ -4,6 +4,7 @@ import AdminDashboard from './AdminDashboard';
 import SettingsView from './SettingsView';
 import LockedAccountsTab from './tabs/LockedAccountsTab';
 import AuditLogsTab from './tabs/AuditLogsTab';
+import UserManagement from '../UserManagement';
 
 const SystemDashboardView = ({ 
   currentUser, 
@@ -18,13 +19,10 @@ const SystemDashboardView = ({
   const subView = currentView.sub || 'activity';
 
   return (
-    <div className="app-content" style={{ 
-      paddingLeft: '20px', 
-      paddingTop: '20px',
-      paddingRight: '20px',
-      paddingBottom: '20px',
-      overflowY: 'auto',
-      height: '100%'
+    <div style={{ 
+      height: '100%',
+      width: '100%',
+      overflow: 'auto'
     }}>
       {subView === 'activity' && (
         <ActivityView 
@@ -62,6 +60,15 @@ const SystemDashboardView = ({
         <AuditLogsTab 
           appSettings={appSettings}
           currentUser={currentUser}
+        />
+      )}
+
+      {subView === 'user-management' && currentUser?.role === 'admin' && (
+        <UserManagement 
+          currentUser={currentUser}
+          onClose={() => {}}
+          isEmbedded={true}
+          appSettings={appSettings}
         />
       )}
     </div>

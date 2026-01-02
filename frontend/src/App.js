@@ -535,27 +535,6 @@ const App = () => {
                         activeTab={currentView.sub || 'general'}
                       />
                     )}
-                    {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
-                      <ActivityView
-                        currentUser={currentUser}
-                        appSettings={appSettings}
-                        isMobile={false}
-                      />
-                    )}
-                    {currentView.main === 'system-dashboard' && currentView.sub === 'activity' && (
-                      <ActivityView
-                        currentUser={currentUser}
-                        appSettings={appSettings}
-                        isMobile={false}
-                      />
-                    )}
-                    {currentView.main === 'dashboard' && currentView.sub === 'admin-dashboard' && (
-                      <AdminDashboard
-                        currentUser={currentUser}
-                        appSettings={appSettings}
-                        isMobile={false}
-                      />
-                    )}
                   </div>
                 </div>
               </div>

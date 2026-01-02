@@ -632,9 +632,9 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
 
   // Desktop View
   return (
-    <div style={{ padding: '24px', backgroundColor: colors.backgroundLight, minHeight: '100vh', overflowY: 'auto', maxHeight: '100vh' }}>
+    <div style={{ padding: '24px', backgroundColor: colors.backgroundLight, height: '100%', width: '100%', overflowY: 'auto', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ margin: 0, color: colors.primary }}>Admin Dashboard</h2>
+        <h2 style={{ margin: 0, color: colors.primary }}>Dashboard</h2>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <span style={{ color: colors.secondary, fontSize: '12px' }}>
             Last updated: {lastRefresh.toLocaleTimeString()}

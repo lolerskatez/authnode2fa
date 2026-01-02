@@ -85,8 +85,8 @@ const LockedAccountsTab = ({ appSettings, currentUser }) => {
   };
 
   return (
-    <div>
-      <div style={{ maxWidth: '1000px' }}>
+    <div style={{ height: '100%', width: '100%', padding: '24px', boxSizing: 'border-box' }}>
+      <div>
         <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
           <i className="fas fa-lock" style={{ marginRight: '8px', color: colors.accent }}></i>
           Locked Accounts

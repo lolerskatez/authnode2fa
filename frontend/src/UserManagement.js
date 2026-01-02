@@ -236,9 +236,18 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
       : 'U';
   };
 
+  // Card container style
+  const cardStyle = {
+    padding: '16px',
+    backgroundColor: colors.background,
+    borderRadius: '8px',
+    border: `1px solid ${colors.border}`,
+    marginBottom: '16px'
+  };
+
   if (isEmbedded) {
     return (
-      <div>
+      <div style={{ padding: '20px' }}>
         {toast.show && (
           <div style={{
             position: 'fixed',
@@ -259,6 +268,13 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             {toast.message}
           </div>
         )}
+
+        {/* Page Header */}
+        <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+          <i className="fas fa-users-cog" style={{ marginRight: '8px', color: colors.accent }}></i>
+          User Management
+        </h3>
+
         {error && (
           <div style={{
             padding: '12px 16px',
@@ -272,47 +288,63 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           </div>
         )}
 
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-          <button
-            onClick={handleAddUser}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: colors.accent,
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <i className="fas fa-user-plus"></i>
-            Add User
-          </button>
-          <button
-            onClick={loadUsers}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: colors.success,
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <i className="fas fa-sync"></i>
-            Refresh
-          </button>
+        {/* Actions Card */}
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+                <i className="fas fa-user-plus" style={{ marginRight: '8px', color: colors.accent }}></i>
+                Manage Users
+              </h4>
+              <p style={{ margin: 0, color: colors.secondary, fontSize: '12px' }}>
+                {users.length} user{users.length !== 1 ? 's' : ''} registered
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={loadUsers}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: 'transparent',
+                  color: colors.accent,
+                  border: `1px solid ${colors.accent}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className="fas fa-sync"></i>
+                Refresh
+              </button>
+              <button
+                onClick={handleAddUser}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: colors.accent,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className="fas fa-user-plus"></i>
+                Add User
+              </button>
+            </div>
+          </div>
         </div>
 
+        {/* Users Table Card */}
+        <div style={cardStyle}>
         {loading ? (
           <div style={{
             padding: '40px',
@@ -326,11 +358,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
           <div style={{
             padding: '40px',
             textAlign: 'center',
-            backgroundColor: colors.backgroundSecondary,
-            borderRadius: '8px',
             color: colors.secondary
           }}>
-            <p>No users found</p>
+            <i className="fas fa-users" style={{ fontSize: '32px', marginBottom: '12px', display: 'block', opacity: 0.5 }}></i>
+            <p style={{ margin: 0 }}>No users found</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -340,19 +371,19 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
               fontSize: '14px'
             }}>
               <thead>
-                <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>User</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Email</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Role</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Type</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: colors.primary }}>Created</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: colors.primary }}>Actions</th>
+                <tr style={{ borderBottom: `1px solid ${colors.border}` }}>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: colors.primary, fontSize: '13px' }}>User</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: colors.primary, fontSize: '13px' }}>Email</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: colors.primary, fontSize: '13px' }}>Role</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: colors.primary, fontSize: '13px' }}>Type</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', color: colors.primary, fontSize: '13px' }}>Created</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: '600', color: colors.primary, fontSize: '13px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(user => (
-                  <tr key={user.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                    <td style={{ padding: '12px' }}>
+                {users.map((user, index) => (
+                  <tr key={user.id} style={{ borderBottom: index < users.length - 1 ? `1px solid ${colors.border}` : 'none' }}>
+                    <td style={{ padding: '12px 8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
                           width: '36px',
@@ -374,8 +405,8 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px', color: colors.primary }}>{user.email}</td>
-                    <td style={{ padding: '12px' }}>
+                    <td style={{ padding: '12px 8px', color: colors.primary }}>{user.email}</td>
+                    <td style={{ padding: '12px 8px' }}>
                       <span style={{
                         padding: '4px 12px',
                         backgroundColor: user.role === 'admin' ? colors.adminBg : colors.userBg,
@@ -388,7 +419,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         {user.role}
                       </span>
                     </td>
-                    <td style={{ padding: '12px' }}>
+                    <td style={{ padding: '12px 8px' }}>
                       <span style={{
                         padding: '4px 12px',
                         backgroundColor: user.is_sso_user ? colors.ssoBg : colors.localBg,
@@ -401,10 +432,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         {user.is_sso_user ? 'SSO' : 'Local'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', color: colors.secondary, fontSize: '12px' }}>
+                    <td style={{ padding: '12px 8px', color: colors.secondary, fontSize: '12px' }}>
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                       <button
                         onClick={() => handleEditClick(user)}
                         style={{
@@ -427,6 +458,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             </table>
           </div>
         )}
+        </div>
 
         {showForm && (
           <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
