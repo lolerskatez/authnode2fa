@@ -53,6 +53,8 @@ const NotificationsTab = ({ appSettings, currentUser }) => {
       setNotifications(notifications.map(n => 
         n.id === notificationId ? { ...n, read: true } : n
       ));
+      // Trigger notification count refresh
+      window.dispatchEvent(new Event('notificationsChanged'));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -62,6 +64,8 @@ const NotificationsTab = ({ appSettings, currentUser }) => {
     try {
       await axios.post('/api/notifications/read-all');
       setNotifications(notifications.map(n => ({ ...n, read: true })));
+      // Trigger notification count refresh
+      window.dispatchEvent(new Event('notificationsChanged'));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
@@ -71,6 +75,8 @@ const NotificationsTab = ({ appSettings, currentUser }) => {
     try {
       await axios.delete(`/api/notifications/${notificationId}`);
       setNotifications(notifications.filter(n => n.id !== notificationId));
+      // Trigger notification count refresh
+      window.dispatchEvent(new Event('notificationsChanged'));
     } catch (error) {
       console.error('Failed to delete notification:', error);
     }

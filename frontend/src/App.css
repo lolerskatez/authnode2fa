@@ -235,7 +235,7 @@ header {
   min-height: calc(100vh - 140px);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  background-color: white;
+  background-color: transparent;
 }
 
 /* Mobile View */

@@ -45,7 +45,9 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
   const [toast, setToast] = useState(null);
 
   // Audit Logs States
+  // eslint-disable-next-line no-unused-vars
   const [auditLogs, setAuditLogs] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [auditLogsLoading, setAuditLogsLoading] = useState(false);
   const [auditLogsFilter, setAuditLogsFilter] = useState({
     user_id: '',
@@ -54,7 +56,6 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
     limit: 50,
     offset: 0
   });
-  const [selectedAuditLog, setSelectedAuditLog] = useState(null);
 
   const fetchStats = async () => {
     try {
@@ -111,14 +112,16 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleAuditLogsFilterChange = (field, value) => {
     setAuditLogsFilter(prev => ({
       ...prev,
       [field]: value,
-      offset: field !== 'offset' ? 0 : value // Reset offset when changing filters
+      offset: field !== 'offset' ? 0 : value
     }));
   };
 
+  // eslint-disable-next-line no-unused-vars
   const getActionIcon = (action) => {
     const actionIcons = {
       'login_success': 'fas fa-sign-in-alt',
@@ -140,14 +143,7 @@ const AdminDashboard = ({ currentUser, appSettings, isMobile }) => {
     return actionIcons[action] || 'fas fa-info-circle';
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'success': return colors.success;
-      case 'failed': return colors.danger;
-      default: return colors.secondary;
-    }
-  };
-
+  // eslint-disable-next-line no-unused-vars
   const handleExportAuditLogs = async () => {
     try {
       const response = await axios.get('/api/admin/audit-logs/export', {

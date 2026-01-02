@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -251,6 +251,7 @@ class UserSessionBase(BaseModel):
 class UserSessionResponse(UserSessionBase):
     id: int
     user_id: int
+    token_jti: str
     device_name: Optional[str] = None
     ip_address: Optional[str] = None
     last_activity: datetime
@@ -263,7 +264,7 @@ class UserSessionResponse(UserSessionBase):
 
 class SessionListResponse(BaseModel):
     sessions: List[UserSessionResponse]
-    current_session_id: Optional[int] = None
+    current_session_id: Optional[str] = None  # JWT ID (jti) - UUID string
 
 
 # Audit Log Schemas
@@ -279,6 +280,14 @@ class AuditLogResponse(BaseModel):
     reason: Optional[str] = None
     details: Optional[Dict[str, Any]] = None
     created_at: datetime
+    
+    @field_serializer('created_at')
+    def serialize_created_at(self, value: datetime, _info):
+        """Serialize datetime as ISO 8601 with UTC timezone"""
+        if value and value.tzinfo is None:
+            # If naive datetime (no timezone), assume it's UTC
+            return value.isoformat() + 'Z'
+        return value.isoformat() if value else None
     
     class Config:
         from_attributes = True

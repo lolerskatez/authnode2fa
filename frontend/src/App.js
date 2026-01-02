@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Auth from './Auth';
 import MainLayout from './layouts/MainLayout';
@@ -433,11 +433,20 @@ const App = () => {
                       currentUser={currentUser}
                       onUserUpdate={setCurrentUser}
                       appSettings={appSettings}
+                      onSettingsChange={setAppSettings}
                       onSecurityClick={() => setShowSecurityModal(true)}
                       twoFAEnabled={globalSettings.totp_enabled}
+                      activeTab={currentView.sub || 'general'}
                     />
                   )}
                   {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
+                    <ActivityView
+                      currentUser={currentUser}
+                      appSettings={appSettings}
+                      isMobile={true}
+                    />
+                  )}
+                  {currentView.main === 'system-dashboard' && currentView.sub === 'activity' && (
                     <ActivityView
                       currentUser={currentUser}
                       appSettings={appSettings}
@@ -520,11 +529,20 @@ const App = () => {
                         currentUser={currentUser}
                         onUserUpdate={setCurrentUser}
                         appSettings={appSettings}
+                        onSettingsChange={setAppSettings}
                         onSecurityClick={() => setShowSecurityModal(true)}
                         twoFAEnabled={globalSettings.totp_enabled}
+                        activeTab={currentView.sub || 'general'}
                       />
                     )}
                     {currentView.main === 'dashboard' && currentView.sub === 'activity' && (
+                      <ActivityView
+                        currentUser={currentUser}
+                        appSettings={appSettings}
+                        isMobile={false}
+                      />
+                    )}
+                    {currentView.main === 'system-dashboard' && currentView.sub === 'activity' && (
                       <ActivityView
                         currentUser={currentUser}
                         appSettings={appSettings}

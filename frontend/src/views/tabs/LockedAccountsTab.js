@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const LockedAccountsTab = ({ appSettings, currentUser }) => {
@@ -26,12 +26,7 @@ const LockedAccountsTab = ({ appSettings, currentUser }) => {
 
   const colors = getThemeColors();
 
-  // Fetch locked accounts
-  useEffect(() => {
-    fetchLockedAccounts();
-  }, []);
-
-  const fetchLockedAccounts = async () => {
+  const fetchLockedAccounts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get('/api/admin/locked-accounts');
@@ -42,7 +37,11 @@ const LockedAccountsTab = ({ appSettings, currentUser }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchLockedAccounts();
+  }, [fetchLockedAccounts]);
 
   const handleUnlockAccount = async (userId, userEmail) => {
     try {

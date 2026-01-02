@@ -300,4 +300,93 @@ Current version will remain as `/api/...`
 
 ---
 
+## Quick Reference - Common Operations
+
+### Reordering Accounts
+
+**Move an Account to a New Position**
+```bash
+PUT /api/applications/{app_id}/move?position={new_position}
+
+# Example: Move account 42 to position 0 (first)
+PUT /api/applications/42/move?position=0
+```
+
+- Position is 0-based (0 = first, 1 = second, etc.)
+- Positions are automatically constrained to valid range
+- Returns updated application object
+
+### Enhanced Search & Filtering
+
+**Search Applications**
+```bash
+GET /api/applications/?q=search_term&category=Work&favorite=true
+
+# Examples
+GET /api/applications/?q=github              # Find GitHub account
+GET /api/applications/?category=Work         # Filter by category
+GET /api/applications/?favorite=true         # Show favorites only
+```
+
+**Search Fields:** Account name, Username, Notes/metadata, Service URL  
+**Filter Options:** `q` (search term), `category` (Personal/Work/Security), `favorite` (true/false)
+
+### Account Metadata Management
+
+**Update Account Metadata**
+```bash
+PUT /api/applications/{app_id}
+
+{
+  "name": "GitHub",
+  "username": "john.doe",
+  "url": "https://github.com/john.doe",
+  "notes": "Work account - enable IP whitelist",
+  "category": "Work",
+  "favorite": true
+}
+```
+
+**Updatable Fields:** name, username, url, notes, category, favorite, icon, color
+
+### User Activity Dashboard
+
+**Get Personal Activity Log**
+```bash
+GET /api/users/activity?limit=50&offset=0
+```
+
+**Tracked Actions:** login, logout, account_added, account_updated, account_deleted, account_reordered, session_created, session_revoked, 2fa_enabled, 2fa_disabled
+
+### Admin Dashboard Statistics
+
+**Get System Statistics**
+```bash
+GET /api/admin/dashboard/stats
+```
+
+Returns: total_users, active_users_7d, total_accounts, users_with_2fa, recent_logins_7d, account_distribution_by_category
+
+### JavaScript Frontend Usage
+
+**Copy Code to Clipboard**
+```javascript
+import ClipboardManager from '../utils/ClipboardManager';
+
+await ClipboardManager.copyToClipboard(code, {
+  autoClear: true,
+  clearDelay: 30000,
+  showToast: true
+});
+```
+
+**Reorder Accounts**
+```javascript
+const response = await axios.put(
+  `/api/applications/${accountId}/move?position=${newPosition}`
+);
+```
+
+---
+
 **See [DEPLOYMENT.md](DEPLOYMENT.md) for setup instructions.**

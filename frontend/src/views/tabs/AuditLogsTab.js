@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const AuditLogsTab = ({ appSettings, currentUser }) => {
@@ -32,12 +32,7 @@ const AuditLogsTab = ({ appSettings, currentUser }) => {
 
   const colors = getThemeColors();
 
-  // Fetch audit logs
-  useEffect(() => {
-    fetchAuditLogs();
-  }, []);
-
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     try {
       setAuditLogsLoading(true);
       const params = {};
@@ -56,7 +51,11 @@ const AuditLogsTab = ({ appSettings, currentUser }) => {
     } finally {
       setAuditLogsLoading(false);
     }
-  };
+  }, [auditLogsFilter]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   const handleAuditLogsFilterChange = (field, value) => {
     setAuditLogsFilter(prev => ({

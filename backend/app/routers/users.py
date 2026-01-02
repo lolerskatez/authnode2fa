@@ -267,6 +267,7 @@ def get_sessions(db: Session = Depends(get_db), current_user: models.User = Depe
         schemas.UserSessionResponse(
             id=session.id,
             user_id=session.user_id,
+            token_jti=session.token_jti,
             device_name=session.device_name,
             ip_address=session.ip_address,
             last_activity=session.last_activity,

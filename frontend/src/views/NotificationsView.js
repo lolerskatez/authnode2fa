@@ -10,6 +10,17 @@ const NotificationsView = ({
   // Default to inbox if no sub-view is specified
   const subView = currentView.sub || 'inbox';
 
+  // Theme-aware background color
+  const getBackgroundColor = () => {
+    let isDark = appSettings?.theme === 'dark';
+    
+    if (appSettings?.theme === 'auto') {
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    
+    return isDark ? '#111827' : '#f7fafc';
+  };
+
   return (
     <div className="app-content" style={{ 
       paddingLeft: '20px', 
@@ -17,7 +28,8 @@ const NotificationsView = ({
       paddingRight: '20px',
       paddingBottom: '20px',
       overflowY: 'auto',
-      height: '100%'
+      height: '100%',
+      backgroundColor: getBackgroundColor()
     }}>
       {subView === 'inbox' && (
         <NotificationsTab appSettings={appSettings} currentUser={currentUser} />

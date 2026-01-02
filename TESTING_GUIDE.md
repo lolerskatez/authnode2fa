@@ -258,3 +258,84 @@ Monitor:
 ---
 
 **Ready to test?** Start with "Quick Test" above, then run "Comprehensive Test" for final validation.
+---
+
+## Feature-Specific Testing
+
+### Testing Activity Log Feature
+
+**Location:** Sidebar → Activity (or Mobile Menu → Activity)
+
+**Test Checklist:**
+- [ ] Page loads without errors
+- [ ] Activity list displays with action, status, timestamp, IP address
+- [ ] Action type filter works
+- [ ] Status filter (success/failed) works
+- [ ] Pagination controls work (Next/Previous)
+- [ ] Refresh button works with toast notification
+- [ ] Mobile responsive (cards on mobile, table on desktop)
+- [ ] Dark/light theme works correctly
+
+**Example Activity Actions:**
+- `login` - User logged in
+- `logout` - User logged out
+- `account_added` - New 2FA account added
+- `account_updated` - 2FA account modified
+- `account_deleted` - 2FA account removed
+- `code_viewed` - 2FA code displayed
+- `password_changed` - Password changed
+- `2fa_enabled` - 2FA enabled
+- `webauthn_added` - Security key added
+- `profile_updated` - User profile changed
+
+### Testing Admin Dashboard Feature
+
+**Location:** Sidebar → Dashboard (Admin users only)
+
+**Test Checklist:**
+- [ ] Access control: Regular users cannot access
+- [ ] Admin users: Dashboard link visible in sidebar
+- [ ] All 6 statistics cards display:
+  1. Total Users
+  2. Active Users (7d)
+  3. 2FA Accounts
+  4. Users with 2FA
+  5. Logins (7d)
+  6. Failed Logins (7d)
+- [ ] Top active users list shows
+- [ ] Account distribution by category shows
+- [ ] Refresh button updates stats
+- [ ] Mobile responsive layout works
+- [ ] Dark/light theme works correctly
+
+### Testing Password Reset
+
+**Test Flow:**
+1. Click "Forgot Password" on login page
+2. Enter email address
+3. Check email for reset link (or check backend logs)
+4. Click reset link
+5. Enter new password
+6. Verify login with new password
+
+### Testing Session Management
+
+**Test Flow:**
+1. Navigate to Profile → Sessions
+2. View active sessions list
+3. Click "Revoke" on a session
+4. Verify session removed from list
+5. Try "Logout All Sessions"
+6. Verify forced logout
+
+### Testing Backup Codes
+
+**Test Flow:**
+1. Enable 2FA in Profile → Security
+2. Generate backup codes
+3. Download/copy backup codes
+4. Test login with backup code
+5. Verify backup code is marked as used
+6. Regenerate backup codes
+
+---

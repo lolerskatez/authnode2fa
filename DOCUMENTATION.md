@@ -6,7 +6,7 @@ Complete documentation for AuthNode2FA - A modular, secure Two-Factor Authentica
 
 ## 🗂️ Documentation Structure
 
-This project uses **modular documentation** where each file has a specific purpose. Start with your use case below:
+This project uses **streamlined documentation** where each file has a specific purpose. Start with your use case below:
 
 ### For Everyone
 
@@ -16,8 +16,10 @@ This project uses **modular documentation** where each file has a specific purpo
 ### For Developers
 
 - **[CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md)** - Architecture review, security audit, production readiness
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design patterns
 - **[backend/README.md](backend/README.md)** - Backend structure, API setup, local development
-- **[API.md](API.md)** - REST API documentation with interactive examples
+- **[backend/2FA_IMPLEMENTATION.md](backend/2FA_IMPLEMENTATION.md)** - 2FA technical implementation details
+- **[API.md](API.md)** - REST API documentation with interactive examples and quick reference
 
 ### For DevOps / Deployment
 
@@ -26,7 +28,7 @@ This project uses **modular documentation** where each file has a specific purpo
 
 ### For Testing / QA
 
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Test procedures, pre-publishing checklist, troubleshooting
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Test procedures, feature testing, pre-publishing checklist
 
 ### For Configuration
 
@@ -40,199 +42,70 @@ This project uses **modular documentation** where each file has a specific purpo
 ### I want to...
 
 **Get started quickly**
-→ [README.md](README.md) → [Quick Start section](#quick-start)
+→ [README.md](README.md) → Quick Start section
 
 **Deploy to production**
-→ [DEPLOYMENT.md](DEPLOYMENT.md) → [Production Deployment](#production-docker-recommended)
+→ [DEPLOYMENT.md](DEPLOYMENT.md) → Production Deployment
 
-**Understand the codebase**
-→ [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md) → [Application Architecture](#1-application-architecture-assessment)
+**Understand the architecture**
+→ [ARCHITECTURE.md](ARCHITECTURE.md) or [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md)
 
 **Review security**
-→ [SECURITY.md](SECURITY.md) or [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md#2-security-assessment)
+→ [SECURITY.md](SECURITY.md) or [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md)
 
 **Set up for local development**
-→ [backend/README.md](backend/README.md) → [Running Locally](#running-locally)
+→ [backend/README.md](backend/README.md) → Running Locally
 
 **Test before publishing**
-→ [TESTING_GUIDE.md](TESTING_GUIDE.md) → [Quick Test](#quick-test-5-10-minutes)
+→ [TESTING_GUIDE.md](TESTING_GUIDE.md) → Quick Test or Feature-Specific Testing
 
 **Use the REST API**
 → [API.md](API.md) or visit `/api/docs` when running
 
 **Configure environment**
-→ [SECURITY.md](SECURITY.md) → [How Configuration Works](#how-configuration-works)
+→ [SECURITY.md](SECURITY.md) → How Configuration Works
 
 **Check what changed**
 → [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
-## 📋 Document Reference
+## 📋 Core Documents
+
+### README.md
+**Purpose:** Project overview and quick start guide  
+**Read this if:** First time exploring the project  
+**Key sections:** Features, Quick Start, Deployment options
 
 ### CODEBASE_ASSESSMENT.md
-**What it covers:**
-- Full codebase analysis
-- Architecture review
-- Security assessment
-- Testing framework
-- DevOps readiness
-- Production readiness verification
-- Feature gaps (non-blocking)
+**Purpose:** Complete technical assessment and production readiness  
+**Read this if:** Evaluating the project, making architectural decisions  
+**Key sections:** Architecture, Security, Testing, Production Readiness
 
-**Read this if:**
-- Evaluating the project
-- Making architectural decisions
-- Planning enhancements
-- Preparing for production
-
-**Key sections:**
-1. Executive Summary
-2. Application Architecture
-3. Security Assessment
-4. Deployment & DevOps
-5. Testing & QA
-6. Code Organization
-7. Documentation Quality
-8. Production Readiness
-9. Feature Gaps (future enhancements)
-
----
+### ARCHITECTURE.md
+**Purpose:** System architecture and design patterns  
+**Read this if:** Understanding system design, planning modifications  
+**Key sections:** System overview, Component architecture, Design patterns
 
 ### DEPLOYMENT.md
-**What it covers:**
-- Docker deployment (recommended)
-- Manual server setup
-- SSL/TLS configuration
-- Database setup and migrations
-- Monitoring and backup strategies
-- Troubleshooting deployment issues
-- Updates and maintenance
-
-**Read this if:**
-- Deploying to production
-- Setting up a new server
-- Configuring reverse proxy
-- Backing up data
-- Updating the application
-
-**Key sections:**
-1. Production Deployment (Docker)
-2. SSL Certificate Setup
-3. Security Checklist
-4. Monitoring & Backup
-5. Updates & Maintenance
-6. Troubleshooting
-
----
+**Purpose:** Production deployment instructions  
+**Read this if:** Deploying to production, setting up new servers  
+**Key sections:** Docker deployment, SSL setup, Monitoring, Updates
 
 ### SECURITY.md
-**What it covers:**
-- Secret management
-- Environment variable configuration
-- Encryption key generation
-- `.gitignore` verification
-- Security best practices
-- Configuration workflows
-- Sensitive data protection
-
-**Read this if:**
-- Setting up a new environment
-- Generating encryption keys
-- Configuring secrets
-- Verifying security
-- Understanding what's protected in git
-
-**Key sections:**
-1. Secret Verification (what's protected)
-2. Git Configuration
-3. Secret Generation
-4. Environment Variables Reference
-5. Setup Workflow
-6. Security Summary
-
----
+**Purpose:** Security configuration and best practices  
+**Read this if:** Setting up environment, generating keys, securing application  
+**Key sections:** Secret management, Encryption keys, Environment variables
 
 ### TESTING_GUIDE.md
-**What it covers:**
-- Running unit tests
-- Test suite configuration
-- Docker container testing
-- Pre-publishing verification
-- Performance testing
-- Health checks
-- Troubleshooting tests
-
-**Read this if:**
-- Preparing to publish
-- Running tests locally
-- Verifying production readiness
-- Troubleshooting test failures
-- Checking code coverage
-
-**Key sections:**
-1. Quick Test (5-10 minutes)
-2. Comprehensive Test (20-30 minutes)
-3. Pre-Publishing Checklist
-4. Docker Testing
-5. Health Check Verification
-6. Troubleshooting
-
----
+**Purpose:** Testing procedures and quality assurance  
+**Read this if:** Running tests, verifying features, pre-publishing checks  
+**Key sections:** Quick Test, Comprehensive Test, Feature Testing
 
 ### API.md
-**What it covers:**
-- REST API overview
-- Endpoint documentation
-- Authentication methods
-- Request/response examples
-- Error handling
-- Rate limiting
-- Multiple documentation formats
-
-**Read this if:**
-- Integrating with the API
-- Building client applications
-- Understanding endpoint behavior
-- Troubleshooting API calls
-
-**Key sections:**
-1. API Documentation Formats
-2. Authentication Endpoints
-3. User Management Endpoints
-4. 2FA Applications Endpoints
-5. Admin Endpoints
-6. Health Check
-7. Making API Requests
-
----
-
-### backend/README.md
-**What it covers:**
-- Backend project structure
-- FastAPI setup
-- Database configuration
-- Running locally
-- Development environment
-- API router organization
-- Test setup
-
-**Read this if:**
-- Developing backend features
-- Understanding backend structure
-- Setting up local development
-- Modifying API endpoints
-- Running backend tests
-
----
-
-### Environment Templates
-**Files:**
-- `.env.example` - Local development
-- `.env.docker.example` - Production Docker deployment
-
-**Use:**
-Copy to `.env` or `.env.docker` and customize with your values (never commit actual files to git)
+**Purpose:** Complete REST API reference with examples  
+**Read this if:** Integrating with the API, building client apps  
+**Key sections:** Endpoints, Authentication, Quick Reference examples
 
 ---
 
@@ -246,6 +119,9 @@ README.md (Start here - overview)
     │
     ├─→ CODEBASE_ASSESSMENT.md (Technical review)
     │   └─→ For: Developers, architects, evaluators
+    │
+    ├─→ ARCHITECTURE.md (System design)
+    │   └─→ For: Developers, architects
     │
     ├─→ DEPLOYMENT.md (How to deploy)
     │   └─→ For: DevOps, system administrators
@@ -267,17 +143,18 @@ README.md (Start here - overview)
 
 ## ✅ Documentation Status
 
-| Document | Complete | Current | Status |
-|----------|----------|---------|--------|
-| README.md | ✅ | v1.0 | Updated |
-| CODEBASE_ASSESSMENT.md | ✅ | v1.0 | New (Dec 30, 2025) |
-| DEPLOYMENT.md | ✅ | v1.0 | Complete |
-| SECURITY.md | ✅ | v1.0 | Complete |
-| TESTING_GUIDE.md | ✅ | v1.0 | New (Dec 30, 2025) |
-| API.md | ✅ | v1.0 | Complete |
-| DOCUMENTATION.md | ✅ | v1.0 | New (Dec 30, 2025) |
-| backend/README.md | ✅ | v1.0 | Complete |
-| Environment templates | ✅ | v1.0 | Complete |
+| Document | Status | Last Updated |
+|----------|--------|--------------|
+| README.md | ✅ Complete | Jan 2, 2026 |
+| CODEBASE_ASSESSMENT.md | ✅ Complete | Dec 30, 2025 |
+| ARCHITECTURE.md | ✅ Complete | Dec 30, 2025 |
+| DEPLOYMENT.md | ✅ Complete | Dec 28, 2025 |
+| SECURITY.md | ✅ Complete | Dec 28, 2025 |
+| TESTING_GUIDE.md | ✅ Complete | Jan 2, 2026 |
+| API.md | ✅ Complete | Jan 2, 2026 |
+| DOCUMENTATION.md | ✅ Complete | Jan 2, 2026 |
+| backend/README.md | ✅ Complete | Dec 30, 2025 |
+| CHANGELOG.md | ✅ Complete | Dec 27, 2025 |
 
 ---
 
@@ -289,15 +166,41 @@ README.md (Start here - overview)
 2. Choose your path:
    - **Want to deploy?** → [DEPLOYMENT.md](DEPLOYMENT.md)
    - **Want to develop?** → [backend/README.md](backend/README.md)
-   - **Want to understand?** → [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md)
+   - **Want to understand?** → [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md) or [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ### Developers
 
 1. [README.md](README.md) - Overview
-2. [backend/README.md](backend/README.md) - Backend setup
-3. [API.md](API.md) - REST API reference
-4. [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md) - Deep dive
+2. [ARCHITECTURE.md](ARCHITECTURE.md) - System design
+3. [backend/README.md](backend/README.md) - Backend setup
+4. [API.md](API.md) - REST API reference
+5. [CODEBASE_ASSESSMENT.md](CODEBASE_ASSESSMENT.md) - Deep dive
 
+### DevOps Engineers
+
+1. [README.md](README.md) - Overview
+2. [DEPLOYMENT.md](DEPLOYMENT.md) - Production deployment
+3. [SECURITY.md](SECURITY.md) - Security configuration
+4. [TESTING_GUIDE.md](TESTING_GUIDE.md) - Pre-deployment testing
+
+### QA / Testers
+
+1. [README.md](README.md) - Overview
+2. [TESTING_GUIDE.md](TESTING_GUIDE.md) - All testing procedures
+3. [API.md](API.md) - API endpoints to test
+
+---
+
+## 📞 Additional Resources
+
+- **Interactive API Docs:** `http://localhost:8041/api/docs` (when running)
+- **Environment Templates:** `.env.example`, `.env.docker.example`
+- **Backend Documentation:** `backend/README.md`, `backend/2FA_IMPLEMENTATION.md`
+
+---
+
+**Last Updated:** January 2, 2026  
+**Documentation Version:** 2.0 (Streamlined)
 ### DevOps / Deployment Teams
 
 1. [README.md](README.md) - Overview

@@ -54,7 +54,16 @@ const MainLayout = ({
     // Poll for updates every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
 
-    return () => clearInterval(interval);
+    // Listen for notification changes to refresh count immediately
+    const handleNotificationChange = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('notificationsChanged', handleNotificationChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notificationsChanged', handleNotificationChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -202,7 +211,7 @@ const MainLayout = ({
             position: 'absolute',
             top: '60px',
             left: '0',
-            width: '160px',
+            width: '200px',
             backgroundColor: colors.background,
             borderRadius: '6px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
@@ -248,20 +257,20 @@ const MainLayout = ({
             <div 
               className="category-item"
               onClick={() => {
-                onViewChange('system-dashboard', 'activity');
+                onViewChange('settings', 'general');
                 setShowUserMenu(false);
               }}
               style={{ cursor: 'pointer', borderBottom: `1px solid ${colors.border}` }}
             >
-              <i className="fas fa-sliders-h"></i>
-              <span>System Dashboard</span>
+              <i className="fas fa-cog"></i>
+              <span>Settings</span>
             </div>
             {/* Logout button removed - only one at bottom of sidebar */}
           </div>
         )}
       </div>
 
-      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && currentView.main !== 'notifications' && currentView.main !== 'system-dashboard' && (
+      {currentView.main !== 'settings' && currentView.main !== 'dashboard' && currentView.main !== 'notifications' && currentView.main !== 'system-dashboard' && currentView.main !== 'profile' && (
           <div style={{ marginTop: '30px', paddingBottom: '20px', borderBottom: `1px solid ${colors.border}` }}>
             <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
               Navigation
@@ -570,6 +579,56 @@ const MainLayout = ({
               <span>Device Sync</span>
             </div>
 
+          </div>
+        )}
+
+      {currentView.main === 'profile' && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${colors.border}` }}>
+              <div 
+                className="category-item"
+                onClick={() => onViewChange('applications')}
+                style={{ cursor: 'pointer', backgroundColor: 'transparent', color: colors.secondary }}
+              >
+                <i className="fas fa-arrow-left"></i>
+                <span>Back to Authenticator</span>
+              </div>
+            </div>
+            <h4 style={{ padding: '0 16px', marginBottom: '12px', fontSize: '12px', fontWeight: '600', color: colors.secondary, textTransform: 'uppercase' }}>
+              Profile
+            </h4>
+            <div 
+              className={`category-item ${currentView.sub === 'general' ? 'active' : ''}`}
+              onClick={() => onViewChange('profile', 'general')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-user-circle"></i>
+              <span>Profile Info</span>
+            </div>
+            <div 
+              className={`category-item ${currentView.sub === 'security' ? 'active' : ''}`}
+              onClick={() => onViewChange('profile', 'security')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-shield-alt"></i>
+              <span>Security</span>
+            </div>
+            <div 
+              className={`category-item ${currentView.sub === 'sessions' ? 'active' : ''}`}
+              onClick={() => onViewChange('profile', 'sessions')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-laptop"></i>
+              <span>Active Sessions</span>
+            </div>
+            <div 
+              className={`category-item ${currentView.sub === 'preferences' ? 'active' : ''}`}
+              onClick={() => onViewChange('profile', 'preferences')}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-sliders-h"></i>
+              <span>Preferences</span>
+            </div>
           </div>
         )}
 

@@ -201,7 +201,13 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
 
   const formatDate = (dateString) => {
     try {
+      if (!dateString) return 'Unknown';
+      
       const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) return 'Invalid date';
+      
       const now = new Date();
       const diffMs = now - date;
       const diffMins = Math.floor(diffMs / 60000);
@@ -214,7 +220,8 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
       if (diffDays < 7) return `${diffDays}d ago`;
 
       return date.toLocaleDateString();
-    } catch {
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
       return 'Unknown';
     }
   };
@@ -652,8 +659,8 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
 
   // Desktop View
   return (
-    <div style={{ padding: '24px', backgroundColor: colors.backgroundLight, minHeight: '100vh', overflowY: 'auto', maxHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: colors.backgroundLight, overflow: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '24px 24px 0 24px' }}>
         <h2 style={{ margin: 0, color: colors.primary }}>Activity History</h2>
         <button
           onClick={handleRefresh}
@@ -682,7 +689,8 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
           display: 'flex',
           gap: '12px',
           marginBottom: '24px',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          padding: '0 24px'
         }}
       >
         <select
@@ -770,7 +778,8 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
             color: colors.danger,
             padding: '16px',
             borderRadius: '4px',
-            border: `1px solid ${colors.danger}30`
+            border: `1px solid ${colors.danger}30`,
+            margin: '0 24px'
           }}
         >
           <i className="fas fa-exclamation-circle"></i> {error}
@@ -787,7 +796,9 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
               overflowX: 'auto',
               border: `1px solid ${colors.border}`,
               borderRadius: '8px',
-              backgroundColor: colors.background
+              backgroundColor: colors.background,
+              margin: '0 24px 24px 24px',
+              flex: 1
             }}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -905,11 +916,12 @@ const ActivityView = ({ currentUser, appSettings, isMobile }) => {
             style={{
               marginTop: '16px',
               padding: '16px',
-              backgroundColor: colors.background,
+              backgroundColor: colors.backgroundLight,
               borderRadius: '4px',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              margin: '16px 24px 24px 24px'
             }}
           >
             <div style={{ color: colors.secondary, fontSize: '13px' }}>
