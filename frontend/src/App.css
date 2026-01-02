@@ -182,7 +182,7 @@ header {
 .user-avatar {
   width: 40px;
   height: 40px;
-  background-color: #4361ee;
+  background-color: var(--accent-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -242,7 +242,7 @@ header {
 .mobile-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex-shrink: 0;
   overflow: hidden;
 }
 

@@ -39,10 +39,21 @@ const App = () => {
     const saved = localStorage.getItem('currentView');
     return saved ? JSON.parse(saved) : { main: 'applications', sub: 'general' };
   });
-  const [appSettings, setAppSettings] = useState({
-    theme: 'light',
-    autoLock: 5,
-    codeFormat: 'spaced'
+  const [appSettings, setAppSettings] = useState(() => {
+    // Load appSettings from localStorage for unauthenticated users
+    const saved = localStorage.getItem('appSettings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // Fall back to defaults if parsing fails
+      }
+    }
+    return {
+      theme: 'light',
+      autoLock: 5,
+      codeFormat: 'spaced'
+    };
   });
 
   // Validate token on mount (page refresh)

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 
 const AddAccountModal = ({ 
@@ -120,6 +120,18 @@ const AddAccountModal = ({
   };
 
   const colors = getThemeColors();
+  const [showCamera, setShowCamera] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+  }, []);
 
   // Populate form when editing
   useEffect(() => {
@@ -293,6 +305,7 @@ const AddAccountModal = ({
                   id="accountUsername" 
                   className="form-control" 
                   placeholder="your.email@example.com"
+                  name="accountUsername"
                 />
               </div>
 
@@ -303,6 +316,7 @@ const AddAccountModal = ({
                   className="form-control" 
                   name="accountCategory"
                   defaultValue="Personal"
+                  style={{ width: '100%' }}
                 >
                   <option value="Work">Work</option>
                   <option value="Personal">Personal</option>
@@ -317,6 +331,7 @@ const AddAccountModal = ({
                   className="form-control" 
                   name="otpType"
                   defaultValue="TOTP"
+                  style={{ width: '100%' }}
                 >
                   <option value="TOTP">TOTP (Time-based)</option>
                   <option value="HOTP">HOTP (Counter-based)</option>
@@ -325,36 +340,46 @@ const AddAccountModal = ({
                   TOTP: Codes change every 30 seconds. HOTP: Codes increment with each use.
                 </small>
               </div>
+            </div>
 
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '24px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="accountFavorite" 
-                    name="accountFavorite"
-                    style={{ margin: 0 }}
-                  />
-                  <span>Add to Favorites</span>
-                </label>
-              </div>
+            <div style={{ marginTop: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input 
+                  type="checkbox" 
+                  id="accountFavorite" 
+                  name="accountFavorite"
+                  style={{ margin: 0 }}
+                />
+                <span>Add to Favorites</span>
+              </label>
             </div>
 
             {!isEditMode && (
               <>
                 <div className="form-group form-group-full">
                   <label>Setup Method</label>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
                     <button 
                       className={`btn ${setupMethod === 'scan' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={{ flex: 1 }} 
+                      style={{ flex: 1, minWidth: '140px' }} 
                       type="button"
                       onClick={() => onSetupMethodChange('scan')}
                     >
-                      <i className="fas fa-qrcode"></i> Scan QR Code
+                      <i className="fas fa-qrcode"></i> {isMobile ? 'Upload' : 'Scan'} QR
                     </button>
+                    {isMobile && (
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ flex: 1, minWidth: '140px' }} 
+                        type="button"
+                        onClick={() => setShowCamera(true)}
+                      >
+                        <i className="fas fa-camera"></i> Use Camera
+                      </button>
+                    )}
                     <button 
                       className={`btn ${setupMethod === 'manual' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={{ flex: 1 }} 
+                      style={{ flex: 1, minWidth: '140px' }} 
                       type="button"
                       onClick={() => onSetupMethodChange('manual')}
                     >
@@ -412,6 +437,82 @@ const AddAccountModal = ({
           </form>
         </div>
       </div>
+
+      {/* Camera Scanner Modal for Mobile */}
+      {showCamera && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 10000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '500px',
+            backgroundColor: colors.background,
+            borderRadius: '8px',
+            padding: '20px',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, color: colors.primary }}>Scan QR Code</h3>
+              <button
+                onClick={() => setShowCamera(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: colors.primary,
+                  padding: 0
+                }}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <p style={{ color: colors.secondary, fontSize: '13px', marginBottom: '16px' }}>
+              Position the QR code within the camera view. The code will be scanned automatically.
+            </p>
+            <div style={{
+              width: '100%',
+              aspectRatio: '1',
+              backgroundColor: '#000',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+            </div>
+            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowCamera(false)}
+                style={{ width: '100%' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
