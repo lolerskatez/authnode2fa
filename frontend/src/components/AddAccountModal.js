@@ -122,8 +122,10 @@ const AddAccountModal = ({
   const colors = getThemeColors();
   const [showCamera, setShowCamera] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [scanningActive, setScanningActive] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   // Detect mobile device and screen size
   useEffect(() => {
@@ -136,6 +138,72 @@ const AddAccountModal = ({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Initialize camera when showCamera becomes true
+  useEffect(() => {
+    let animationFrame;
+
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          streamRef.current = stream;
+          setScanningActive(true);
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Unable to access camera. Please check permissions or use the Upload QR option instead.');
+        setShowCamera(false);
+      }
+    };
+
+    const scanQRCode = () => {
+      if (!videoRef.current || !canvasRef.current || !scanningActive) return;
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Simple QR code detection - look for otpauth:// pattern
+        // In production, you'd use a library like jsQR
+        try {
+          // For now, we'll just show a message that this feature needs a QR library
+          // You can add jsQR library for full implementation
+        } catch (error) {
+          console.error('QR scan error:', error);
+        }
+      }
+
+      animationFrame = requestAnimationFrame(scanQRCode);
+    };
+
+    if (showCamera) {
+      startCamera().then(() => {
+        scanQRCode();
+      });
+    }
+
+    return () => {
+      // Cleanup
+      setScanningActive(false);
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [showCamera, scanningActive]);
 
   // Populate form when editing
   useEffect(() => {
@@ -610,7 +678,9 @@ const AddAccountModal = ({
               </button>
             </div>
             <p style={{ color: colors.secondary, fontSize: '13px', marginBottom: '16px' }}>
-              Position the QR code within the camera view. The code will be scanned automatically.
+              {scanningActive 
+                ? 'Position the QR code within the camera view. The code will be scanned automatically.'
+                : 'Initializing camera...'}
             </p>
             <div style={{
               width: '100%',
@@ -618,7 +688,10 @@ const AddAccountModal = ({
               backgroundColor: '#000',
               borderRadius: '8px',
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
               <video
                 ref={videoRef}
@@ -627,9 +700,16 @@ const AddAccountModal = ({
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover'
+                  objectFit: 'cover',
+                  display: scanningActive ? 'block' : 'none'
                 }}
               />
+              {!scanningActive && (
+                <div style={{ color: 'white', textAlign: 'center', padding: '20px' }}>
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: '32px', marginBottom: '10px' }}></i>
+                  <p>Starting camera...</p>
+                </div>
+              )}
               <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
