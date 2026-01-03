@@ -5,7 +5,7 @@ services:
     container_name: authnode2fa_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-authnode2fa}
+      POSTGRES_DB: ${POSTGRES_DB:-authnode2fa_prod}
       POSTGRES_USER: ${POSTGRES_USER:-authnode2fa_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
@@ -14,7 +14,7 @@ services:
     networks:
       - authnode2fa_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-authnode2fa_user} -d ${POSTGRES_DB:-authnode2fa}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-authnode2fa_user} -d ${POSTGRES_DB:-authnode2fa_prod}"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -46,7 +46,7 @@ services:
       - "8041:8041"
     environment:
       # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-authnode2fa_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-authnode2fa}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-authnode2fa_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-authnode2fa_prod}
       # Security
       SECRET_KEY: ${SECRET_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
