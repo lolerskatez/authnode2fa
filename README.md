@@ -15,7 +15,7 @@ Deploy your own secure 2FA vault in minutes. No cloud dependencies. Full control
 **⚡ Deploy in 3 Commands:**
 ```bash
 git clone https://github.com/lolerskatez/authnode2fa.git && cd authnode2fa
-cp .env.prod.example .env.prod && nano .env.prod  # Set your secrets
+bash setup_production.sh  # Interactive setup with auto-generated secrets
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
@@ -111,41 +111,63 @@ docker-compose -f docker-compose.prod.yml up -d
 
 **Prerequisites:** Docker & Docker Compose installed on Linux server
 
+#### Easy Setup (Interactive Wizard) ⭐
+
 ```bash
 # 1. Clone repository
 git clone https://github.com/lolerskatez/authnode2fa.git
 cd authnode2fa
 
-# 2. Configure environment
+# 2. Run setup wizard
+bash setup_production.sh     # Linux/Mac
+setup_production.bat         # Windows
+
+# The wizard will:
+# ✓ Auto-generate all secure passwords and keys
+# ✓ Ask for your domain (optional)
+# ✓ Configure SMTP if needed (optional)
+# ✓ Create .env.prod with all settings
+# ✓ Set secure file permissions
+
+# 3. Deploy
+docker-compose -f docker-compose.prod.yml up -d
+
+# 4. Check logs
+docker-compose -f docker-compose.prod.yml logs -f
+
+# 5. Access your application
+# Frontend: http://your-server-ip (or your domain)
+# Login: admin@example.com / changeme123
+# ⚠️ CHANGE ADMIN PASSWORD IMMEDIATELY!
+```
+
+#### Manual Setup (Advanced)
+
+```bash
+# 1. Clone repository
+git clone https://github.com/lolerskatez/authnode2fa.git
+cd authnode2fa
+
+# 2. Configure environment manually
 cp .env.prod.example .env.prod
 nano .env.prod  # Edit with your secrets
 
-# Required changes:
+# Required:
 # - POSTGRES_PASSWORD=<strong-password>
-# - SECRET_KEY=<generate with: openssl rand -hex 32>
-# - REDIS_PASSWORD=<generate with: openssl rand -hex 32>
-# - APP_URL=https://yourdomain.com
+# - SECRET_KEY=$(openssl rand -hex 32)
+# - REDIS_PASSWORD=$(openssl rand -hex 32)
 
 # 3. Verify configuration (optional)
-bash check_deployment.sh  # Linux/Mac
-check_deployment.bat      # Windows
+bash check_deployment.sh
 
 # 4. Deploy
 docker-compose -f docker-compose.prod.yml up -d
-
-# 5. Check logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# 6. Access your application
-# Frontend: http://your-server-ip
-# Login: admin@example.com / changeme123
-# ⚠️ CHANGE ADMIN PASSWORD IMMEDIATELY!
 ```
 
 **What happens automatically:**
 - ✅ Database migrations run
 - ✅ Admin user created
-- ✅ Encryption key generated
+- ✅ Encryption key auto-generated (if not provided)
 - ✅ All services started
 
 ### Local Development
