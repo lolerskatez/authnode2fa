@@ -682,6 +682,7 @@ const SecurityModal = ({ isOpen, onClose, currentUser, colors, isMobile }) => {
                 placeholder="Password"
                 value={disableTwoFAPassword}
                 onChange={(e) => setDisableTwoFAPassword(e.target.value)}
+                autoComplete="current-password"
                 style={{
                   width: '100%',
                   padding: '12px',

@@ -1794,6 +1794,7 @@ const SettingsView = ({
                       placeholder="••••••••"
                       value={smtpSettings.password}
                       onChange={(e) => handleSmtpChange('password', e.target.value)}
+                      autoComplete="new-password"
                       style={{
                         width: '100%',
                         padding: '10px 12px',
@@ -2718,6 +2719,7 @@ const SettingsView = ({
                   placeholder="Enter your password"
                   value={disableTwoFAPassword}
                   onChange={(e) => setDisableTwoFAPassword(e.target.value)}
+                  autoComplete="current-password"
                   style={{
                     width: '100%',
                     padding: '10px 12px',

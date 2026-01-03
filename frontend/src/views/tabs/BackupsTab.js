@@ -299,6 +299,7 @@ const BackupsTab = ({ appSettings }) => {
                   value={restorePassword}
                   onChange={(e) => setRestorePassword(e.target.value)}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   style={{
                     width: '100%',
                     padding: '10px 12px',

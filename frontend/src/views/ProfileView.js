@@ -780,7 +780,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                   )}
                 </div>
                 {isChangingPassword ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <input
                       type="password"
                       value={currentPassword}
@@ -807,7 +807,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                     />
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button 
-                        onClick={handleChangePassword} 
+                        type="submit"
                         className="btn" 
                         style={{ padding: '8px 16px' }}
                         disabled={loading}
@@ -815,6 +815,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                         Update Password
                       </button>
                       <button 
+                        type="button"
                         onClick={() => cancelEdit('password')} 
                         className="btn btn-secondary" 
                         style={{ padding: '8px 16px' }}
@@ -823,7 +824,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                         Cancel
                       </button>
                     </div>
-                  </div>
+                  </form>
                 ) : (
                   <p style={{ margin: 0, color: colors.secondary, fontSize: '16px' }}>••••••••</p>
                 )}
@@ -1940,6 +1941,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                     placeholder="Password"
                     value={disableTwoFAPassword}
                     onChange={(e) => setDisableTwoFAPassword(e.target.value)}
+                    autoComplete="current-password"
                     style={{
                       width: '100%',
                       padding: '12px',
