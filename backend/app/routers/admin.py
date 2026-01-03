@@ -453,7 +453,7 @@ def get_dashboard_stats(
     ).filter(
         models.AuditLog.action == "login_success",
         models.AuditLog.created_at >= seven_days_ago
-    ).group_by(models.AuditLog.user_id).order_by(
+    ).group_by(models.User.email, models.AuditLog.user_id).order_by(
         func.count(models.AuditLog.id).desc()
     ).limit(5).all()
     
