@@ -272,11 +272,11 @@ if %errorlevel% equ 0 (
             echo.
             
             echo Pulling Docker images...
-            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml --env-file .env.prod pull
             
             echo.
             echo Starting services...
-            docker-compose -f docker-compose.prod.yml up -d
+            docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
             
             echo.
             echo Waiting for services to initialize...
@@ -284,7 +284,7 @@ if %errorlevel% equ 0 (
             
             echo.
             echo Deployment Status:
-            docker-compose -f docker-compose.prod.yml ps
+            docker-compose -f docker-compose.prod.yml --env-file .env.prod ps
             
             echo.
             echo [SUCCESS] Deployment complete!
@@ -294,11 +294,11 @@ if %errorlevel% equ 0 (
             echo.
             echo WARNING: CHANGE ADMIN PASSWORD IMMEDIATELY!
             echo.
-            echo View logs with: docker-compose -f docker-compose.prod.yml logs -f
+            echo View logs with: docker-compose -f docker-compose.prod.yml --env-file .env.prod logs -f
         ) else (
             echo.
             echo   1. Review .env.prod if needed
-            echo   2. Run: docker-compose -f docker-compose.prod.yml up -d
+            echo   2. Run: docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
             echo   3. Access: !APP_URL!
             echo   4. Login and change admin password immediately!
         )
@@ -306,13 +306,13 @@ if %errorlevel% equ 0 (
         echo Warning: Docker Compose not found
         echo.
         echo Install Docker Compose, then run:
-        echo   docker-compose -f docker-compose.prod.yml up -d
+        echo   docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
     )
 ) else (
     echo Warning: Docker not found
     echo.
     echo Install Docker and Docker Compose, then run:
-    echo   docker-compose -f docker-compose.prod.yml up -d
+    echo   docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
     echo.
     echo Or see DEPLOYMENT_GUIDE.md for manual installation.
 )

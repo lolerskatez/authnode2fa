@@ -130,10 +130,10 @@ setup_production.bat         # Windows
 # ✓ Set secure file permissions
 
 # 3. Deploy
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 # 4. Check logs
-docker-compose -f docker-compose.prod.yml logs -f
+docker-compose -f docker-compose.prod.yml --env-file .env.prod logs -f
 
 # 5. Access your application
 # Frontend: http://your-server-ip (or your domain)
@@ -161,7 +161,7 @@ nano .env.prod  # Edit with your secrets
 bash check_deployment.sh
 
 # 4. Deploy
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
 **What happens automatically:**

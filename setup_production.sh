@@ -287,12 +287,12 @@ if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; the
         
         # Pull images first
         echo "Pulling Docker images..."
-        docker-compose -f docker-compose.prod.yml pull
+        docker-compose -f docker-compose.prod.yml --env-file .env.prod pull
         
         # Start services
         echo ""
         echo "Starting services..."
-        docker-compose -f docker-compose.prod.yml up -d
+        docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
         
         # Wait a bit for services to start
         echo ""
@@ -302,7 +302,7 @@ if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; the
         # Show status
         echo ""
         echo -e "${GREEN}Deployment Status:${NC}"
-        docker-compose -f docker-compose.prod.yml ps
+        docker-compose -f docker-compose.prod.yml --env-file .env.prod ps
         
         echo ""
         echo -e "${GREEN}✓ Deployment complete!${NC}"
@@ -312,11 +312,11 @@ if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; the
         echo ""
         echo -e "${RED}⚠️  CHANGE ADMIN PASSWORD IMMEDIATELY!${NC}"
         echo ""
-        echo "View logs with: docker-compose -f docker-compose.prod.yml logs -f"
+        echo "View logs with: docker-compose -f docker-compose.prod.yml --env-file .env.prod logs -f"
     else
         echo ""
         echo "  1. Review .env.prod if needed"
-        echo "  2. Run: docker-compose -f docker-compose.prod.yml up -d"
+        echo "  2. Run: docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d"
         echo "  3. Access: $APP_URL"
         echo "  4. Login and change admin password immediately!"
     fi
@@ -324,7 +324,7 @@ else
     echo -e "${YELLOW}⚠️  Docker not found${NC}"
     echo ""
     echo "Install Docker and Docker Compose, then run:"
-    echo "  docker-compose -f docker-compose.prod.yml up -d"
+    echo "  docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d"
     echo ""
     echo "Or see DEPLOYMENT_GUIDE.md for manual installation."
 fi
