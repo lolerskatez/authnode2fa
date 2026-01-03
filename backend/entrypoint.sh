@@ -6,12 +6,20 @@ set -e
 
 echo "Starting 2FA Manager Backend..."
 
-# Check if database connection is available (wait for PostgreSQL to be ready)
-if [ ! -z "$DATABASE_URL" ] && [[ "$DATABASE_URL" == postgresql* ]]; then
+# Extract database connection details from DATABASE_URL
+if [ ! -z "$DATABASE_URL" ]; then
     echo "Waiting for PostgreSQL to be ready..."
-    while ! python -c "from sqlalchemy import create_engine; create_engine('$DATABASE_URL').execute('SELECT 1')" 2>/dev/null; do
+    # Parse DATABASE_URL to extract host, port, user, database
+    # Format: postgresql://user:password@host:port/database
+    DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
+    DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+    DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
+    DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
+    
+    # Wait for PostgreSQL to be ready using pg_isready
+    until PGPASSWORD=$POSTGRES_PASSWORD pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" > /dev/null 2>&1; do
         echo "PostgreSQL is unavailable - sleeping"
-        sleep 1
+        sleep 2
     done
     echo "PostgreSQL is ready!"
 fi
