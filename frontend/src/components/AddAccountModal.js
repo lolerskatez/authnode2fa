@@ -528,7 +528,7 @@ const AddAccountModal = ({
           )}
 
           <form onSubmit={handleAddAccount} style={!isMobile && !isEditMode ? { flex: 1, padding: '24px', overflowY: 'auto' } : {}}>
-            <div className="form-grid" style={!isMobile && !isEditMode ? { maxWidth: '450px' } : {}}>
+            <div className="form-grid" style={!isMobile && !isEditMode ? { maxWidth: '450px', display: 'block' } : {}}>
               <div className="form-group" style={{ position: 'relative' }}>
                 <label htmlFor="accountName" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
                   Account Name
