@@ -1,6 +1,7 @@
 import pyotp
 import re
 import numpy as np
+from urllib.parse import unquote
 
 # Try to import QR decoding libraries
 try:
@@ -80,13 +81,13 @@ def extract_issuer_from_qr_data(qr_data: str) -> str:
         # Extract issuer parameter from otpauth URL
         issuer_match = re.search(r'issuer=([^&]+)', qr_data, re.IGNORECASE)
         if issuer_match:
-            return issuer_match.group(1).replace('+', ' ')
+            return unquote(issuer_match.group(1).replace('+', ' '))
         
         # If no issuer parameter, try to extract from the label part
         # Format: otpauth://totp/Issuer:Label?...
-        label_match = re.search(r'otpauth://totp/([^:]+)', qr_data)
+        label_match = re.search(r'otpauth://totp/([^:?]+)', qr_data)
         if label_match:
-            return label_match.group(1).replace('+', ' ')
+            return unquote(label_match.group(1).replace('+', ' '))
     
     return ""
 
