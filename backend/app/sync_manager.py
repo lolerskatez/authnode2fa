@@ -14,8 +14,22 @@ from sqlalchemy.orm import Session
 from cryptography.fernet import Fernet
 import os
 
+# Handle encryption key - auto-generate if not set or invalid
 key = os.getenv("ENCRYPTION_KEY")
-cipher = Fernet(key.encode() if isinstance(key, str) else key)
+if not key or len(key) != 44:  # Fernet keys are 32 bytes base64 encoded = 44 chars
+    # Auto-generate a new Fernet key
+    from cryptography.fernet import Fernet
+    key = Fernet.generate_key().decode()
+    # Save it to a file for persistence
+    key_file = os.path.join(os.path.dirname(__file__), '..', '.encryption_key')
+    os.makedirs(os.path.dirname(key_file), exist_ok=True)
+    with open(key_file, 'w') as f:
+        f.write(key)
+    print(f"Auto-generated encryption key saved to {key_file}")
+else:
+    print("Using existing encryption key from environment")
+
+cipher = Fernet(key.encode())
 
 
 class DeviceSyncManager:
