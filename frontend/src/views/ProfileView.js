@@ -781,6 +781,14 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                 </div>
                 {isChangingPassword ? (
                   <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Hidden username field for accessibility and password managers */}
+                    <input
+                      type="email"
+                      value={currentUser?.email || ''}
+                      autoComplete="username"
+                      style={{ display: 'none' }}
+                      readOnly
+                    />
                     <input
                       type="password"
                       value={currentPassword}
