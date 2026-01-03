@@ -651,10 +651,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                   <i className="fas fa-times"></i>
                 </button>
               </div>
-              <div className="modal-body" style={{ padding: '20px' }}>
+              <div className="modal-body" style={{ padding: isMobile ? '16px' : '20px' }}>
                 <form onSubmit={handleSubmit}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary }}>
+                  <div style={{ marginBottom: isMobile ? '14px' : '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary, fontSize: isMobile ? '13px' : '14px' }}>
                       Full Name
                     </label>
                     <input
@@ -666,10 +666,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                       required
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
+                        padding: isMobile ? '10px 12px' : '8px 12px',
                         borderRadius: '4px',
                         border: `1px solid ${colors.border}`,
-                        fontSize: '14px',
+                        fontSize: isMobile ? '16px' : '14px',
                         boxSizing: 'border-box',
                         backgroundColor: colors.secondaryBg,
                         color: colors.primary
@@ -677,8 +677,8 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                     />
                   </div>
 
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary }}>
+                  <div style={{ marginBottom: isMobile ? '14px' : '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary, fontSize: isMobile ? '13px' : '14px' }}>
                       Email
                     </label>
                     <input
@@ -690,10 +690,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                       required
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
+                        padding: isMobile ? '10px 12px' : '8px 12px',
                         borderRadius: '4px',
                         border: `1px solid ${colors.border}`,
-                        fontSize: '14px',
+                        fontSize: isMobile ? '16px' : '14px',
                         boxSizing: 'border-box',
                         backgroundColor: colors.secondaryBg,
                         color: colors.primary
@@ -701,8 +701,8 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                     />
                   </div>
 
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary }}>
+                  <div style={{ marginBottom: isMobile ? '14px' : '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary, fontSize: isMobile ? '13px' : '14px' }}>
                       {editingUser ? 'New Password (leave empty to keep current)' : 'Password (min 6 characters)'}
                     </label>
                     <input
@@ -715,10 +715,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                       minLength={editingUser ? undefined : 6}
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
+                        padding: isMobile ? '10px 12px' : '8px 12px',
                         borderRadius: '4px',
                         border: `1px solid ${colors.border}`,
-                        fontSize: '14px',
+                        fontSize: isMobile ? '16px' : '14px',
                         boxSizing: 'border-box',
                         backgroundColor: colors.secondaryBg,
                         color: colors.primary
@@ -726,8 +726,8 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                     />
                   </div>
 
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary }}>
+                  <div style={{ marginBottom: isMobile ? '14px' : '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: colors.primary, fontSize: isMobile ? '13px' : '14px' }}>
                       Role
                     </label>
                     <select
@@ -736,10 +736,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                       disabled={editingUser && editingUser.id === currentUser.id}
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
+                        padding: isMobile ? '10px 12px' : '8px 12px',
                         borderRadius: '4px',
                         border: `1px solid ${colors.border}`,
-                        fontSize: '14px',
+                        fontSize: isMobile ? '16px' : '14px',
                         boxSizing: 'border-box',
                         backgroundColor: editingUser && editingUser.id === currentUser.id ? colors.border : colors.secondaryBg,
                         color: colors.primary,
@@ -750,25 +750,37 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                       <option value="admin">Admin</option>
                     </select>
                     {editingUser && editingUser.id === currentUser.id && (
-                      <p style={{ color: colors.secondary, fontSize: '12px', marginTop: '6px' }}>
+                      <p style={{ color: colors.secondary, fontSize: '12px', marginTop: '6px', margin: '6px 0 0 0' }}>
                         You cannot change your own role
                       </p>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: isMobile ? '8px' : '10px', 
+                    flexDirection: isMobile ? 'column' : 'row',
+                    justifyContent: isMobile ? 'stretch' : 'space-between',
+                    alignItems: isMobile ? 'stretch' : 'center'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: isMobile ? '8px' : '10px',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      flex: isMobile ? '1' : 'auto'
+                    }}>
                       <button
                         type="submit"
                         style={{
-                          padding: '10px 20px',
+                          padding: isMobile ? '12px 16px' : '10px 20px',
                           backgroundColor: colors.success,
                           color: 'white',
                           border: 'none',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500'
+                          fontSize: isMobile ? '14px' : '14px',
+                          fontWeight: '500',
+                          flex: isMobile ? '1' : 'auto'
                         }}
                       >
                         {editingUser ? 'Update User' : 'Create User'}
@@ -777,14 +789,15 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         type="button"
                         onClick={handleCloseForm}
                         style={{
-                          padding: '10px 20px',
+                          padding: isMobile ? '12px 16px' : '10px 20px',
                           backgroundColor: colors.secondary,
                           color: 'white',
                           border: 'none',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500'
+                          fontSize: isMobile ? '14px' : '14px',
+                          fontWeight: '500',
+                          flex: isMobile ? '1' : 'auto'
                         }}
                       >
                         Cancel
@@ -795,21 +808,23 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                         type="button"
                         onClick={() => handleDeleteUser(editingUser.id)}
                         style={{
-                          padding: '10px 20px',
+                          padding: isMobile ? '12px 16px' : '10px 20px',
                           backgroundColor: colors.danger,
                           color: 'white',
                           border: 'none',
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '14px',
+                          fontSize: isMobile ? '14px' : '14px',
                           fontWeight: '500',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          justifyContent: 'center',
+                          gap: '6px',
+                          flex: isMobile ? '1' : 'auto'
                         }}
                       >
                         <i className="fas fa-trash"></i>
-                        Delete User
+                        {!isMobile && 'Delete User'}
                       </button>
                     )}
                   </div>

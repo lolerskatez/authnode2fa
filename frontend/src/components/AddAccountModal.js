@@ -372,14 +372,22 @@ const AddAccountModal = ({
         maxHeight: '85vh',
         display: 'flex',
         flexDirection: 'column'
-      } : {}}>
+      } : {
+        maxWidth: '900px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         <div className="modal-header" style={isMobile ? {
           padding: '14px 16px',
           position: 'sticky',
           top: 0,
           zIndex: 10
-        } : {}}>
-          <h2 style={isMobile ? { fontSize: '18px' } : {}}>
+        } : {
+          padding: '20px 24px',
+          borderBottom: `1px solid ${colors.border}`
+        }}>
+          <h2 style={isMobile ? { fontSize: '18px' } : { fontSize: '20px', marginBottom: 0 }}>
             {isEditMode ? 'Edit Account' : 'Add New Account'}
           </h2>
           <button 
@@ -394,9 +402,133 @@ const AddAccountModal = ({
           padding: '16px',
           overflowY: 'auto',
           flex: 1
-        } : {}}>
-          <form onSubmit={handleAddAccount}>
-            <div className="form-grid">
+        } : {
+          display: 'flex',
+          flex: 1,
+          overflowY: 'auto'
+        }}>
+          {!isMobile && !isEditMode && (
+            // Desktop: Left sidebar with setup methods
+            <div style={{
+              width: '280px',
+              borderRight: `1px solid ${colors.border}`,
+              padding: '24px 20px',
+              backgroundColor: colors.secondaryBg,
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ marginBottom: '8px' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: colors.primary, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Setup Method
+                </h4>
+              </div>
+
+              {/* Scan QR Method */}
+              <button 
+                className={`btn ${setupMethod === 'scan' ? 'btn-primary' : 'btn-secondary'}`} 
+                type="button"
+                onClick={() => onSetupMethodChange('scan')}
+                style={{
+                  padding: '14px 16px',
+                  fontSize: '14px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: '10px',
+                  border: setupMethod === 'scan' ? `2px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                  backgroundColor: setupMethod === 'scan' ? colors.accent : 'transparent',
+                  color: setupMethod === 'scan' ? 'white' : colors.primary,
+                  cursor: 'pointer',
+                  fontWeight: setupMethod === 'scan' ? '600' : '500',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <i className="fas fa-qrcode" style={{ fontSize: '16px' }}></i>
+                <div style={{ textAlign: 'left', flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '2px' }}>Scan QR Code</div>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>Upload QR image</div>
+                </div>
+              </button>
+
+              {/* Camera Method */}
+              {cameraAvailable && (
+                <button 
+                  className="btn btn-secondary" 
+                  type="button"
+                  onClick={() => setShowCamera(true)}
+                  style={{
+                    padding: '14px 16px',
+                    fontSize: '14px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: '10px',
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: 'transparent',
+                    color: colors.primary,
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <i className="fas fa-camera" style={{ fontSize: '16px' }}></i>
+                  <div style={{ textAlign: 'left', flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '2px' }}>Use Camera</div>
+                    <div style={{ fontSize: '12px', opacity: 0.8 }}>Scan live QR</div>
+                  </div>
+                </button>
+              )}
+
+              {/* Manual Entry Method */}
+              <button 
+                className={`btn ${setupMethod === 'manual' ? 'btn-primary' : 'btn-secondary'}`} 
+                type="button"
+                onClick={() => onSetupMethodChange('manual')}
+                style={{
+                  padding: '14px 16px',
+                  fontSize: '14px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: '10px',
+                  border: setupMethod === 'manual' ? `2px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                  backgroundColor: setupMethod === 'manual' ? colors.accent : 'transparent',
+                  color: setupMethod === 'manual' ? 'white' : colors.primary,
+                  cursor: 'pointer',
+                  fontWeight: setupMethod === 'manual' ? '600' : '500',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <i className="fas fa-keyboard" style={{ fontSize: '16px' }}></i>
+                <div style={{ textAlign: 'left', flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '2px' }}>Manual Entry</div>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>Enter code manually</div>
+                </div>
+              </button>
+
+              {/* Help Section */}
+              <div style={{
+                marginTop: '20px',
+                padding: '12px 14px',
+                backgroundColor: colors.background,
+                borderRadius: '6px',
+                borderLeft: `3px solid ${colors.accent}`
+              }}>
+                <p style={{ margin: 0, color: colors.secondary, fontSize: '12px', lineHeight: '1.5' }}>
+                  <strong style={{ display: 'block', marginBottom: '4px', color: colors.primary }}>Tip:</strong>
+                  Most services provide a QR code during setup. Scan it for quick setup.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleAddAccount} style={!isMobile && !isEditMode ? { flex: 1, padding: '24px', overflowY: 'auto' } : {}}>
+            <div className="form-grid" style={!isMobile && !isEditMode ? { maxWidth: '450px' } : {}}>
               <div className="form-group" style={{ position: 'relative' }}>
                 <label htmlFor="accountName" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
                   Account Name
@@ -514,7 +646,7 @@ const AddAccountModal = ({
               </label>
             </div>
 
-            {!isEditMode && (
+            {!isEditMode && isMobile && (
               <>
                 <div className="form-group form-group-full">
                   <label style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
@@ -624,6 +756,58 @@ const AddAccountModal = ({
                         fontSize: '15px',
                         borderRadius: '8px'
                       } : {}}
+                    />
+                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      The secret key is usually found in the advanced settings of your 2FA setup
+                    </small>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!isEditMode && !isMobile && (
+              <>
+                {setupMethod === 'scan' && (
+                  <div className="form-group form-group-full">
+                    <label htmlFor="qrFile" style={{ fontSize: '14px', marginBottom: '8px' }}>
+                      <i className="fas fa-image" style={{ marginRight: '8px', color: colors.accent }}></i>
+                      Upload QR Code Image
+                    </label>
+                    <input 
+                      type="file" 
+                      id="qrFile" 
+                      className="form-control" 
+                      accept="image/*"
+                      name="qrFile"
+                      style={{
+                        padding: '12px', 
+                        fontSize: '14px',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Upload a screenshot or photo of the QR code from your service
+                    </small>
+                  </div>
+                )}
+
+                {setupMethod === 'manual' && (
+                  <div className="form-group form-group-full">
+                    <label htmlFor="manualSecret" style={{ fontSize: '14px', marginBottom: '8px' }}>
+                      <i className="fas fa-key" style={{ marginRight: '8px', color: colors.accent }}></i>
+                      Secret Key
+                    </label>
+                    <input 
+                      type="text" 
+                      id="manualSecret" 
+                      className="form-control" 
+                      placeholder="Enter your 2FA secret key (e.g., JBSWY3DPEHPK3PXP)"
+                      name="manualSecret"
+                      style={{
+                        padding: '12px', 
+                        fontSize: '14px',
+                        borderRadius: '8px'
+                      }}
                     />
                     <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
                       The secret key is usually found in the advanced settings of your 2FA setup
