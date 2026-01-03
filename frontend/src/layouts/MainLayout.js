@@ -64,9 +64,30 @@ const MainLayout = ({
             <div 
               className="user-avatar" 
               onClick={() => setShowDropdown(!showDropdown)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', position: 'relative' }}
             >
               {currentUser ? currentUser.name.substring(0, 2).toUpperCase() : 'U'}
+              {unreadCount > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  border: '2px solid var(--header-bg)',
+                  zIndex: 1
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </div>
+              )}
             </div>
             {showDropdown && (
               <div className="dropdown-menu">

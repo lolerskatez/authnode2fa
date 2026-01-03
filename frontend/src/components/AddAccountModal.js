@@ -123,6 +123,7 @@ const AddAccountModal = ({
   const [showCamera, setShowCamera] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [scanningActive, setScanningActive] = useState(false);
+  const [cameraAvailable, setCameraAvailable] = useState(true);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -133,6 +134,18 @@ const AddAccountModal = ({
       const userAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const screenSize = window.innerWidth <= 768;
       setIsMobile(userAgent || screenSize);
+      
+      // Check if camera API is available
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+      const hasCamera = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+      
+      // On iOS, camera requires HTTPS
+      if (isIOS && !isSecure) {
+        setCameraAvailable(false);
+      } else if (!hasCamera) {
+        setCameraAvailable(false);
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -145,8 +158,17 @@ const AddAccountModal = ({
 
     const startCamera = async () => {
       try {
+        // Check if getUserMedia is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Camera API not supported');
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
         });
         
         if (videoRef.current) {
@@ -156,7 +178,24 @@ const AddAccountModal = ({
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
-        alert('Unable to access camera. Please check permissions or use the Upload QR option instead.');
+        
+        let errorMessage = 'Unable to access camera. ';
+        
+        // Check if it's iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+        
+        if (isIOS && !isSecure) {
+          errorMessage += 'iOS requires HTTPS to access the camera. Please use the "Upload QR" option instead, or access this site via HTTPS.';
+        } else if (error.name === 'NotAllowedError') {
+          errorMessage += 'Camera permission was denied. Please check your browser settings and allow camera access.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += 'No camera found on this device. Please use the "Upload QR" option instead.';
+        } else {
+          errorMessage += 'Please use the "Upload QR" option instead.';
+        }
+        
+        alert(errorMessage);
         setShowCamera(false);
       }
     };
@@ -505,7 +544,7 @@ const AddAccountModal = ({
                     >
                       <i className="fas fa-qrcode"></i> {isMobile ? 'Upload' : 'Scan'} QR
                     </button>
-                    {isMobile && (
+                    {isMobile && cameraAvailable && (
                       <button 
                         className="btn btn-primary" 
                         style={{ 

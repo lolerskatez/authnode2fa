@@ -392,7 +392,7 @@ body.theme-dark .dropdown-item.logout:hover {
 
 @media (max-width: 768px) {
   .app-content {
-    padding-bottom: 70px; /* Space for mobile bottom nav */
+    padding-bottom: 85px; /* Space for mobile bottom nav */
   }
 }
 
@@ -402,6 +402,14 @@ body.theme-dark .dropdown-item.logout:hover {
   overflow-y: auto;
   background-color: var(--bg-primary);
   height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .content-area {
+    padding: 20px;
+    height: auto;
+    min-height: 0;
+  }
 }
 
 .content-header {
@@ -709,7 +717,7 @@ body.theme-dark .dropdown-item.logout:hover {
   .accounts-grid {
     grid-template-columns: 1fr;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
     padding-bottom: 20px;
   }
 }
