@@ -165,9 +165,18 @@ const App = () => {
 
     fetchUnreadCount();
     
+    // Listen for notification changes to update count immediately
+    const handleNotificationsChanged = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('notificationsChanged', handleNotificationsChanged);
+    
     // Poll every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notificationsChanged', handleNotificationsChanged);
+    };
   }, [isAuthenticated]);
 
   // Auto-lock functionality

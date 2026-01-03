@@ -354,7 +354,7 @@ const AuthenticatorView = ({
           onClick={handleAddAccountClick}
           style={{
             position: 'fixed',
-            bottom: '80px',
+            bottom: '110px',
             right: '20px',
             width: '56px',
             height: '56px',

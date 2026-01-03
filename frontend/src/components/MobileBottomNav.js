@@ -43,6 +43,13 @@ const MobileBottomNav = ({ currentView, onViewChange, unreadCount, currentUser, 
             id: 'dashboard',
             icon: 'fa-chart-line',
             label: 'Dashboard',
+            action: () => onViewChange('system-dashboard', 'admin-dashboard')
+          });
+        } else {
+          appNavItems.push({
+            id: 'dashboard',
+            icon: 'fa-chart-line',
+            label: 'Dashboard',
             action: () => onViewChange('system-dashboard', 'activity')
           });
         }
