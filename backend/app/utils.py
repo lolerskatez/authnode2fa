@@ -16,25 +16,25 @@ def extract_qr_data(image_bytes: bytes) -> str:
             "QR code decoding is not available. Please install opencv-python. "
             "As a workaround, you can manually enter the 2FA secret code instead of scanning a QR code."
         )
-    
+
     try:
         # Convert bytes to numpy array
         nparr = np.frombuffer(image_bytes, np.uint8)
         # Decode image
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+
         if img is None:
-            raise ValueError("Could not decode image")
-        
+            raise ValueError("Could not decode image - invalid image format or corrupted file")
+
         # Use OpenCV's QR code detector
         detector = cv2.QRCodeDetector()
         qr_data, points, _ = detector.detectAndDecode(img)
-        
+
         if not qr_data:
-            raise ValueError("No QR code found in image")
-        
+            raise ValueError("No QR code found in image - make sure the QR code is clearly visible and well-lit")
+
         return qr_data
-        
+
     except Exception as e:
         raise ValueError(f"Failed to decode QR code: {str(e)}")
 

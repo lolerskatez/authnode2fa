@@ -39,28 +39,33 @@ def create_application(request: Request, app: schemas.ApplicationCreate, current
 def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     try:
         image_bytes = file.file.read()
-        
+
         # Extract QR data with OTP type and counter
         qr_data = utils.extract_qr_data(image_bytes)
+        print(f"DEBUG: Extracted QR data: {qr_data}")  # Debug log
+
         qr_info = utils.extract_secret_from_qr_data(qr_data)
+        print(f"DEBUG: Extracted QR info: {qr_info}")  # Debug log
+
         if not qr_info:
+            print(f"DEBUG: Failed to extract secret from QR data: {qr_data}")  # Debug log
             raise ValueError("Could not extract secret from QR code")
-        
+
         secret = qr_info["secret"]
         otp_type = qr_info["otp_type"]
         counter = qr_info["counter"]
-        
+
         issuer = utils.extract_issuer_from_qr_data(qr_data)
-        
+
         # Determine service name for icon
         service_name = name or issuer or "Unknown Service"
         icon = utils.get_service_icon(service_name)
         color = utils.get_service_color(service_name)
-        
+
         backup_key = utils.generate_backup_key()
         app = schemas.ApplicationCreate(
-            name=service_name, 
-            secret=secret, 
+            name=service_name,
+            secret=secret,
             backup_key=backup_key,
             icon=icon,
             color=color,
