@@ -27,11 +27,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
-
-# Create logs directory
-RUN mkdir -p logs && chown -R app:app /app
+# Make entrypoint executable and set permissions before switching user
+RUN chmod +x entrypoint.sh && \
+    mkdir -p logs && \
+    chown -R app:app /app
 
 # Switch to non-root user
 USER app

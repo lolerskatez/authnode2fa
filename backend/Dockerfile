@@ -11,4 +11,4 @@ COPY . .
 RUN chmod +x entrypoint.sh
 
 # Use entrypoint script for automated setup
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "./entrypoint.sh"]

@@ -270,10 +270,65 @@ echo "  • Default credentials: admin@example.com / changeme123"
 echo ""
 echo -e "${GREEN}Next Steps:${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  1. Review .env.prod if needed"
-echo "  2. Run: docker-compose -f docker-compose.prod.yml up -d"
-echo "  3. Access: $APP_URL"
-echo "  4. Login and change admin password immediately!"
 echo ""
-echo "For detailed deployment instructions, see DEPLOYMENT_GUIDE.md"
+
+# Check if Docker is available
+if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; then
+    echo -e "${BLUE}Docker detected!${NC}"
+    echo ""
+    read -p "Do you want to deploy with Docker now? (yes/no) [yes]: " DEPLOY_NOW
+    DEPLOY_NOW=${DEPLOY_NOW:-yes}
+    
+    if [ "$DEPLOY_NOW" = "yes" ]; then
+        echo ""
+        echo -e "${BLUE}Starting Docker deployment...${NC}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        
+        # Pull images first
+        echo "Pulling Docker images..."
+        docker-compose -f docker-compose.prod.yml pull
+        
+        # Start services
+        echo ""
+        echo "Starting services..."
+        docker-compose -f docker-compose.prod.yml up -d
+        
+        # Wait a bit for services to start
+        echo ""
+        echo "Waiting for services to initialize..."
+        sleep 5
+        
+        # Show status
+        echo ""
+        echo -e "${GREEN}Deployment Status:${NC}"
+        docker-compose -f docker-compose.prod.yml ps
+        
+        echo ""
+        echo -e "${GREEN}✓ Deployment complete!${NC}"
+        echo ""
+        echo "Access your application at: $APP_URL"
+        echo "Default login: admin@example.com / changeme123"
+        echo ""
+        echo -e "${RED}⚠️  CHANGE ADMIN PASSWORD IMMEDIATELY!${NC}"
+        echo ""
+        echo "View logs with: docker-compose -f docker-compose.prod.yml logs -f"
+    else
+        echo ""
+        echo "  1. Review .env.prod if needed"
+        echo "  2. Run: docker-compose -f docker-compose.prod.yml up -d"
+        echo "  3. Access: $APP_URL"
+        echo "  4. Login and change admin password immediately!"
+    fi
+else
+    echo -e "${YELLOW}⚠️  Docker not found${NC}"
+    echo ""
+    echo "Install Docker and Docker Compose, then run:"
+    echo "  docker-compose -f docker-compose.prod.yml up -d"
+    echo ""
+    echo "Or see DEPLOYMENT_GUIDE.md for manual installation."
+fi
+
+echo ""
+echo "For detailed instructions, see DEPLOYMENT_GUIDE.md"
 echo ""

@@ -253,11 +253,71 @@ echo   * Default credentials: admin@example.com / changeme123
 echo.
 echo Next Steps:
 echo ================================================
-echo   1. Review .env.prod if needed
-echo   2. Run: docker-compose -f docker-compose.prod.yml up -d
-echo   3. Access: !APP_URL!
-echo   4. Login and change admin password immediately!
 echo.
-echo For detailed deployment instructions, see DEPLOYMENT_GUIDE.md
+
+REM Check if Docker is available
+docker --version >nul 2>&1
+if %errorlevel% equ 0 (
+    docker-compose --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo Docker detected!
+        echo.
+        set /p DEPLOY_NOW="Do you want to deploy with Docker now? (yes/no) [yes]: "
+        if "!DEPLOY_NOW!"=="" set DEPLOY_NOW=yes
+        
+        if "!DEPLOY_NOW!"=="yes" (
+            echo.
+            echo Starting Docker deployment...
+            echo ================================================
+            echo.
+            
+            echo Pulling Docker images...
+            docker-compose -f docker-compose.prod.yml pull
+            
+            echo.
+            echo Starting services...
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            echo.
+            echo Waiting for services to initialize...
+            timeout /t 5 /nobreak >nul
+            
+            echo.
+            echo Deployment Status:
+            docker-compose -f docker-compose.prod.yml ps
+            
+            echo.
+            echo [SUCCESS] Deployment complete!
+            echo.
+            echo Access your application at: !APP_URL!
+            echo Default login: admin@example.com / changeme123
+            echo.
+            echo WARNING: CHANGE ADMIN PASSWORD IMMEDIATELY!
+            echo.
+            echo View logs with: docker-compose -f docker-compose.prod.yml logs -f
+        ) else (
+            echo.
+            echo   1. Review .env.prod if needed
+            echo   2. Run: docker-compose -f docker-compose.prod.yml up -d
+            echo   3. Access: !APP_URL!
+            echo   4. Login and change admin password immediately!
+        )
+    ) else (
+        echo Warning: Docker Compose not found
+        echo.
+        echo Install Docker Compose, then run:
+        echo   docker-compose -f docker-compose.prod.yml up -d
+    )
+) else (
+    echo Warning: Docker not found
+    echo.
+    echo Install Docker and Docker Compose, then run:
+    echo   docker-compose -f docker-compose.prod.yml up -d
+    echo.
+    echo Or see DEPLOYMENT_GUIDE.md for manual installation.
+)
+
+echo.
+echo For detailed instructions, see DEPLOYMENT_GUIDE.md
 echo.
 pause
