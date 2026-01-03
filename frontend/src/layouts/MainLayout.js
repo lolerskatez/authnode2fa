@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import '../App.css';
 
 const MainLayout = ({ 
@@ -13,7 +12,8 @@ const MainLayout = ({
   onCategoryChange,
   appSettings,
   onSecurityClick,
-  twoFAEnabled
+  twoFAEnabled,
+  unreadCount = 0
 }) => {
   // Theme-aware color helpers
   const getThemeColors = () => {
@@ -33,38 +33,8 @@ const MainLayout = ({
   const colors = getThemeColors();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const accountCount = accounts.length;
   const userMenuRef = useRef(null);
-
-  // Fetch unread notification count
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await axios.get('/api/notifications/count');
-        setUnreadCount(response.data.unread || 0);
-      } catch (error) {
-        console.error('Failed to fetch notification count:', error);
-        setUnreadCount(0);
-      }
-    };
-
-    fetchUnreadCount();
-
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
-
-    // Listen for notification changes to refresh count immediately
-    const handleNotificationChange = () => {
-      fetchUnreadCount();
-    };
-    window.addEventListener('notificationsChanged', handleNotificationChange);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('notificationsChanged', handleNotificationChange);
-    };
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

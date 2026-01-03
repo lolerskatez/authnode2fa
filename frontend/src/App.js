@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Auth from './Auth';
 import MainLayout from './layouts/MainLayout';
+import MobileBottomNav from './components/MobileBottomNav';
 import AuthenticatorView from './views/AuthenticatorView';
 import SettingsView from './views/SettingsView';
 import NotificationsView from './views/NotificationsView';
@@ -34,6 +35,7 @@ const App = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [globalSettings, setGlobalSettings] = useState({ totp_enabled: false });
+  const [unreadCount, setUnreadCount] = useState(0);
   const [currentView, setCurrentView] = useState(() => {
     // Restore view from localStorage on mount
     const saved = localStorage.getItem('currentView');
@@ -147,6 +149,26 @@ const App = () => {
       localStorage.setItem('currentView', JSON.stringify(currentView));
     }
   }, [currentView, isAuthenticated]);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await axios.get('/api/notifications/count');
+        setUnreadCount(response.data.unread || 0);
+      } catch (error) {
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+    
+    // Poll every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   // Auto-lock functionality
   useEffect(() => {
@@ -392,6 +414,7 @@ const App = () => {
                   appSettings={appSettings}
                   onSecurityClick={() => setShowSecurityModal(true)}
                   twoFAEnabled={globalSettings.totp_enabled}
+                  unreadCount={unreadCount}
                 />
                 <div className="app-content">
                   {currentView.main === 'applications' && (
@@ -472,6 +495,14 @@ const App = () => {
                     />
                   )}
                 </div>
+                <MobileBottomNav
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                  unreadCount={unreadCount}
+                  currentUser={currentUser}
+                  appSettings={appSettings}
+                  onLogout={logout}
+                />
               </div>
             ) : (
               <div className="app-display desktop-mode">
@@ -488,6 +519,7 @@ const App = () => {
                     appSettings={appSettings}
                     onSecurityClick={() => setShowSecurityModal(true)}
                     twoFAEnabled={globalSettings.totp_enabled}
+                    unreadCount={unreadCount}
                   />
                   <div className="app-content">
                     {currentView.main === 'applications' && (

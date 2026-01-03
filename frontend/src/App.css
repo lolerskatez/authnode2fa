@@ -202,6 +202,10 @@ header {
   .app-container {
     gap: 0;
     align-items: stretch;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
   }
 }
 
@@ -209,11 +213,11 @@ header {
   width: 100%;
   max-width: 360px;
   height: 600px;
-  background-color: white;
+  background-color: var(--bg-primary);
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  border: 1px solid #e0e6ed;
+  border: 1px solid var(--border-color);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -222,10 +226,14 @@ header {
 @media (max-width: 768px) {
   .app-display {
     max-width: 100%;
+    width: 100%;
     height: 100vh;
+    min-height: 100vh;
     border-radius: 0;
     box-shadow: none;
     border: none;
+    margin: 0;
+    padding: 0;
   }
 }
 
@@ -243,7 +251,7 @@ header {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .mobile-header {
@@ -379,6 +387,13 @@ body.theme-dark .dropdown-item.logout:hover {
   flex: 1;
   overflow: hidden;
   min-height: 0;
+  padding-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding-bottom: 70px; /* Space for mobile bottom nav */
+  }
 }
 
 .content-area {
@@ -688,6 +703,15 @@ body.theme-dark .dropdown-item.logout:hover {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+  .accounts-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+  }
 }
 
 .account-card {
