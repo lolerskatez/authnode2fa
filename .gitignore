@@ -43,6 +43,9 @@ dmypy.json
 .env.docker
 *.env
 
+# Encryption keys (CRITICAL - never commit these)
+backend/.encryption_key
+
 # Database files (CRITICAL - contains user data)
 *.db
 *.sqlite

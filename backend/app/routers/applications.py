@@ -1,14 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
-from .. import models, schemas, crud, auth, utils
+from .. import models, schemas, crud, auth, utils, secrets_encryption
 from ..rate_limit import limiter, API_RATE_LIMIT, SENSITIVE_API_RATE_LIMIT
-from cryptography.fernet import Fernet
 import os
 import json
-
-key = os.getenv("ENCRYPTION_KEY").encode()
-cipher = Fernet(key)
 
 router = APIRouter()
 
@@ -142,7 +138,7 @@ def get_code(request: Request, app_id: int, current_user: models.User = Depends(
     app = crud.get_application(db, app_id)
     if not app or app.user_id != current_user.id:
         raise HTTPException(status_code=404)
-    decrypted_secret = cipher.decrypt(app.secret.encode()).decode()
+    decrypted_secret = secrets_encryption.decrypt_secret(app.secret)
     
     # Generate code based on OTP type
     if app.otp_type == "HOTP":

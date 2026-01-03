@@ -80,6 +80,8 @@ services:
       - authnode2fa_network
     volumes:
       - ./logs:/app/logs
+      # Mount backend directory to persist .encryption_key file
+      - ./backend:/app/backend:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8041/api/health"]
       interval: 30s

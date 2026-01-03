@@ -21,7 +21,7 @@ A secure, modular, full-stack web application for managing Two-Factor Authentica
 - 🚀 **Deploy?** → [DEPLOYMENT.md](DEPLOYMENT.md)
 - 👨‍💻 **Develop?** → [backend/README.md](backend/README.md)
 - 🧪 **Test?** → [TESTING_GUIDE.md](TESTING_GUIDE.md)
-- 🔐 **Secure?** → [SECURITY.md](SECURITY.md)
+- 🔐 **Secure?** → [SECURITY.md](SECURITY.md) & [ENCRYPTION_SETUP.md](ENCRYPTION_SETUP.md)
 - 🔌 **API?** → [API.md](API.md)
 
 ---

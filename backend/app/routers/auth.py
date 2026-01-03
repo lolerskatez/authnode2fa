@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from .. import models, schemas, crud, auth
+from .. import models, schemas, crud, auth, secrets_encryption
 from ..rate_limit import limiter, limit_login, limit_signup, limit_totp_verify, TOTP_VERIFY_RATE_LIMIT
 from ..oidc_state import generate_secure_state, store_oidc_state, validate_oidc_state
 from ..notifications import email_service
@@ -728,12 +728,7 @@ def enable_2fa(request: Request, data: dict, db: Session = Depends(get_db), curr
         raise HTTPException(status_code=401, detail="Invalid TOTP code")
     
     # Encrypt the secret before storing
-    encryption_key = os.getenv("ENCRYPTION_KEY")
-    if not encryption_key:
-        raise HTTPException(status_code=500, detail="Encryption key not configured")
-    
-    cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
-    encrypted_secret = cipher.encrypt(secret.encode()).decode()
+    encrypted_secret = secrets_encryption.encrypt_secret(secret)
     
     # Generate and store backup codes
     backup_codes = crud.create_backup_codes(db, current_user.id)
@@ -788,13 +783,9 @@ def disable_2fa(disable_data: schemas.TOTP2FADisable, db: Session = Depends(get_
     # If user has 2FA enabled, verify the TOTP code before disabling
     if current_user.totp_enabled and disable_data.totp_code:
         import pyotp
-        from cryptography.fernet import Fernet
-        
-        encryption_key = os.getenv("ENCRYPTION_KEY")
-        cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
         
         try:
-            decrypted_secret = cipher.decrypt(current_user.totp_secret.encode()).decode()
+            decrypted_secret = secrets_encryption.decrypt_secret(current_user.totp_secret)
             totp = pyotp.TOTP(decrypted_secret)
             
             if not totp.verify(disable_data.totp_code, valid_window=1):
@@ -840,14 +831,8 @@ def verify_login_2fa(request: Request, data: dict, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="Invalid request")
     
     # Decrypt TOTP secret
-    encryption_key = os.getenv("ENCRYPTION_KEY")
-    if not encryption_key:
-        raise HTTPException(status_code=500, detail="Encryption key not configured")
-    
-    cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
-    
     try:
-        decrypted_secret = cipher.decrypt(user.totp_secret.encode()).decode()
+        decrypted_secret = secrets_encryption.decrypt_secret(user.totp_secret)
         totp = pyotp.TOTP(decrypted_secret)
         
         if not totp.verify(totp_code, valid_window=1):

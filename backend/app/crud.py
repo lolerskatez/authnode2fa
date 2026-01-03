@@ -1,15 +1,12 @@
 from sqlalchemy.orm import Session
 from . import models, schemas, auth
-from cryptography.fernet import Fernet
+from . import secrets_encryption
 import os
 from dotenv import load_dotenv
 from typing import List, Tuple
 from datetime import datetime
 
 load_dotenv()
-
-key = os.getenv("ENCRYPTION_KEY")
-cipher = Fernet(key.encode() if isinstance(key, str) else key)
 
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -49,7 +46,7 @@ def get_applications(db: Session, user_id: int):
     return db.query(models.Application).filter(models.Application.user_id == user_id).order_by(models.Application.display_order).all()
 
 def create_application(db: Session, app: schemas.ApplicationCreate, user_id: int):
-    encrypted_secret = cipher.encrypt(app.secret.encode()).decode()
+    encrypted_secret = secrets_encryption.encrypt_secret(app.secret)
     db_app = models.Application(
         name=app.name,
         secret=encrypted_secret,
@@ -75,7 +72,7 @@ def update_application(db: Session, app_id: int, app: schemas.ApplicationUpdate)
     if db_app:
         for key, value in app.dict().items():
             if key == "secret" and value:
-                value = cipher.encrypt(value.encode()).decode()
+                value = secrets_encryption.encrypt_secret(value)
             if value is not None:
                 setattr(db_app, key, value)
         db.commit()
@@ -425,7 +422,7 @@ def export_applications(db: Session, user_id: int):
     exported_apps = []
     for app in applications:
         try:
-            decrypted_secret = cipher.decrypt(app.secret.encode()).decode()
+            decrypted_secret = secrets_encryption.decrypt_secret(app.secret)
             exported_apps.append(schemas.ApplicationExportData(
                 name=app.name,
                 secret=decrypted_secret,
@@ -466,7 +463,7 @@ def import_applications(db: Session, user_id: int, import_data: schemas.ImportRe
                 elif import_data.conflict_action == "overwrite":
                     # Update existing app
                     existing_app = existing_apps[app_data.name]
-                    encrypted_secret = cipher.encrypt(app_data.secret.encode()).decode()
+                    encrypted_secret = secrets_encryption.encrypt_secret(app_data.secret)
                     existing_app.secret = encrypted_secret
                     existing_app.icon = app_data.icon or existing_app.icon
                     existing_app.color = app_data.color or existing_app.color
@@ -477,7 +474,7 @@ def import_applications(db: Session, user_id: int, import_data: schemas.ImportRe
                     continue
             
             # Create new application
-            encrypted_secret = cipher.encrypt(app_data.secret.encode()).decode()
+            encrypted_secret = secrets_encryption.encrypt_secret(app_data.secret)
             backup_key = auth.generate_token()
             
             new_app = models.Application(

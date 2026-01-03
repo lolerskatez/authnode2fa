@@ -37,7 +37,7 @@ class Application(Base):
     name = Column(String, index=True)
     icon = Column(String, nullable=True, default=None)  # Custom emoji or icon
     color = Column(String, nullable=True, default='#6B46C1')  # Background color for the icon
-    secret = Column(Text)  # Encrypted
+    secret = Column(Text)  # Encrypted with Fernet (secrets_encryption module) - NEVER stored in plain text
     backup_key = Column(String)
     otp_type = Column(String, default="TOTP")  # TOTP or HOTP
     counter = Column(Integer, default=0)  # For HOTP counter
