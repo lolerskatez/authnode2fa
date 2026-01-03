@@ -11,6 +11,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     libpq-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libzbar0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
