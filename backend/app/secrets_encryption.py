@@ -46,20 +46,35 @@ def get_encryption_key() -> str:
         except Exception as e:
             raise ValueError(f"Invalid ENCRYPTION_KEY environment variable: {str(e)}")
     
-    # Try loading from .encryption_key file in backend directory
+    # Try loading from .encryption_key file
+    # Check multiple locations for Docker and bare metal compatibility
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    key_file = os.path.join(backend_dir, ".encryption_key")
     
-    if os.path.exists(key_file):
-        try:
-            with open(key_file, "r") as f:
-                key = f.read().strip()
-            
-            # Validate it's a valid Fernet key
-            Fernet(key.encode())
-            return key
-        except Exception as e:
-            raise ValueError(f"Failed to load encryption key from {key_file}: {str(e)}")
+    # Docker persistent volume location (preferred for Docker deployments)
+    docker_key_file = "/app/encryption_data/.encryption_key"
+    # Local key file (for bare metal/dev)
+    local_key_file = os.path.join(backend_dir, ".encryption_key")
+    
+    # Try Docker location first, then local
+    for key_file in [docker_key_file, local_key_file]:
+        if os.path.exists(key_file):
+            try:
+                with open(key_file, "r") as f:
+                    key = f.read().strip()
+                
+                # Validate it's a valid Fernet key
+                Fernet(key.encode())
+                return key
+            except Exception as e:
+                print(f"Warning: Failed to load encryption key from {key_file}: {str(e)}")
+                continue
+    
+    # Auto-generate key on fresh install
+    # Prefer Docker volume location if it exists
+    if os.path.isdir("/app/encryption_data"):
+        key_file = docker_key_file
+    else:
+        key_file = local_key_file
     
     # Auto-generate key on fresh install
     try:
