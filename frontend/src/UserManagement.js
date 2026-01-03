@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import './Auth.css';
 
 function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings }) {
+  // Check if mobile viewport
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Theme-aware color helpers
   const getThemeColors = () => {
     const isDark = appSettings?.theme === 'dark';
@@ -20,7 +32,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
       ssoBg: isDark ? '#2c4a6e' : '#e6f3ff',
       ssoText: isDark ? '#90cdf4' : '#0066cc',
       localBg: isDark ? '#2d4a3e' : '#f0fff4',
-      localText: isDark ? '#9ae6b4' : '#276749',
+      localText: isDark ? '#276749' : '#276749',
       success: isDark ? '#48bb78' : '#48bb78',
       danger: isDark ? '#fc8181' : '#f56565',
       dangerLight: isDark ? '#9b2c2c' : '#fed7d7',
@@ -247,7 +259,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
 
   if (isEmbedded) {
     return (
-      <div style={{ padding: '20px' }}>
+      <div style={{ padding: isMobile ? '12px' : '20px' }}>
         {toast.show && (
           <div style={{
             position: 'fixed',
@@ -270,7 +282,13 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         )}
 
         {/* Page Header */}
-        <h3 style={{ marginBottom: '24px', color: colors.primary, fontSize: '18px', fontWeight: '600' }}>
+        <h3 style={{ 
+          marginBottom: '24px', 
+          color: colors.primary, 
+          fontSize: isMobile ? '16px' : '18px', 
+          fontWeight: '600',
+          marginTop: 0
+        }}>
           <i className="fas fa-users-cog" style={{ marginRight: '8px', color: colors.accent }}></i>
           User Management
         </h3>
@@ -290,9 +308,15 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
 
         {/* Actions Card */}
         <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: isMobile ? 'flex-start' : 'center', 
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '12px' : '0'
+          }}>
             <div>
-              <h4 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: '14px', fontWeight: '600' }}>
+              <h4 style={{ margin: '0 0 4px 0', color: colors.primary, fontSize: isMobile ? '13px' : '14px', fontWeight: '600' }}>
                 <i className="fas fa-user-plus" style={{ marginRight: '8px', color: colors.accent }}></i>
                 Manage Users
               </h4>
@@ -300,7 +324,7 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                 {users.length} user{users.length !== 1 ? 's' : ''} registered
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', width: isMobile ? '100%' : 'auto', flexWrap: 'wrap' }}>
               <button
                 onClick={loadUsers}
                 style={{
@@ -314,11 +338,13 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                   fontWeight: '500',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  flex: isMobile ? '1' : 'auto',
+                  justifyContent: 'center'
                 }}
               >
                 <i className="fas fa-sync"></i>
-                Refresh
+                {!isMobile && 'Refresh'}
               </button>
               <button
                 onClick={handleAddUser}
@@ -333,17 +359,19 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
                   fontWeight: '500',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  flex: isMobile ? '1' : 'auto',
+                  justifyContent: 'center'
                 }}
               >
                 <i className="fas fa-user-plus"></i>
-                Add User
+                {!isMobile && 'Add User'}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Users Table Card */}
+        {/* Users List Card */}
         <div style={cardStyle}>
         {loading ? (
           <div style={{
@@ -363,7 +391,144 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
             <i className="fas fa-users" style={{ fontSize: '32px', marginBottom: '12px', display: 'block', opacity: 0.5 }}></i>
             <p style={{ margin: 0 }}>No users found</p>
           </div>
+        ) : isMobile ? (
+          // Mobile Card View
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {users.map((user) => (
+              <div key={user.id} style={{
+                padding: '12px',
+                backgroundColor: colors.backgroundSecondary,
+                borderRadius: '6px',
+                border: `1px solid ${colors.border}`
+              }}>
+                {/* User Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    backgroundColor: colors.avatarBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    flexShrink: 0
+                  }}>
+                    {getUserInitials(user.name)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: '600', color: colors.primary, fontSize: '14px', marginBottom: '2px' }}>
+                      {user.name || 'Unknown'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: colors.secondary, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      @{user.username}
+                    </div>
+                  </div>
+                </div>
+
+                {/* User Info Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  {/* Email */}
+                  <div>
+                    <div style={{ fontSize: '11px', color: colors.secondary, fontWeight: '500', marginBottom: '4px' }}>Email</div>
+                    <div style={{ fontSize: '12px', color: colors.primary, wordBreak: 'break-word' }}>
+                      {user.email}
+                    </div>
+                  </div>
+
+                  {/* Role */}
+                  <div>
+                    <div style={{ fontSize: '11px', color: colors.secondary, fontWeight: '500', marginBottom: '4px' }}>Role</div>
+                    <span style={{
+                      padding: '4px 8px',
+                      backgroundColor: user.role === 'admin' ? colors.adminBg : colors.userBg,
+                      color: user.role === 'admin' ? colors.adminText : colors.userText,
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      display: 'inline-block'
+                    }}>
+                      {user.role}
+                    </span>
+                  </div>
+
+                  {/* Type */}
+                  <div>
+                    <div style={{ fontSize: '11px', color: colors.secondary, fontWeight: '500', marginBottom: '4px' }}>Type</div>
+                    <span style={{
+                      padding: '4px 8px',
+                      backgroundColor: user.is_sso_user ? colors.ssoBg : colors.localBg,
+                      color: user.is_sso_user ? colors.ssoText : colors.localText,
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      display: 'inline-block'
+                    }}>
+                      {user.is_sso_user ? 'SSO' : 'Local'}
+                    </span>
+                  </div>
+
+                  {/* Created */}
+                  <div>
+                    <div style={{ fontSize: '11px', color: colors.secondary, fontWeight: '500', marginBottom: '4px' }}>Created</div>
+                    <div style={{ fontSize: '12px', color: colors.primary }}>
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleEditClick(user)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      backgroundColor: colors.accent,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <i className="fas fa-edit"></i> Edit
+                  </button>
+                  {currentUser.id !== user.id && (
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        backgroundColor: colors.dangerLight,
+                        color: colors.danger,
+                        border: `1px solid ${colors.danger}`,
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <i className="fas fa-trash"></i> Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
+          // Desktop Table View
           <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: '100%',
@@ -461,10 +626,10 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
         </div>
 
         {showForm && (
-          <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div className="modal" style={{ backgroundColor: colors.background, borderRadius: '8px', padding: '0', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflow: 'auto', border: `1px solid ${colors.border}` }}>
-              <div className="modal-header" style={{ padding: '20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.accent }}>
-                <h3 style={{ margin: 0, color: 'white' }}>
+          <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="modal" style={{ backgroundColor: colors.background, borderRadius: isMobile ? '12px 12px 0 0' : '8px', padding: '0', maxWidth: '500px', width: '100%', maxHeight: isMobile ? '95vh' : '90vh', overflow: 'auto', border: `1px solid ${colors.border}` }}>
+              <div className="modal-header" style={{ padding: isMobile ? '16px' : '20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.accent }}>
+                <h3 style={{ margin: 0, color: 'white', fontSize: isMobile ? '16px' : '18px' }}>
                   {editingUser ? `Edit ${editingUser.name}` : 'Add New User'}
                 </h3>
                 <button

@@ -114,6 +114,22 @@ def update_user_password(
     user.password_hash = auth.hash_password(new_password)
     db.commit()
     db.refresh(user)
+    
+    # Send notification about password change
+    from app.notifications import InAppNotificationService
+    from datetime import datetime
+    InAppNotificationService.create_notification(
+        db,
+        user_id=user.id,
+        notification_type="security_alert",
+        title="Password Changed",
+        message="Your password has been successfully changed. If you didn't make this change, please contact support immediately.",
+        details={
+            "timestamp": datetime.utcnow().isoformat(),
+            "action": "password_changed"
+        }
+    )
+    
     return user
 
 @router.put("/{user_id}/name")
