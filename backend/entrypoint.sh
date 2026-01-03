@@ -26,8 +26,14 @@ fi
 
 # Run database migrations
 echo "Running database migrations..."
-# Skip migrations since tables are created from models
-echo "Skipping alembic migrations (tables created from models)"
+# Create tables from models first
+python -c "
+from app.database import engine
+from app.models import Base
+print('Creating database tables from models...')
+Base.metadata.create_all(bind=engine)
+print('Database tables created successfully!')
+"
 
 # Create default admin user if it doesn't exist
 echo "Checking for default admin user..."
