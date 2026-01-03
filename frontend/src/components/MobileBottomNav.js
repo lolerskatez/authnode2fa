@@ -166,7 +166,16 @@ const MobileBottomNav = ({ currentView, onViewChange, unreadCount, currentUser, 
             active: currentView.sub === 'user-management',
             action: () => onViewChange('system-dashboard', 'user-management')
           });
+        }
 
+        dashboardItems.push({
+          id: 'settings',
+          icon: 'fa-cog',
+          label: 'Settings',
+          action: () => onViewChange('settings', 'general')
+        });
+
+        if (isAdmin) {
           dashboardItems.push({
             id: 'more',
             icon: 'fa-ellipsis-h',

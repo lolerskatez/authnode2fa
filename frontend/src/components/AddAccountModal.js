@@ -125,12 +125,16 @@ const AddAccountModal = ({
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  // Detect mobile device
+  // Detect mobile device and screen size
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      const userAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const screenSize = window.innerWidth <= 768;
+      setIsMobile(userAgent || screenSize);
     };
     checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Populate form when editing
@@ -251,22 +255,45 @@ const AddAccountModal = ({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <div className="modal-header">
-          <h2>{isEditMode ? 'Edit Account' : 'Add New Account'}</h2>
+    <div className="modal-overlay" style={isMobile ? { alignItems: 'flex-end' } : {}}>
+      <div className="modal" style={isMobile ? {
+        width: '100%',
+        maxWidth: '100%',
+        height: '85vh',
+        borderRadius: '16px 16px 0 0',
+        margin: 0,
+        maxHeight: '85vh',
+        display: 'flex',
+        flexDirection: 'column'
+      } : {}}>
+        <div className="modal-header" style={isMobile ? {
+          padding: '14px 16px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10
+        } : {}}>
+          <h2 style={isMobile ? { fontSize: '18px' } : {}}>
+            {isEditMode ? 'Edit Account' : 'Add New Account'}
+          </h2>
           <button 
             className="modal-close"
             onClick={onClose}
+            style={isMobile ? { width: '36px', height: '36px', fontSize: '18px' } : {}}
           >
             <i className="fas fa-times"></i>
           </button>
         </div>
-        <div className="modal-body">
+        <div className="modal-body" style={isMobile ? {
+          padding: '16px',
+          overflowY: 'auto',
+          flex: 1
+        } : {}}>
           <form onSubmit={handleAddAccount}>
             <div className="form-grid">
               <div className="form-group" style={{ position: 'relative' }}>
-                <label htmlFor="accountName">Account Name</label>
+                <label htmlFor="accountName" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                  Account Name
+                </label>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <input 
                     type="text" 
@@ -275,7 +302,12 @@ const AddAccountModal = ({
                     placeholder="e.g., Google, Facebook, etc."
                     name="accountName"
                     onChange={(e) => onAccountNameChange(e.target.value)}
-                    style={{ flex: 1 }}
+                    style={isMobile ? { 
+                      flex: 1, 
+                      padding: '12px', 
+                      fontSize: '15px',
+                      borderRadius: '8px'
+                    } : { flex: 1 }}
                   />
                   {accountNamePreview && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '0px', minWidth: '50px' }}>
@@ -299,24 +331,38 @@ const AddAccountModal = ({
               </div>
 
               <div className="form-group">
-                <label htmlFor="accountUsername">Username/Email (Optional)</label>
+                <label htmlFor="accountUsername" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                  Username/Email (Optional)
+                </label>
                 <input 
                   type="text" 
                   id="accountUsername" 
                   className="form-control" 
                   placeholder="your.email@example.com"
                   name="accountUsername"
+                  style={isMobile ? { 
+                    padding: '12px', 
+                    fontSize: '15px',
+                    borderRadius: '8px'
+                  } : {}}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="accountCategory">Category</label>
+                <label htmlFor="accountCategory" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                  Category
+                </label>
                 <select 
                   id="accountCategory" 
                   className="form-control" 
                   name="accountCategory"
                   defaultValue="Personal"
-                  style={{ width: '100%' }}
+                  style={isMobile ? { 
+                    width: '100%', 
+                    padding: '12px', 
+                    fontSize: '15px',
+                    borderRadius: '8px'
+                  } : { width: '100%' }}
                 >
                   <option value="Work">Work</option>
                   <option value="Personal">Personal</option>
@@ -325,13 +371,20 @@ const AddAccountModal = ({
               </div>
 
               <div className="form-group">
-                <label htmlFor="otpType">OTP Type</label>
+                <label htmlFor="otpType" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                  OTP Type
+                </label>
                 <select 
                   id="otpType" 
                   className="form-control" 
                   name="otpType"
                   defaultValue="TOTP"
-                  style={{ width: '100%' }}
+                  style={isMobile ? { 
+                    width: '100%', 
+                    padding: '12px', 
+                    fontSize: '15px',
+                    borderRadius: '8px'
+                  } : { width: '100%' }}
                 >
                   <option value="TOTP">TOTP (Time-based)</option>
                   <option value="HOTP">HOTP (Counter-based)</option>
@@ -357,11 +410,28 @@ const AddAccountModal = ({
             {!isEditMode && (
               <>
                 <div className="form-group form-group-full">
-                  <label>Setup Method</label>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+                  <label style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                    Setup Method
+                  </label>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: isMobile ? '10px' : '10px', 
+                    marginTop: isMobile ? '10px' : '10px', 
+                    flexWrap: 'wrap' 
+                  }}>
                     <button 
                       className={`btn ${setupMethod === 'scan' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={{ flex: 1, minWidth: '140px' }} 
+                      style={isMobile ? { 
+                        flex: 1, 
+                        minWidth: '130px',
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      } : { flex: 1, minWidth: '140px' }}
                       type="button"
                       onClick={() => onSetupMethodChange('scan')}
                     >
@@ -370,7 +440,17 @@ const AddAccountModal = ({
                     {isMobile && (
                       <button 
                         className="btn btn-primary" 
-                        style={{ flex: 1, minWidth: '140px' }} 
+                        style={{ 
+                          flex: 1, 
+                          minWidth: '130px',
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
                         type="button"
                         onClick={() => setShowCamera(true)}
                       >
@@ -379,7 +459,17 @@ const AddAccountModal = ({
                     )}
                     <button 
                       className={`btn ${setupMethod === 'manual' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={{ flex: 1, minWidth: '140px' }} 
+                      style={isMobile ? { 
+                        flex: 1, 
+                        minWidth: '130px',
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      } : { flex: 1, minWidth: '140px' }}
                       type="button"
                       onClick={() => onSetupMethodChange('manual')}
                     >
@@ -390,13 +480,20 @@ const AddAccountModal = ({
 
                 {setupMethod === 'scan' && (
                   <div className="form-group form-group-full">
-                    <label htmlFor="qrFile">Upload QR Code Image</label>
+                    <label htmlFor="qrFile" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                      Upload QR Code Image
+                    </label>
                     <input 
                       type="file" 
                       id="qrFile" 
                       className="form-control" 
                       accept="image/*"
                       name="qrFile"
+                      style={isMobile ? { 
+                        padding: '12px', 
+                        fontSize: '15px',
+                        borderRadius: '8px'
+                      } : {}}
                     />
                     <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
                       Upload a screenshot or photo of the QR code from your service
@@ -406,13 +503,20 @@ const AddAccountModal = ({
 
                 {setupMethod === 'manual' && (
                   <div className="form-group form-group-full">
-                    <label htmlFor="manualSecret">Secret Key</label>
+                    <label htmlFor="manualSecret" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                      Secret Key
+                    </label>
                     <input 
                       type="text" 
                       id="manualSecret" 
                       className="form-control" 
                       placeholder="Enter your 2FA secret key (e.g., JBSWY3DPEHPK3PXP)"
                       name="manualSecret"
+                      style={isMobile ? { 
+                        padding: '12px', 
+                        fontSize: '15px',
+                        borderRadius: '8px'
+                      } : {}}
                     />
                     <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
                       The secret key is usually found in the advanced settings of your 2FA setup
@@ -422,15 +526,42 @@ const AddAccountModal = ({
               </>
             )}
 
-            <div className="btn-group" style={{ marginTop: '20px' }}>
+            <div className="btn-group" style={isMobile ? {
+              marginTop: '20px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${colors.border}`,
+              position: 'sticky',
+              bottom: 0,
+              backgroundColor: colors.background,
+              marginLeft: '-16px',
+              marginRight: '-16px',
+              marginBottom: '-16px',
+              padding: '16px',
+              gap: '10px'
+            } : { marginTop: '20px' }}>
               <button 
                 type="button"
                 className="btn btn-secondary" 
                 onClick={onClose}
+                style={isMobile ? {
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  borderRadius: '8px'
+                } : {}}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn">
+              <button 
+                type="submit" 
+                className="btn"
+                style={isMobile ? {
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  borderRadius: '8px'
+                } : {}}
+              >
                 {isEditMode ? 'Update Account' : 'Add Account'}
               </button>
             </div>

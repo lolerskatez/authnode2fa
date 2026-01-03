@@ -52,11 +52,6 @@ const MainLayout = ({
     };
   }, [showUserMenu]);
 
-  const handleUserManagementClick = () => {
-    onViewChange('settings', 'user-management');
-    setShowDropdown(false);
-  };
-
   if (isMobile) {
     return (
       <div className="mobile-view">
@@ -75,20 +70,16 @@ const MainLayout = ({
             </div>
             {showDropdown && (
               <div className="dropdown-menu">
-                <div className="dropdown-item">
-                  <i className="fas fa-user"></i>
-                  Profile
-                </div>
                 <div 
                   className="dropdown-item"
                   onClick={() => {
-                    onViewChange('settings', 'general');
+                    onViewChange('profile', 'general');
                     setShowDropdown(false);
                   }}
                   style={{ cursor: 'pointer' }}
                 >
-                  <i className="fas fa-cog"></i>
-                  Settings
+                  <i className="fas fa-user"></i>
+                  Profile
                 </div>
                 <div 
                   className="dropdown-item"
@@ -100,31 +91,21 @@ const MainLayout = ({
                 >
                   <i className="fas fa-bell"></i>
                   Notifications
-                </div>
-                <div 
-                  className="dropdown-item"
-                  onClick={() => {
-                    onViewChange('settings', 'notification-preferences');
-                    setShowDropdown(false);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <i className="fas fa-cog"></i>
-                  Notification Settings
-                </div>
-                {currentUser && currentUser.role === 'admin' && (
-                  <div 
-                    className="dropdown-item" 
-                    onClick={handleUserManagementClick}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <i className="fas fa-users-cog"></i>
-                    User Management
-                  </div>
-                )}
-                <div className="dropdown-item">
-                  <i className="fas fa-question-circle"></i>
-                  Help
+                  {unreadCount > 0 && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      borderRadius: '10px',
+                      padding: '2px 6px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      minWidth: '18px',
+                      textAlign: 'center'
+                    }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </div>
               </div>
             )}
