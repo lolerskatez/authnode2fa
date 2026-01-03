@@ -787,6 +787,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       className="form-control"
                       placeholder="Current password"
+                      autoComplete="current-password"
                       disabled={loading}
                     />
                     <input
@@ -795,6 +796,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="form-control"
                       placeholder="New password (min 6 characters)"
+                      autoComplete="new-password"
                       disabled={loading}
                     />
                     <input
@@ -803,6 +805,7 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="form-control"
                       placeholder="Confirm new password"
+                      autoComplete="new-password"
                       disabled={loading}
                     />
                     <div style={{ display: 'flex', gap: '8px' }}>
