@@ -26,7 +26,13 @@ fi
 
 # Run database migrations
 echo "Running database migrations..."
-python -m alembic upgrade head
+# Merge any conflicting heads first
+python -m alembic merge heads 2>/dev/null || true
+# Now run migrations
+python -m alembic upgrade head || {
+    echo "Migration failed, attempting to create tables from models..."
+    python -c "from app.database import engine; from app.models import Base; Base.metadata.create_all(bind=engine)"
+}
 
 # Create default admin user if it doesn't exist
 echo "Checking for default admin user..."
