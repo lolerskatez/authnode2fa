@@ -6,21 +6,21 @@ set -e
 
 echo "Starting 2FA Manager Backend..."
 
-# Extract database connection details from DATABASE_URL
+# Wait for PostgreSQL to be ready
 if [ ! -z "$DATABASE_URL" ]; then
     echo "Waiting for PostgreSQL to be ready..."
-    # Parse DATABASE_URL to extract host, port, user, database
-    # Format: postgresql://user:password@host:port/database
+    # Extract host and port from DATABASE_URL (format: postgresql://user:pass@host:port/db)
     DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
     DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-    DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
-    DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
-    # Wait for PostgreSQL to be ready using pg_isready
-    until PGPASSWORD=$POSTGRES_PASSWORD pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" > /dev/null 2>&1; do
+    # Wait for port to be open
+    until timeout 1 bash -c "cat < /dev/null > /dev/tcp/$DB_HOST/$DB_PORT" 2>/dev/null; do
         echo "PostgreSQL is unavailable - sleeping"
         sleep 2
     done
+    
+    # Give it a moment to fully initialize
+    sleep 2
     echo "PostgreSQL is ready!"
 fi
 
