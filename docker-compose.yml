@@ -13,10 +13,10 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db/${POSTGRES_DB:-authy}
       # Encryption key - auto-generated on first run if not set
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
     volumes:
       # Mount backend directory to persist .encryption_key file
-      - ./backend:/app/backend
+      - ./backend:/app
     depends_on:
       - db
     ports:

@@ -81,7 +81,7 @@ services:
     volumes:
       - ./logs:/app/logs
       # Mount backend directory to persist .encryption_key file
-      - ./backend:/app/backend:ro
+      - backend_encryption:/app/backend
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8041/api/health"]
       interval: 30s
@@ -163,6 +163,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  backend_encryption:
     driver: local
 
 networks:
