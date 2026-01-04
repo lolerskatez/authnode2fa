@@ -82,6 +82,12 @@ def update_application(db: Session, app_id: int, app: schemas.ApplicationUpdate)
 def delete_application(db: Session, app_id: int):
     db_app = get_application(db, app_id)
     if db_app:
+        # Delete related code_generation_history records first (cascade)
+        db.query(models.CodeGenerationHistory).filter(
+            models.CodeGenerationHistory.application_id == app_id
+        ).delete(synchronize_session=False)
+        
+        # Now delete the application
         db.delete(db_app)
         db.commit()
     return db_app

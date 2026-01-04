@@ -55,6 +55,12 @@ def get_encryption_key() -> str:
     # Local key file (for bare metal/dev)
     local_key_file = os.path.join(backend_dir, ".encryption_key")
     
+    # Debug: check what directories exist
+    print(f"Checking for encryption key...")
+    print(f"  - Docker volume dir /app/encryption_data exists: {os.path.isdir('/app/encryption_data')}")
+    print(f"  - Docker key file exists: {os.path.exists(docker_key_file)}")
+    print(f"  - Local key file {local_key_file} exists: {os.path.exists(local_key_file)}")
+    
     # Try Docker location first, then local
     for key_file in [docker_key_file, local_key_file]:
         if os.path.exists(key_file):
@@ -64,17 +70,37 @@ def get_encryption_key() -> str:
                 
                 # Validate it's a valid Fernet key
                 Fernet(key.encode())
+                print(f"  ✓ Loaded existing encryption key from {key_file}")
                 return key
             except Exception as e:
                 print(f"Warning: Failed to load encryption key from {key_file}: {str(e)}")
                 continue
     
     # Auto-generate key on fresh install
-    # Prefer Docker volume location if it exists
-    if os.path.isdir("/app/encryption_data"):
+    # For Docker: The volume mount should create /app/encryption_data directory
+    # If running in Docker (/app exists) but encryption_data doesn't exist, create it
+    docker_volume_available = os.path.isdir("/app/encryption_data")
+    running_in_docker = os.path.isdir("/app")
+    
+    print(f"  - Running in Docker container: {running_in_docker}")
+    print(f"  - Docker volume available: {docker_volume_available}")
+    
+    # Determine where to save the new key
+    if docker_volume_available:
         key_file = docker_key_file
+        print(f"  - Will save key to Docker volume: {key_file}")
+    elif running_in_docker:
+        # Docker but volume not mounted - try to create directory anyway
+        try:
+            os.makedirs("/app/encryption_data", exist_ok=True)
+            key_file = docker_key_file
+            print(f"  - Created /app/encryption_data, will save key there")
+        except Exception as e:
+            key_file = local_key_file
+            print(f"  - Could not create volume dir ({e}), using local: {key_file}")
     else:
         key_file = local_key_file
+        print(f"  - Using local key file: {key_file}")
     
     # Auto-generate key on fresh install
     try:
