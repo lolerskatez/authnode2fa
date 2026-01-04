@@ -118,31 +118,33 @@ const AccountCard = ({
         </div>
         <div className="card-code" style={{ position: 'relative' }}>
           <span>{displayCode}</span>
-          {code && code !== '--- ---' && (
-            <button
-              {...ClipboardManager.getCopyButtonProps(handleCopyCode)}
-              style={{
-                position: 'absolute',
-                right: '-25px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: justCopied ? '#4CAF50' : 'none',
-                border: justCopied ? '1px solid #4CAF50' : 'none',
-                color: justCopied ? 'white' : '#666',
-                fontSize: '14px',
-                padding: '4px',
-                borderRadius: '3px',
-                transition: 'all 0.2s ease'
-              }}
-              title={justCopied ? 'Code copied!' : 'Copy code to clipboard (auto-clears in 30 seconds)'}
-            >
-              <i className={justCopied ? 'fas fa-check' : 'fas fa-copy'}></i>
-            </button>
-          )}
         </div>
       </div>
 
-      <div className="card-timer-badge">
+      <div className="card-timer-badge" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {code && code !== '--- ---' && (
+          <button
+            {...ClipboardManager.getCopyButtonProps(handleCopyCode)}
+            style={{
+              background: justCopied ? '#4CAF50' : 'none',
+              border: justCopied ? '1px solid #4CAF50' : 'none',
+              color: justCopied ? 'white' : '#666',
+              fontSize: '18px',
+              padding: '6px 8px',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
+              minWidth: '32px'
+            }}
+            title={justCopied ? 'Code copied!' : 'Copy code to clipboard (auto-clears in 30 seconds)'}
+          >
+            <i className={justCopied ? 'fas fa-check' : 'fas fa-copy'}></i>
+          </button>
+        )}
         <svg className="timer-circle" viewBox="0 0 40 40">
           <circle className="timer-circle-bg" cx="20" cy="20" r="18" />
           <circle
