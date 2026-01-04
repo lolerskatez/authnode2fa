@@ -497,6 +497,28 @@ def health_check():
     """
 
 
+@app.get("/api/health")
+def api_health_check():
+    """JSON health check endpoint for monitoring tools"""
+    try:
+        # Test database connection
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": __import__('datetime').datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": f"disconnected: {str(e)}",
+            "timestamp": __import__('datetime').datetime.now().isoformat()
+        }
+
+
 @app.get("/api/schema", response_class=HTMLResponse)
 def schema_viewer():
     """Beautiful visual schema viewer with download option"""
