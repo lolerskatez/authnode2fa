@@ -104,6 +104,26 @@ const AddAccountModal = ({
     return '#6B46C1';
   };
 
+  const getCategoryForService = (serviceName) => {
+    const cleanName = serviceName.toLowerCase().trim();
+    
+    // Work-related services
+    const workServices = ['github', 'gitlab', 'bitbucket', 'slack', 'microsoft', 'office', 'azure', 'aws', 'google workspace', 'gsuite'];
+    // Security-related services
+    const securityServices = ['authy', 'lastpass', 'keepass', 'bitwarden', 'proton', 'dashlane', 'nordpass'];
+    
+    if (workServices.some(service => cleanName.includes(service))) {
+      return 'Work';
+    }
+    
+    if (securityServices.some(service => cleanName.includes(service))) {
+      return 'Security';
+    }
+    
+    // Default to Personal for everything else
+    return 'Personal';
+  };
+
   // Theme-aware color helpers
   const getThemeColors = () => {
     const isDark = appSettings?.theme === 'dark';
@@ -132,7 +152,7 @@ const AddAccountModal = ({
 
   // Clear extracted QR data when setup method changes
   useEffect(() => {
-    if (setupMethod !== 'scan') {
+    if (setupMethod !== 'scan' && setupMethod !== 'paste') {
       setExtractedQRData(null);
     }
   }, [setupMethod]);
@@ -290,11 +310,28 @@ const AddAccountModal = ({
       // Pre-populate the account name field with the suggested name
       onAccountNameChange(qrData.suggested_name);
       
-      // Update the form field if it exists
+      // Update the form fields if they exist
       setTimeout(() => {
         const form = document.querySelector('.modal form');
-        if (form && form.accountName) {
-          form.accountName.value = qrData.suggested_name;
+        if (form) {
+          // Set account name
+          if (form.accountName) {
+            form.accountName.value = qrData.suggested_name;
+          }
+          
+          // Set category based on service
+          if (form.accountCategory) {
+            const suggestedCategory = getCategoryForService(qrData.suggested_name);
+            form.accountCategory.value = suggestedCategory;
+          }
+          
+          // Set username if account_name looks like an email
+          if (form.accountUsername && qrData.account_name) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailRegex.test(qrData.account_name)) {
+              form.accountUsername.value = qrData.account_name;
+            }
+          }
         }
       }, 100);
       
@@ -302,6 +339,60 @@ const AddAccountModal = ({
       console.error('Failed to extract QR data:', error);
       alert('Failed to extract data from QR code. Please try again or enter the details manually.');
       setExtractedQRData(null);
+    } finally {
+      setIsExtractingQR(false);
+    }
+  };
+
+  const handleQRUrlChange = async (e) => {
+    const qrUrl = e.target.value.trim();
+    if (!qrUrl) {
+      setExtractedQRData(null);
+      return;
+    }
+
+    setIsExtractingQR(true);
+    try {
+      // Call the backend to extract data from the URL
+      const response = await axios.post('/api/applications/extract-qr-url', { url: qrUrl }, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const qrData = response.data;
+      setExtractedQRData(qrData);
+      
+      // Pre-populate the account name field with the suggested name
+      onAccountNameChange(qrData.suggested_name);
+      
+      // Update the form fields if they exist
+      setTimeout(() => {
+        const form = document.querySelector('.modal form');
+        if (form) {
+          // Set account name
+          if (form.accountName) {
+            form.accountName.value = qrData.suggested_name;
+          }
+          
+          // Set category based on service
+          if (form.accountCategory) {
+            const suggestedCategory = getCategoryForService(qrData.suggested_name);
+            form.accountCategory.value = suggestedCategory;
+          }
+          
+          // Set username if account_name looks like an email
+          if (form.accountUsername && qrData.account_name) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailRegex.test(qrData.account_name)) {
+              form.accountUsername.value = qrData.account_name;
+            }
+          }
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Failed to parse QR URL:', error);
+      setExtractedQRData(null);
+      // Don't show alert for paste - just clear the data
     } finally {
       setIsExtractingQR(false);
     }
@@ -322,7 +413,6 @@ const AddAccountModal = ({
 
     try {
       if (isEditMode && selectedAccount) {
-      if (isEditMode && selectedAccount) {
         // Update existing account
         await axios.put(`/api/applications/${selectedAccount.id}`, {
           name: accountName,
@@ -341,9 +431,9 @@ const AddAccountModal = ({
       } else {
         let newAccount;
 
-        if (setupMethod === 'scan') {
+        if (setupMethod === 'scan' || setupMethod === 'paste') {
           if (!extractedQRData) {
-            alert('Please select a QR code image first');
+            alert(`Please ${setupMethod === 'scan' ? 'select a QR code image' : 'paste a QR code URL'} first`);
             return;
           }
 
@@ -749,6 +839,24 @@ const AddAccountModal = ({
                       </button>
                     )}
                     <button 
+                      className={`btn ${setupMethod === 'paste' ? 'btn-primary' : 'btn-secondary'}`} 
+                      style={isMobile ? { 
+                        flex: 1, 
+                        minWidth: '130px',
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      } : { flex: 1, minWidth: '140px' }}
+                      type="button"
+                      onClick={() => onSetupMethodChange('paste')}
+                    >
+                      <i className="fas fa-paste"></i> Paste URL
+                    </button>
+                    <button 
                       className={`btn ${setupMethod === 'manual' ? 'btn-primary' : 'btn-secondary'}`} 
                       style={isMobile ? { 
                         flex: 1, 
@@ -814,11 +922,90 @@ const AddAccountModal = ({
                             <strong>Service:</strong> {extractedQRData.issuer || 'Not specified'}
                           </div>
                           <div style={{ marginBottom: '4px' }}>
+                            <strong>Account:</strong> {extractedQRData.account_name || 'Not specified'}
+                          </div>
+                          <div style={{ marginBottom: '4px' }}>
                             <strong>Type:</strong> {extractedQRData.otp_type}
+                          </div>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Category:</strong> {getCategoryForService(extractedQRData.suggested_name)}
                           </div>
                           <div>
                             <strong>Secret:</strong> {extractedQRData.secret.substring(0, 8)}...
                           </div>
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: colors.accent, 
+                          marginTop: '8px',
+                          fontStyle: 'italic'
+                        }}>
+                          ✓ Form fields have been auto-filled above
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {setupMethod === 'paste' && (
+                  <div className="form-group form-group-full">
+                    <label htmlFor="qrUrl" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
+                      Paste QR Code URL
+                    </label>
+                    <textarea
+                      id="qrUrl"
+                      className="form-control"
+                      name="qrUrl"
+                      placeholder="otpauth://totp/ServiceName:username?secret=ABC123&issuer=ServiceName"
+                      rows={3}
+                      style={isMobile ? { 
+                        padding: '12px', 
+                        fontSize: '15px',
+                        borderRadius: '8px',
+                        fontFamily: 'monospace'
+                      } : { fontFamily: 'monospace' }}
+                      onChange={handleQRUrlChange}
+                    />
+                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Paste the otpauth:// URL from your QR code (right-click QR code → Copy image address, or use a QR scanner app)
+                    </small>
+                    
+                    {extractedQRData && !isExtractingQR && (
+                      <div style={{ 
+                        marginTop: '12px', 
+                        padding: '12px', 
+                        backgroundColor: colors.secondaryBg, 
+                        borderRadius: '8px',
+                        border: `1px solid ${colors.border}`
+                      }}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: colors.primary }}>
+                          <i className="fas fa-check-circle" style={{ color: colors.success || '#10B981', marginRight: '8px' }}></i>
+                          URL Parsed Successfully
+                        </div>
+                        <div style={{ fontSize: '13px', color: colors.secondary }}>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Service:</strong> {extractedQRData.issuer || 'Not specified'}
+                          </div>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Account:</strong> {extractedQRData.account_name || 'Not specified'}
+                          </div>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Type:</strong> {extractedQRData.otp_type}
+                          </div>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Category:</strong> {getCategoryForService(extractedQRData.suggested_name)}
+                          </div>
+                          <div>
+                            <strong>Secret:</strong> {extractedQRData.secret.substring(0, 8)}...
+                          </div>
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: colors.accent, 
+                          marginTop: '8px',
+                          fontStyle: 'italic'
+                        }}>
+                          ✓ Form fields have been auto-filled above
                         </div>
                       </div>
                     )}

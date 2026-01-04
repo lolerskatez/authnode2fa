@@ -77,23 +77,21 @@ def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/extract-qr", response_model=schemas.QRExtractionResponse)
+@router.post("/extract-qr-url", response_model=schemas.QRExtractionResponse)
 @limiter.limit(SENSITIVE_API_RATE_LIMIT)
-def extract_qr_data(request: Request, file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    """Extract data from QR code without creating application"""
+def extract_qr_url(request: Request, url_data: dict, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    """Extract data from QR code URL string"""
     try:
-        image_bytes = file.file.read()
-
-        # Extract QR data with OTP type and counter
-        qr_data = utils.extract_qr_data(image_bytes)
-        print(f"DEBUG: Extracted QR data: {qr_data}")  # Debug log
+        qr_data = url_data.get('url', '').strip()
+        if not qr_data:
+            raise ValueError("No URL provided")
 
         qr_info = utils.extract_secret_from_qr_data(qr_data)
-        print(f"DEBUG: Extracted QR info: {qr_info}")  # Debug log
+        print(f"DEBUG: Extracted QR info from URL: {qr_info}")  # Debug log
 
         if not qr_info:
-            print(f"DEBUG: Failed to extract secret from QR data: {qr_data}")  # Debug log
-            raise ValueError("Could not extract secret from QR code")
+            print(f"DEBUG: Failed to extract secret from QR URL: {qr_data}")  # Debug log
+            raise ValueError("Could not extract secret from QR code URL")
 
         secret = qr_info["secret"]
         otp_type = qr_info["otp_type"]
