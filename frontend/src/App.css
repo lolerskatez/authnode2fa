@@ -775,6 +775,13 @@ body.theme-dark .dropdown-item.logout:hover {
 }
 
 .card-timer-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.card-timer-badge .timer-wrapper {
   width: 40px;
   height: 40px;
   border-radius: 50%;
