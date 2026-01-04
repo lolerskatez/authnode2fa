@@ -443,7 +443,9 @@ const SettingsView = ({
   };
 
   const handleRevokeAllOtherSessions = async () => {
-    if (window.confirm('Are you sure? This will sign you out from all other devices.')) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure? This will sign you out from all other devices.');
+    if (confirmed) {
       try {
         await axios.post('/api/users/sessions/revoke-all');
         setSessions(sessions.filter(s => s.is_current_session));

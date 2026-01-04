@@ -225,7 +225,9 @@ const SecurityModal = ({ isOpen, onClose, currentUser, colors, isMobile }) => {
   };
 
   const handleDeleteWebauthnCredential = async (credentialId) => {
-    if (!window.confirm('Are you sure you want to remove this security key?')) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to remove this security key?');
+    if (!confirmed) {
       return;
     }
     setLoadingWebauthn(true);

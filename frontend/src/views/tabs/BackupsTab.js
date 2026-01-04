@@ -53,10 +53,10 @@ const BackupsTab = ({ appSettings }) => {
       setCreatingBackup(true);
       await axios.post('/api/admin/backups/create');
       await fetchBackups();
-      alert('Backup created successfully!');
+      showToast('Backup created successfully!', 'success');
     } catch (error) {
       console.error('Failed to create backup:', error);
-      alert('Error creating backup: ' + (error.response?.data?.detail || error.message));
+      showToast('Error creating backup: ' + (error.response?.data?.detail || error.message), 'error');
     } finally {
       setCreatingBackup(false);
     }
@@ -64,7 +64,7 @@ const BackupsTab = ({ appSettings }) => {
 
   const handleRestore = async () => {
     if (!selectedBackup || !restorePassword) {
-      alert('Please select a backup and enter your password');
+      showToast('Please select a backup and enter your password', 'warning');
       return;
     }
 
@@ -74,23 +74,25 @@ const BackupsTab = ({ appSettings }) => {
       });
       setShowRestoreModal(false);
       setRestorePassword('');
-      alert('Backup restored successfully! Please refresh the page.');
+      showToast('Backup restored successfully! Please refresh the page.', 'success');
       await fetchBackups();
     } catch (error) {
       console.error('Failed to restore backup:', error);
-      alert('Error restoring backup: ' + (error.response?.data?.detail || error.message));
+      showToast('Error restoring backup: ' + (error.response?.data?.detail || error.message), 'error');
     }
   };
 
   const handleDelete = async (backupId) => {
-    if (!window.confirm('Are you sure you want to delete this backup?')) return;
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to delete this backup?');
+    if (!confirmed) return;
 
     try {
       await axios.delete(`/api/admin/backups/${backupId}`);
       await fetchBackups();
     } catch (error) {
       console.error('Failed to delete backup:', error);
-      alert('Error deleting backup: ' + (error.response?.data?.detail || error.message));
+      showToast('Error deleting backup: ' + (error.response?.data?.detail || error.message), 'error');
     }
   };
 
@@ -100,6 +102,15 @@ const BackupsTab = ({ appSettings }) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const showToast = (message, type = 'success') => {
+    // TODO: Implement proper toast notification
+    if (window.showToast) {
+      window.showToast(message, type);
+    } else {
+      console.log(`Toast [${type}]: ${message}`);
+    }
   };
 
   return (

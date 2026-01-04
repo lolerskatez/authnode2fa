@@ -50,19 +50,21 @@ const APIKeysTab = ({ appSettings }) => {
       await fetchApiKeys();
     } catch (error) {
       console.error('Failed to generate API key:', error);
-      alert('Error generating API key: ' + (error.response?.data?.detail || error.message));
+      showToast('Error generating API key: ' + (error.response?.data?.detail || error.message), 'error');
     }
   };
 
   const handleRevokeKey = async (keyId) => {
-    if (!window.confirm('Are you sure you want to revoke this API key?')) return;
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to revoke this API key?');
+    if (!confirmed) return;
 
     try {
       await axios.post(`/api/admin/api-keys/${keyId}/revoke`);
       await fetchApiKeys();
     } catch (error) {
       console.error('Failed to revoke API key:', error);
-      alert('Error revoking API key: ' + (error.response?.data?.detail || error.message));
+      showToast('Error revoking API key: ' + (error.response?.data?.detail || error.message), 'error');
     }
   };
 
@@ -70,6 +72,14 @@ const APIKeysTab = ({ appSettings }) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const showToast = (message, type = 'success') => {
+    if (window.showToast) {
+      window.showToast(message, type);
+    } else {
+      console.log(`Toast [${type}]: ${message}`);
+    }
   };
 
   return (

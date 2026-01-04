@@ -160,10 +160,14 @@ const AuthenticatorView = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      alert(`Successfully exported ${exportData.account_count} accounts!`);
+      if (window.showToast) {
+        window.showToast(`Successfully exported ${exportData.account_count} accounts!`, 'success');
+      }
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export accounts. Please try again.');
+      if (window.showToast) {
+        window.showToast('Failed to export accounts. Please try again.', 'error');
+      }
     }
   };
 
@@ -191,10 +195,14 @@ const AuthenticatorView = ({
       })));
       
       setShowImportDialog(false);
-      alert(`Import complete!\nImported: ${response.data.imported}\nSkipped: ${response.data.skipped}\nOverwritten: ${response.data.overwritten}${response.data.errors.length > 0 ? '\nErrors: ' + response.data.errors.length : ''}`);
+      if (window.showToast) {
+        window.showToast(`Import complete! Imported: ${response.data.imported}, Skipped: ${response.data.skipped}, Overwritten: ${response.data.overwritten}${response.data.errors.length > 0 ? ', Errors: ' + response.data.errors.length : ''}`, 'success');
+      }
     } catch (error) {
       console.error('Import failed:', error);
-      alert('Failed to import accounts. Please check the file format and try again.');
+      if (window.showToast) {
+        window.showToast('Failed to import accounts. Please check the file format and try again.', 'error');
+      }
     }
   };
 
@@ -228,12 +236,16 @@ const AuthenticatorView = ({
       setSelectedAccount(null);
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
-      alert('Failed to update favorite status. Please try again.');
+      if (window.showToast) {
+        window.showToast('Failed to update favorite status. Please try again.', 'error');
+      }
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm(`Are you sure you want to delete the account "${selectedAccount.name}"?`)) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm(`Are you sure you want to delete the account "${selectedAccount.name}"?`);
+    if (confirmed) {
       try {
         await axios.delete(`/api/applications/${selectedAccount.id}`);
         
@@ -254,7 +266,9 @@ const AuthenticatorView = ({
         setSelectedAccount(null);
       } catch (error) {
         console.error('Failed to delete account:', error);
-        alert('Failed to delete account. Please try again.');
+        if (window.showToast) {
+          window.showToast('Failed to delete account. Please try again.', 'error');
+        }
       }
     }
   };
@@ -325,7 +339,9 @@ const AuthenticatorView = ({
       onAccountsChange(newAccounts);
     } catch (error) {
       console.error('Failed to update account order:', error);
-      alert('Failed to update account order. Please try again.');
+      if (window.showToast) {
+        window.showToast('Failed to update account order. Please try again.', 'error');
+      }
     }
 
     setDraggedAccount(null);

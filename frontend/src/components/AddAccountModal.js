@@ -224,7 +224,9 @@ const AddAccountModal = ({
           errorMessage += 'Please use the "Upload QR" option instead.';
         }
         
-        alert(errorMessage);
+        if (window.showToast) {
+          window.showToast(errorMessage, 'error');
+        }
         setShowCamera(false);
       }
     };
@@ -337,7 +339,9 @@ const AddAccountModal = ({
       
     } catch (error) {
       console.error('Failed to extract QR data:', error);
-      alert('Failed to extract data from QR code. Please try again or enter the details manually.');
+      if (window.showToast) {
+        window.showToast('Failed to extract data from QR code. Please try again or enter the details manually.', 'error');
+      }
       setExtractedQRData(null);
     } finally {
       setIsExtractingQR(false);
@@ -353,7 +357,9 @@ const AddAccountModal = ({
     const accountColor = getColorForService(accountName);
     
     if (accountName.trim() === '') {
-      alert('Please enter an account name');
+      if (window.showToast) {
+        window.showToast('Please enter an account name', 'warning');
+      }
       return;
     }
 
@@ -379,7 +385,9 @@ const AddAccountModal = ({
 
         if (setupMethod === 'scan') {
           if (!extractedQRData) {
-            alert(`Please ${setupMethod === 'scan' ? 'select a QR code image' : 'paste a QR code URL'} first`);
+            if (window.showToast) {
+              window.showToast(`Please ${setupMethod === 'scan' ? 'select a QR code image' : 'paste a QR code URL'} first`, 'warning');
+            }
             return;
           }
 
@@ -398,7 +406,9 @@ const AddAccountModal = ({
         } else {
           const manualSecret = e.target.manualSecret?.value;
           if (!manualSecret || manualSecret.trim() === '') {
-            alert('Please enter a secret key');
+            if (window.showToast) {
+              window.showToast('Please enter a secret key', 'warning');
+            }
             return;
           }
 
@@ -445,7 +455,9 @@ const AddAccountModal = ({
     } catch (error) {
       console.error('Failed to save account:', error);
       const errorMessage = error.response?.data?.detail || 'Failed to save account. Please try again.';
-      alert(errorMessage);
+      if (window.showToast) {
+        window.showToast(errorMessage, 'error');
+      }
     }
   };
 

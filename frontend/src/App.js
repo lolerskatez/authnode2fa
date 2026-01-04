@@ -191,7 +191,9 @@ const App = () => {
       clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
         logout();
-        alert('Session locked due to inactivity');
+        if (window.showToast) {
+          window.showToast('Session locked due to inactivity', 'warning');
+        }
       }, autoLockMs);
     };
 

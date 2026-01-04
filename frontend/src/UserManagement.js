@@ -215,7 +215,9 @@ function UserManagement({ currentUser, onClose, isEmbedded = false, appSettings 
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to delete this user? This action cannot be undone.');
+    if (!confirmed) {
       return;
     }
 

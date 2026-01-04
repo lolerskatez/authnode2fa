@@ -34,7 +34,9 @@ const AccountMetadataModal = ({ account, onClose, onAccountUpdate, appSettings }
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update account:', error);
-      alert('Failed to update account. Please try again.');
+      if (window.showToast) {
+        window.showToast('Failed to update account. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
     }

@@ -365,7 +365,9 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
   }, []);
 
   const revokeSession = async (sessionId, sessionName) => {
-    if (!window.confirm(`Are you sure you want to revoke the session "${sessionName}"? This will log you out of that device.`)) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm(`Are you sure you want to revoke the session "${sessionName}"? This will log you out of that device.`);
+    if (!confirmed) {
       return;
     }
 
@@ -379,7 +381,9 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
   };
 
   const logoutAllSessions = async () => {
-    if (!window.confirm('Are you sure you want to log out of all other devices? You will remain logged in on this device.')) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to log out of all other devices? You will remain logged in on this device.');
+    if (!confirmed) {
       return;
     }
 
@@ -403,7 +407,9 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
   };
 
   const handleRegenerateBackupCodes = async () => {
-    if (!window.confirm('Are you sure you want to regenerate your backup codes? Your old codes will no longer work.')) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to regenerate your backup codes? Your old codes will no longer work.');
+    if (!confirmed) {
       return;
     }
 
@@ -492,7 +498,9 @@ const ProfileView = ({ currentUser, onUserUpdate, appSettings, onSettingsChange,
   };
 
   const handleDeleteWebauthnCredential = async (credentialId) => {
-    if (!window.confirm('Are you sure you want to delete this security key? You will no longer be able to use it for authentication.')) {
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to delete this security key? You will no longer be able to use it for authentication.');
+    if (!confirmed) {
       return;
     }
 

@@ -26,6 +26,14 @@ const DeviceSyncTab = ({ appSettings, currentUser }) => {
 
   const colors = getThemeColors();
 
+  const showToast = (message, type = 'success') => {
+    if (window.showToast) {
+      window.showToast(message, type);
+    } else {
+      console.log(`Toast [${type}]: ${message}`);
+    }
+  };
+
   useEffect(() => {
     fetchDevices();
   }, []);
@@ -44,7 +52,7 @@ const DeviceSyncTab = ({ appSettings, currentUser }) => {
 
   const handleRegisterDevice = async () => {
     if (!deviceName.trim()) {
-      alert('Please enter a device name');
+      showToast('Please enter a device name', 'warning');
       return;
     }
 
@@ -56,24 +64,26 @@ const DeviceSyncTab = ({ appSettings, currentUser }) => {
       setDeviceName('');
       setShowRegisterModal(false);
       await fetchDevices();
-      alert('Device registered successfully!');
+      showToast('Device registered successfully!', 'success');
     } catch (error) {
       console.error('Failed to register device:', error);
-      alert('Error registering device: ' + (error.response?.data?.detail || error.message));
+      showToast('Error registering device: ' + (error.response?.data?.detail || error.message), 'error');
     } finally {
       setRegistering(false);
     }
   };
 
   const handleRevokeDevice = async (deviceId) => {
-    if (!window.confirm('Are you sure you want to revoke access for this device?')) return;
+    // TODO: Replace with proper confirmation modal
+    const confirmed = window.confirm('Are you sure you want to revoke access for this device?');
+    if (!confirmed) return;
 
     try {
       await axios.post(`/api/sync/devices/${deviceId}/revoke`);
       await fetchDevices();
     } catch (error) {
       console.error('Failed to revoke device:', error);
-      alert('Error revoking device: ' + (error.response?.data?.detail || error.message));
+      showToast('Error revoking device: ' + (error.response?.data?.detail || error.message), 'error');
     }
   };
 
@@ -81,10 +91,10 @@ const DeviceSyncTab = ({ appSettings, currentUser }) => {
     try {
       await axios.post(`/api/sync/devices/${deviceId}/sync`);
       await fetchDevices();
-      alert('Sync initiated!');
+      showToast('Sync initiated!', 'success');
     } catch (error) {
       console.error('Failed to sync:', error);
-      alert('Error syncing: ' + (error.response?.data?.detail || error.message));
+      showToast('Error syncing: ' + (error.response?.data?.detail || error.message), 'error');
     }
   };
 

@@ -33,6 +33,14 @@ const PasswordPolicyTab = ({ appSettings }) => {
 
   const colors = getThemeColors();
 
+  const showToast = (message, type = 'success') => {
+    if (window.showToast) {
+      window.showToast(message, type);
+    } else {
+      console.log(`Toast [${type}]: ${message}`);
+    }
+  };
+
   const fetchPolicy = async () => {
     try {
       setPolicyLoading(true);
@@ -54,10 +62,10 @@ const PasswordPolicyTab = ({ appSettings }) => {
     try {
       setSaving(true);
       await axios.put('/api/admin/password-policy', policy);
-      alert('Password policy saved successfully!');
+      showToast('Password policy saved successfully!', 'success');
     } catch (error) {
       console.error('Failed to save password policy:', error);
-      alert('Error saving policy: ' + (error.response?.data?.detail || error.message));
+      showToast('Error saving policy: ' + (error.response?.data?.detail || error.message), 'error');
     } finally {
       setSaving(false);
     }
