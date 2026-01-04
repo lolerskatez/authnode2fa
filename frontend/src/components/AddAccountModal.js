@@ -124,9 +124,18 @@ const AddAccountModal = ({
   const [isMobile, setIsMobile] = useState(false);
   const [scanningActive, setScanningActive] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(true);
+  const [extractedQRData, setExtractedQRData] = useState(null);
+  const [isExtractingQR, setIsExtractingQR] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+
+  // Clear extracted QR data when setup method changes
+  useEffect(() => {
+    if (setupMethod !== 'scan') {
+      setExtractedQRData(null);
+    }
+  }, [setupMethod]);
 
   // Detect mobile device and screen size
   useEffect(() => {
@@ -259,6 +268,45 @@ const AddAccountModal = ({
     }
   }, [isEditMode, selectedAccount]);
 
+  const handleQRFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      setExtractedQRData(null);
+      return;
+    }
+
+    setIsExtractingQR(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post('/api/applications/extract-qr', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const qrData = response.data;
+      setExtractedQRData(qrData);
+      
+      // Pre-populate the account name field with the suggested name
+      onAccountNameChange(qrData.suggested_name);
+      
+      // Update the form field if it exists
+      setTimeout(() => {
+        const form = document.querySelector('.modal form');
+        if (form && form.accountName) {
+          form.accountName.value = qrData.suggested_name;
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Failed to extract QR data:', error);
+      alert('Failed to extract data from QR code. Please try again or enter the details manually.');
+      setExtractedQRData(null);
+    } finally {
+      setIsExtractingQR(false);
+    }
+  };
+
   const handleAddAccount = async (e) => {
     e.preventDefault();
     const accountName = e.target.accountName.value;
@@ -273,6 +321,7 @@ const AddAccountModal = ({
     }
 
     try {
+      if (isEditMode && selectedAccount) {
       if (isEditMode && selectedAccount) {
         // Update existing account
         await axios.put(`/api/applications/${selectedAccount.id}`, {
@@ -293,18 +342,21 @@ const AddAccountModal = ({
         let newAccount;
 
         if (setupMethod === 'scan') {
-          const qrFile = e.target.qrFile?.files[0];
-          if (!qrFile) {
-            alert('Please select a QR code image to upload');
+          if (!extractedQRData) {
+            alert('Please select a QR code image first');
             return;
           }
 
-          const formData = new FormData();
-          formData.append('file', qrFile);
-          formData.append('name', accountName);
-
-          const response = await axios.post('/api/applications/upload-qr', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+          const response = await axios.post('/api/applications/', {
+            name: accountName,
+            secret: extractedQRData.secret,
+            backup_key: 'BACKUP123',
+            otp_type: extractedQRData.otp_type,
+            counter: extractedQRData.counter,
+            icon: extractedQRData.icon,
+            color: extractedQRData.color,
+            category: accountCategory,
+            favorite: accountFavorite
           });
           newAccount = response.data;
         } else {
@@ -728,6 +780,7 @@ const AddAccountModal = ({
                       className="form-control" 
                       accept="image/*"
                       name="qrFile"
+                      onChange={handleQRFileChange}
                       style={isMobile ? { 
                         padding: '12px', 
                         fontSize: '15px',
@@ -737,6 +790,38 @@ const AddAccountModal = ({
                     <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
                       Upload a screenshot or photo of the QR code from your service
                     </small>
+                    
+                    {isExtractingQR && (
+                      <div style={{ marginTop: '8px', color: colors.accent, fontSize: '14px' }}>
+                        <i className="fas fa-spinner fa-spin"></i> Extracting data from QR code...
+                      </div>
+                    )}
+                    
+                    {extractedQRData && !isExtractingQR && (
+                      <div style={{ 
+                        marginTop: '12px', 
+                        padding: '12px', 
+                        backgroundColor: colors.secondaryBg, 
+                        borderRadius: '8px',
+                        border: `1px solid ${colors.border}`
+                      }}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: colors.primary }}>
+                          <i className="fas fa-check-circle" style={{ color: colors.success || '#10B981', marginRight: '8px' }}></i>
+                          QR Code Detected
+                        </div>
+                        <div style={{ fontSize: '13px', color: colors.secondary }}>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Service:</strong> {extractedQRData.issuer || 'Not specified'}
+                          </div>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Type:</strong> {extractedQRData.otp_type}
+                          </div>
+                          <div>
+                            <strong>Secret:</strong> {extractedQRData.secret.substring(0, 8)}...
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

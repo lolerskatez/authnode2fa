@@ -91,6 +91,17 @@ def extract_issuer_from_qr_data(qr_data: str) -> str:
     
     return ""
 
+def extract_account_name_from_qr_data(qr_data: str) -> str:
+    """Extract account name from QR code data"""
+    if 'otpauth://' in qr_data:
+        # Extract account name from the label part
+        # Format: otpauth://totp/Issuer:AccountName?...
+        label_match = re.search(r'otpauth://totp/[^:]*:([^?]+)', qr_data)
+        if label_match:
+            return unquote(label_match.group(1).replace('+', ' '))
+    
+    return ""
+
 def extract_issuer_from_qr(image_bytes: bytes) -> str:
     """Extract issuer from QR code image"""
     qr_data = extract_qr_data(image_bytes)

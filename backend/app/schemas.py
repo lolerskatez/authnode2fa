@@ -69,6 +69,18 @@ class Application(ApplicationBase):
         from_attributes = True
 
 
+class QRExtractionResponse(BaseModel):
+    """Response containing extracted data from QR code"""
+    secret: str
+    otp_type: str
+    counter: int
+    issuer: Optional[str] = None
+    account_name: Optional[str] = None
+    suggested_name: str
+    icon: str
+    color: str
+
+
 class SMTPConfigBase(BaseModel):
     enabled: bool
     host: Optional[str] = None
