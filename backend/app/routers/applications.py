@@ -77,6 +77,49 @@ def upload_qr(request: Request, file: UploadFile = File(...), name: str = None, 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/extract-qr", response_model=schemas.QRExtractionResponse)
+@limiter.limit(SENSITIVE_API_RATE_LIMIT)
+def extract_qr(request: Request, file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    """Extract data from QR code image without creating application"""
+    try:
+        image_bytes = file.file.read()
+
+        # Extract QR data with OTP type and counter
+        qr_data = utils.extract_qr_data(image_bytes)
+        print(f"DEBUG: Extracted QR data from image: {qr_data}")  # Debug log
+
+        qr_info = utils.extract_secret_from_qr_data(qr_data)
+        print(f"DEBUG: Extracted QR info: {qr_info}")  # Debug log
+
+        if not qr_info:
+            print(f"DEBUG: Failed to extract secret from QR data: {qr_data}")  # Debug log
+            raise ValueError("Could not extract secret from QR code")
+
+        secret = qr_info["secret"]
+        otp_type = qr_info["otp_type"]
+        counter = qr_info["counter"]
+
+        issuer = utils.extract_issuer_from_qr_data(qr_data)
+        account_name = utils.extract_account_name_from_qr_data(qr_data)
+
+        # Determine suggested name - prefer issuer, then account name
+        suggested_name = issuer or account_name or "Unknown Service"
+        icon = utils.get_service_icon(suggested_name)
+        color = utils.get_service_color(suggested_name)
+
+        return schemas.QRExtractionResponse(
+            secret=secret,
+            otp_type=otp_type,
+            counter=counter,
+            issuer=issuer,
+            account_name=account_name,
+            suggested_name=suggested_name,
+            icon=icon,
+            color=color
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/extract-qr-url", response_model=schemas.QRExtractionResponse)
 @limiter.limit(SENSITIVE_API_RATE_LIMIT)
 def extract_qr_url(request: Request, url_data: dict, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):

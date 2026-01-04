@@ -152,7 +152,7 @@ const AddAccountModal = ({
 
   // Clear extracted QR data when setup method changes
   useEffect(() => {
-    if (setupMethod !== 'scan' && setupMethod !== 'paste') {
+    if (setupMethod !== 'scan') {
       setExtractedQRData(null);
     }
   }, [setupMethod]);
@@ -344,60 +344,6 @@ const AddAccountModal = ({
     }
   };
 
-  const handleQRUrlChange = async (e) => {
-    const qrUrl = e.target.value.trim();
-    if (!qrUrl) {
-      setExtractedQRData(null);
-      return;
-    }
-
-    setIsExtractingQR(true);
-    try {
-      // Call the backend to extract data from the URL
-      const response = await axios.post('/api/applications/extract-qr-url', { url: qrUrl }, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      const qrData = response.data;
-      setExtractedQRData(qrData);
-      
-      // Pre-populate the account name field with the suggested name
-      onAccountNameChange(qrData.suggested_name);
-      
-      // Update the form fields if they exist
-      setTimeout(() => {
-        const form = document.querySelector('.modal form');
-        if (form) {
-          // Set account name
-          if (form.accountName) {
-            form.accountName.value = qrData.suggested_name;
-          }
-          
-          // Set category based on service
-          if (form.accountCategory) {
-            const suggestedCategory = getCategoryForService(qrData.suggested_name);
-            form.accountCategory.value = suggestedCategory;
-          }
-          
-          // Set username if account_name looks like an email
-          if (form.accountUsername && qrData.account_name) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (emailRegex.test(qrData.account_name)) {
-              form.accountUsername.value = qrData.account_name;
-            }
-          }
-        }
-      }, 100);
-      
-    } catch (error) {
-      console.error('Failed to parse QR URL:', error);
-      setExtractedQRData(null);
-      // Don't show alert for paste - just clear the data
-    } finally {
-      setIsExtractingQR(false);
-    }
-  };
-
   const handleAddAccount = async (e) => {
     e.preventDefault();
     const accountName = e.target.accountName.value;
@@ -431,7 +377,7 @@ const AddAccountModal = ({
       } else {
         let newAccount;
 
-        if (setupMethod === 'scan' || setupMethod === 'paste') {
+        if (setupMethod === 'scan') {
           if (!extractedQRData) {
             alert(`Please ${setupMethod === 'scan' ? 'select a QR code image' : 'paste a QR code URL'} first`);
             return;
@@ -791,84 +737,103 @@ const AddAccountModal = ({
             {!isEditMode && isMobile && (
               <>
                 <div className="form-group form-group-full">
-                  <label style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
-                    Setup Method
+                  <label style={isMobile ? { fontSize: '14px', marginBottom: '12px' } : {}}>
+                    How to add 2FA:
                   </label>
                   <div style={{ 
-                    display: 'flex', 
-                    gap: isMobile ? '10px' : '10px', 
+                    display: 'grid', 
+                    gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
+                    gap: '8px',
                     marginTop: isMobile ? '10px' : '10px', 
-                    flexWrap: 'wrap' 
                   }}>
                     <button 
-                      className={`btn ${setupMethod === 'scan' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={isMobile ? { 
-                        flex: 1, 
-                        minWidth: '130px',
-                        padding: '12px 16px',
-                        fontSize: '14px',
+                      className={`btn ${setupMethod === 'scan' ? 'btn-primary' : 'btn-outline-secondary'}`} 
+                      style={{
+                        padding: '12px 8px',
+                        fontSize: '13px',
                         borderRadius: '8px',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px'
-                      } : { flex: 1, minWidth: '140px' }}
+                        gap: '4px',
+                        textAlign: 'center'
+                      }}
                       type="button"
                       onClick={() => onSetupMethodChange('scan')}
                     >
-                      <i className="fas fa-qrcode"></i> {isMobile ? 'Upload' : 'Scan'} QR
+                      <i className="fas fa-image" style={{ fontSize: '18px' }}></i>
+                      Upload QR
                     </button>
-                    {isMobile && cameraAvailable && (
+                    {cameraAvailable && (
                       <button 
-                        className="btn btn-primary" 
-                        style={{ 
-                          flex: 1, 
-                          minWidth: '130px',
-                          padding: '12px 16px',
-                          fontSize: '14px',
+                        className="btn btn-outline-secondary"
+                        style={{
+                          padding: '12px 8px',
+                          fontSize: '13px',
                           borderRadius: '8px',
                           display: 'flex',
+                          flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '6px'
+                          gap: '4px',
+                          textAlign: 'center'
                         }}
                         type="button"
                         onClick={() => setShowCamera(true)}
                       >
-                        <i className="fas fa-camera"></i> Use Camera
+                        <i className="fas fa-camera" style={{ fontSize: '18px' }}></i>
+                        Scan Camera
                       </button>
                     )}
                     <button 
-                      className={`btn ${setupMethod === 'paste' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={isMobile ? { 
-                        flex: 1, 
-                        minWidth: '130px',
-                        padding: '12px 16px',
-                        fontSize: '14px',
+                      className={`btn ${setupMethod === 'manual' ? 'btn-primary' : 'btn-outline-secondary'}`} 
+                      style={{
+                        padding: '12px 8px',
+                        fontSize: '13px',
                         borderRadius: '8px',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px'
-                      } : { flex: 1, minWidth: '140px' }}
+                        gap: '4px',
+                        textAlign: 'center'
+                      }}
                       type="button"
-                      onClick={() => onSetupMethodChange('paste')}
+                      onClick={() => onSetupMethodChange('manual')}
                     >
-                      <i className="fas fa-paste"></i> Paste URL
+                      <i className="fas fa-keyboard" style={{ fontSize: '18px' }}></i>
+                      Manual
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!isEditMode && !isMobile && (
+              <>
+                <div className="form-group form-group-full">
+                  <label style={{ fontSize: '14px', marginBottom: '12px' }}>
+                    How to add 2FA:
+                  </label>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '10px',
+                    marginTop: '10px', 
+
+                    flexWrap: 'wrap' 
+                  }}>
+                    <button 
+                      className={`btn ${setupMethod === 'scan' ? 'btn-primary' : 'btn-secondary'}`} 
+                      style={{ flex: 1, minWidth: '140px' }}
+                      type="button"
+                      onClick={() => onSetupMethodChange('scan')}
+                    >
+                      <i className="fas fa-image"></i> Upload QR
                     </button>
                     <button 
                       className={`btn ${setupMethod === 'manual' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={isMobile ? { 
-                        flex: 1, 
-                        minWidth: '130px',
-                        padding: '12px 16px',
-                        fontSize: '14px',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      } : { flex: 1, minWidth: '140px' }}
+                      style={{ flex: 1, minWidth: '140px' }}
                       type="button"
                       onClick={() => onSetupMethodChange('manual')}
                     >
@@ -876,217 +841,86 @@ const AddAccountModal = ({
                     </button>
                   </div>
                 </div>
-
-                {setupMethod === 'scan' && (
-                  <div className="form-group form-group-full">
-                    <label htmlFor="qrFile" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
-                      Upload QR Code Image
-                    </label>
-                    <input 
-                      type="file" 
-                      id="qrFile" 
-                      className="form-control" 
-                      accept="image/*"
-                      name="qrFile"
-                      onChange={handleQRFileChange}
-                      style={isMobile ? { 
-                        padding: '12px', 
-                        fontSize: '15px',
-                        borderRadius: '8px'
-                      } : {}}
-                    />
-                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      Upload a screenshot or photo of the QR code from your service
-                    </small>
-                    
-                    {isExtractingQR && (
-                      <div style={{ marginTop: '8px', color: colors.accent, fontSize: '14px' }}>
-                        <i className="fas fa-spinner fa-spin"></i> Extracting data from QR code...
-                      </div>
-                    )}
-                    
-                    {extractedQRData && !isExtractingQR && (
-                      <div style={{ 
-                        marginTop: '12px', 
-                        padding: '12px', 
-                        backgroundColor: colors.secondaryBg, 
-                        borderRadius: '8px',
-                        border: `1px solid ${colors.border}`
-                      }}>
-                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: colors.primary }}>
-                          <i className="fas fa-check-circle" style={{ color: colors.success || '#10B981', marginRight: '8px' }}></i>
-                          QR Code Detected
-                        </div>
-                        <div style={{ fontSize: '13px', color: colors.secondary }}>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Service:</strong> {extractedQRData.issuer || 'Not specified'}
-                          </div>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Account:</strong> {extractedQRData.account_name || 'Not specified'}
-                          </div>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Type:</strong> {extractedQRData.otp_type}
-                          </div>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Category:</strong> {getCategoryForService(extractedQRData.suggested_name)}
-                          </div>
-                          <div>
-                            <strong>Secret:</strong> {extractedQRData.secret.substring(0, 8)}...
-                          </div>
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: colors.accent, 
-                          marginTop: '8px',
-                          fontStyle: 'italic'
-                        }}>
-                          ✓ Form fields have been auto-filled above
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {setupMethod === 'paste' && (
-                  <div className="form-group form-group-full">
-                    <label htmlFor="qrUrl" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
-                      Paste QR Code URL
-                    </label>
-                    <textarea
-                      id="qrUrl"
-                      className="form-control"
-                      name="qrUrl"
-                      placeholder="otpauth://totp/ServiceName:username?secret=ABC123&issuer=ServiceName"
-                      rows={3}
-                      style={isMobile ? { 
-                        padding: '12px', 
-                        fontSize: '15px',
-                        borderRadius: '8px',
-                        fontFamily: 'monospace'
-                      } : { fontFamily: 'monospace' }}
-                      onChange={handleQRUrlChange}
-                    />
-                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      Paste the otpauth:// URL from your QR code (right-click QR code → Copy image address, or use a QR scanner app)
-                    </small>
-                    
-                    {extractedQRData && !isExtractingQR && (
-                      <div style={{ 
-                        marginTop: '12px', 
-                        padding: '12px', 
-                        backgroundColor: colors.secondaryBg, 
-                        borderRadius: '8px',
-                        border: `1px solid ${colors.border}`
-                      }}>
-                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: colors.primary }}>
-                          <i className="fas fa-check-circle" style={{ color: colors.success || '#10B981', marginRight: '8px' }}></i>
-                          URL Parsed Successfully
-                        </div>
-                        <div style={{ fontSize: '13px', color: colors.secondary }}>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Service:</strong> {extractedQRData.issuer || 'Not specified'}
-                          </div>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Account:</strong> {extractedQRData.account_name || 'Not specified'}
-                          </div>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Type:</strong> {extractedQRData.otp_type}
-                          </div>
-                          <div style={{ marginBottom: '4px' }}>
-                            <strong>Category:</strong> {getCategoryForService(extractedQRData.suggested_name)}
-                          </div>
-                          <div>
-                            <strong>Secret:</strong> {extractedQRData.secret.substring(0, 8)}...
-                          </div>
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: colors.accent, 
-                          marginTop: '8px',
-                          fontStyle: 'italic'
-                        }}>
-                          ✓ Form fields have been auto-filled above
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {setupMethod === 'manual' && (
-                  <div className="form-group form-group-full">
-                    <label htmlFor="manualSecret" style={isMobile ? { fontSize: '14px', marginBottom: '8px' } : {}}>
-                      Secret Key
-                    </label>
-                    <input 
-                      type="text" 
-                      id="manualSecret" 
-                      className="form-control" 
-                      placeholder="Enter your 2FA secret key (e.g., JBSWY3DPEHPK3PXP)"
-                      name="manualSecret"
-                      style={isMobile ? { 
-                        padding: '12px', 
-                        fontSize: '15px',
-                        borderRadius: '8px'
-                      } : {}}
-                    />
-                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      The secret key is usually found in the advanced settings of your 2FA setup
-                    </small>
-                  </div>
-                )}
               </>
             )}
 
-            {!isEditMode && !isMobile && (
-              <>
-                {setupMethod === 'scan' && (
-                  <div className="form-group form-group-full">
-                    <label htmlFor="qrFile" style={{ fontSize: '14px', marginBottom: '8px' }}>
-                      <i className="fas fa-image" style={{ marginRight: '8px', color: colors.accent }}></i>
-                      Upload QR Code Image
-                    </label>
-                    <input 
-                      type="file" 
-                      id="qrFile" 
-                      className="form-control" 
-                      accept="image/*"
-                      name="qrFile"
-                      style={{
-                        padding: '12px', 
-                        fontSize: '14px',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      Upload a screenshot or photo of the QR code from your service
-                    </small>
+            {!isEditMode && setupMethod === 'scan' && (
+              <div className="form-group form-group-full">
+                <label htmlFor="qrFile">Upload QR Code Image</label>
+                <input 
+                  type="file" 
+                  id="qrFile" 
+                  className="form-control" 
+                  accept="image/*"
+                  name="qrFile"
+                  onChange={handleQRFileChange}
+                />
+                <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  Upload a screenshot or photo of the QR code from your service
+                </small>
+                
+                {isExtractingQR && (
+                  <div style={{ marginTop: '8px', color: colors.accent, fontSize: '14px' }}>
+                    <i className="fas fa-spinner fa-spin"></i> Extracting data from QR code...
                   </div>
                 )}
+                
+                {extractedQRData && !isExtractingQR && (
+                  <div style={{ 
+                    marginTop: '12px', 
+                    padding: '12px', 
+                    backgroundColor: colors.secondaryBg, 
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: colors.primary }}>
+                      <i className="fas fa-check-circle" style={{ color: colors.success || '#10B981', marginRight: '8px' }}></i>
+                      QR Code Detected
+                    </div>
+                    <div style={{ fontSize: '13px', color: colors.secondary }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <strong>Service:</strong> {extractedQRData.issuer || 'Not specified'}
+                      </div>
+                      <div style={{ marginBottom: '4px' }}>
+                        <strong>Account:</strong> {extractedQRData.account_name || 'Not specified'}
+                      </div>
+                      <div style={{ marginBottom: '4px' }}>
+                        <strong>Type:</strong> {extractedQRData.otp_type}
+                      </div>
+                      <div style={{ marginBottom: '4px' }}>
+                        <strong>Category:</strong> {getCategoryForService(extractedQRData.suggested_name)}
+                      </div>
+                      <div>
+                        <strong>Secret:</strong> {extractedQRData.secret.substring(0, 8)}...
+                      </div>
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: colors.accent, 
+                      marginTop: '8px',
+                      fontStyle: 'italic'
+                    }}>
+                      ✓ Form fields have been auto-filled above
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-                {setupMethod === 'manual' && (
-                  <div className="form-group form-group-full">
-                    <label htmlFor="manualSecret" style={{ fontSize: '14px', marginBottom: '8px' }}>
-                      <i className="fas fa-key" style={{ marginRight: '8px', color: colors.accent }}></i>
-                      Secret Key
-                    </label>
-                    <input 
-                      type="text" 
-                      id="manualSecret" 
-                      className="form-control" 
-                      placeholder="Enter your 2FA secret key (e.g., JBSWY3DPEHPK3PXP)"
-                      name="manualSecret"
-                      style={{
-                        padding: '12px', 
-                        fontSize: '14px',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      The secret key is usually found in the advanced settings of your 2FA setup
-                    </small>
-                  </div>
-                )}
-              </>
+            {!isEditMode && setupMethod === 'manual' && (
+              <div className="form-group form-group-full">
+                <label htmlFor="manualSecret">Secret Key</label>
+                <input 
+                  type="text" 
+                  id="manualSecret" 
+                  className="form-control" 
+                  placeholder="Enter your 2FA secret key (e.g., JBSWY3DPEHPK3PXP)"
+                  name="manualSecret"
+                />
+                <small style={{ color: colors.secondary, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  The secret key is usually found in the advanced settings of your 2FA setup
+                </small>
+              </div>
             )}
 
             <div className="btn-group" style={isMobile ? {
